@@ -158,14 +158,14 @@ export function BordioPlanner({
             {title || (activeEntity === "startup" ? "Startup Tasks & Calendar" : activeEntity === "institution" ? "Campus Drives & Schedule" : "Workforce Calendar & Tasks")}
           </h1>
           <p className="text-xs text-ink-soft line-clamp-1">
-            {subtitle || "All-in-one daily/weekly schedule, task delegation, backlog waiting list, and capacity planner like Bordio.com."}
+            {subtitle || "All-in-one daily/weekly schedule, task delegation, backlog waiting list, and team capacity planner."}
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
           <div className="px-3 py-1.5 rounded-xl bg-surface-alt border border-border text-ink-soft flex items-center gap-2 text-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold text-ink text-[11px]">Bordio Planner</span>
+            <span className="font-semibold text-ink text-[11px]">Live Planner Sync</span>
           </div>
         </div>
       </header>

@@ -394,12 +394,14 @@ interface BordioStore {
   deleteSubtask: (itemId: string, subtaskId: string) => void;
 }
 
-const STORAGE_KEY = "letgetin_bordio_items_v1";
+const STORAGE_KEY = "letgetin_planner_items_v1";
 
 function loadSavedItems(): BordioItem[] {
   if (typeof window !== "undefined") {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved =
+        localStorage.getItem(STORAGE_KEY) ||
+        localStorage.getItem("letgetin_bordio_items_v1");
       if (saved) {
         return JSON.parse(saved);
       }

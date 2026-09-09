@@ -7,8 +7,8 @@ export default function WorkforceCalendarPage() {
   return (
     <BordioPlanner
       title="Workforce Calendar & Day Planner"
-      subtitle="Unified daily & weekly schedules, corporate events, and capacity tracking like Bordio.com"
-      badgeLabel="Bordio Calendar"
+      subtitle="Unified daily & weekly schedules, corporate events, and team capacity tracking."
+      badgeLabel="Workforce Calendar"
       defaultView="week"
     />
   );
