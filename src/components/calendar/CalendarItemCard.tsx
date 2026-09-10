@@ -2,26 +2,22 @@
 
 import React from "react";
 import {
-  CheckCircle2,
-  Circle,
   Clock,
   Video,
-  MapPin,
-  Sparkles,
 } from "lucide-react";
 import {
-  BordioItem,
-  BordioColorTheme,
+  CalendarItem,
+  CalendarColorTheme,
   DEFAULT_PROJECTS,
-  useBordioStore,
-} from "@/features/recruiter/store/useBordioStore";
+  useCalendarStore,
+} from "@/features/recruiter/store/useCalendarStore";
 
-interface BordioItemCardProps {
-  item: BordioItem;
+interface CalendarItemCardProps {
+  item: CalendarItem;
 }
 
 const THEME_STYLES: Record<
-  BordioColorTheme,
+  CalendarColorTheme,
   {
     bg: string;
     border: string;
@@ -60,11 +56,10 @@ const THEME_STYLES: Record<
   },
 };
 
-export function BordioItemCard({ item }: BordioItemCardProps) {
-  const { toggleItemDone, setActiveItemId } = useBordioStore();
+export function CalendarItemCard({ item }: CalendarItemCardProps) {
+  const { toggleItemDone, setActiveItemId } = useCalendarStore();
 
-  // Resolve theme color
-  let themeKey: BordioColorTheme = item.themeColor || "teal";
+  let themeKey: CalendarColorTheme = item.themeColor || "teal";
   if (!item.themeColor) {
     if (item.projectId === "growth" || item.projectId === "engineering") {
       themeKey = "blue";
@@ -79,7 +74,6 @@ export function BordioItemCard({ item }: BordioItemCardProps) {
   const isDone = item.status === "done";
   const isEvent = item.type === "event";
 
-  // Duration formatting e.g. 0:30h, 1:15h
   const hours = Math.floor((item.durationMinutes || 30) / 60);
   const mins = (item.durationMinutes || 30) % 60;
   const durationText = `${hours}:${mins < 10 ? `0${mins}` : mins}h`;

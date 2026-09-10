@@ -4,15 +4,14 @@ import React, { useState } from "react";
 import {
   Check,
   Calendar,
-  Plus,
 } from "lucide-react";
 import {
-  BordioItem,
-  useBordioStore,
-} from "@/features/recruiter/store/useBordioStore";
-import { BordioItemCard } from "./BordioItemCard";
+  CalendarItem,
+  useCalendarStore,
+} from "@/features/recruiter/store/useCalendarStore";
+import { CalendarItemCard } from "./CalendarItemCard";
 
-interface BordioDayColumnProps {
+interface CalendarDayColumnProps {
   dateStr: string; // YYYY-MM-DD
   dayNum: string; // e.g. "9", "10"
   weekdayLabel: string; // e.g. "Wed", "Thu"
@@ -22,7 +21,7 @@ interface BordioDayColumnProps {
   onQuickAddEvent: (dateStr: string) => void;
 }
 
-export function BordioDayColumn({
+export function CalendarDayColumn({
   dateStr,
   dayNum,
   weekdayLabel,
@@ -30,13 +29,12 @@ export function BordioDayColumn({
   onSelectColumn,
   onQuickAddTask,
   onQuickAddEvent,
-}: BordioDayColumnProps) {
+}: CalendarDayColumnProps) {
   const { items, moveItemDate, hideCompleted, selectedProjectId, selectedPriority, searchQuery } =
-    useBordioStore();
+    useCalendarStore();
 
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Filter items belonging to this date
   const dayItems = items.filter((item) => {
     if (item.date !== dateStr) return false;
     if (hideCompleted && item.status === "done") return false;
@@ -51,7 +49,6 @@ export function BordioDayColumn({
     return true;
   });
 
-  // Calculate workload in hours & minutes format e.g. 1:15h
   const totalMinutes = dayItems.reduce((acc, item) => acc + (item.durationMinutes || 30), 0);
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
@@ -103,7 +100,7 @@ export function BordioDayColumn({
           )}
         </div>
 
-        {/* Active Blue Indicator Underline (Screenshot 2: "10 Thu") */}
+        {/* Active Blue Indicator Underline */}
         <div className="pt-1.5 -mb-2">
           {isSelected ? (
             <div className="h-[2.5px] bg-[#0091ff] rounded-full w-full shadow-sm animate-in fade-in duration-200" />
@@ -116,7 +113,7 @@ export function BordioDayColumn({
       {/* Cards List Area */}
       <div className="flex-1 p-2.5 space-y-2 overflow-y-auto scrollbar-thin">
         {dayItems.map((item) => (
-          <BordioItemCard key={item.id} item={item} />
+          <CalendarItemCard key={item.id} item={item} />
         ))}
 
         {dayItems.length === 0 && (
@@ -125,7 +122,7 @@ export function BordioDayColumn({
           </div>
         )}
 
-        {/* Circular Action Buttons at bottom of column (as seen on 11 Fri in Screenshot 2) */}
+        {/* Circular Action Buttons at bottom of column */}
         <div className="flex items-center justify-center gap-2 pt-2 pb-1">
           <button
             type="button"

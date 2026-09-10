@@ -1,22 +1,22 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { format, addMonths, subMonths, setMonth, setYear, getDaysInMonth, startOfMonth, getDay, isSameDay, parseISO } from "date-fns";
-import { useBordioStore } from "@/features/recruiter/store/useBordioStore";
+import { format, setMonth, setYear, getDaysInMonth, startOfMonth, getDay, isSameDay, parseISO } from "date-fns";
+import { useCalendarStore } from "@/features/recruiter/store/useCalendarStore";
 
-interface BordioDatePickerPopoverProps {
+interface CalendarDatePickerPopoverProps {
   isOpen: boolean;
   onClose: () => void;
   anchorDate: string; // YYYY-MM-DD
   onSelectDate: (dateStr: string) => void;
 }
 
-export function BordioDatePickerPopover({
+export function CalendarDatePickerPopover({
   isOpen,
   onClose,
   anchorDate,
   onSelectDate,
-}: BordioDatePickerPopoverProps) {
+}: CalendarDatePickerPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const selectedParsed = parseISO(anchorDate || "2026-09-10");
@@ -40,7 +40,6 @@ export function BordioDatePickerPopover({
   if (!isOpen) return null;
 
   // Generate Month list for left pane
-  // Showing e.g. current year remaining months and next year start months
   const currentYear = viewDate.getFullYear();
   const monthsList = [
     { label: `Sep ${currentYear}`, month: 8, year: currentYear },
@@ -130,7 +129,7 @@ export function BordioDatePickerPopover({
             const dayNum = i + 1;
             const thisDayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dayNum);
             const isSelected = isSameDay(thisDayDate, selectedParsed);
-            const isToday = isSameDay(thisDayDate, new Date(2026, 8, 10)); // Current demo date Sep 10, 2026
+            const isToday = isSameDay(thisDayDate, new Date(2026, 8, 10)); // Sep 10, 2026
 
             return (
               <button

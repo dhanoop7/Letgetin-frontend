@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { format, addDays, subDays, startOfWeek, isSameDay, parseISO } from "date-fns";
-import { BordioDayColumn } from "./BordioDayColumn";
-import { BordioItemModal } from "./BordioItemModal";
-import { BordioDatePickerPopover } from "./BordioDatePickerPopover";
-import { BordioWaitingList } from "./BordioWaitingList";
+import React, { useState } from "react";
+import { format, addDays, subDays, startOfWeek, parseISO } from "date-fns";
+import { CalendarDayColumn } from "./CalendarDayColumn";
+import { CalendarItemModal } from "./CalendarItemModal";
+import { CalendarDatePickerPopover } from "./CalendarDatePickerPopover";
+import { CalendarWaitingList } from "./CalendarWaitingList";
 import {
-  BordioItem,
+  CalendarItem,
   DEFAULT_PROJECTS,
-  useBordioStore,
-} from "@/features/recruiter/store/useBordioStore";
+  useCalendarStore,
+} from "@/features/recruiter/store/useCalendarStore";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import {
@@ -23,13 +23,10 @@ import {
   ChevronDown,
   Search,
   Bell,
-  PanelLeftClose,
-  PanelLeftOpen,
   X,
-  Sparkles,
 } from "lucide-react";
 
-export interface BordioPlannerProps {
+export interface CalendarWorkspaceProps {
   title?: string;
   subtitle?: string;
   badgeLabel?: string;
@@ -37,13 +34,13 @@ export interface BordioPlannerProps {
   moduleContext?: "company" | "startup" | "institution";
 }
 
-export function BordioPlanner({
+export function CalendarWorkspace({
   title,
   subtitle,
   badgeLabel,
   defaultView,
   moduleContext,
-}: BordioPlannerProps = {}) {
+}: CalendarWorkspaceProps = {}) {
   const {
     items,
     selectedDate,
@@ -56,7 +53,7 @@ export function BordioPlanner({
     toggleToolsSidebar,
     searchQuery,
     setSearchQuery,
-  } = useBordioStore();
+  } = useCalendarStore();
 
   const { orgProfile } = useRecruiterStore();
   const { user } = useAuthStore();
@@ -80,7 +77,7 @@ export function BordioPlanner({
 
   // Current anchor date calculation
   const currentAnchor = parseISO(selectedDate || "2026-09-10");
-  const weekStart = startOfWeek(currentAnchor, { weekStartsOn: 3 }); // Start on Wednesday (9 Wed) like Screenshot 2!
+  const weekStart = startOfWeek(currentAnchor, { weekStartsOn: 3 }); // Wednesday (9 Wed) like Screenshot 2!
   const displayDays = Array.from({ length: 4 }, (_, i) => addDays(weekStart, i)); // 9 Wed, 10 Thu, 11 Fri, 12 Sat
 
   const monthYearLabel = format(currentAnchor, "MMMM yyyy");
@@ -95,10 +92,6 @@ export function BordioPlanner({
     setSelectedDate(format(next, "yyyy-MM-dd"));
   };
 
-  const handleTodayClick = () => {
-    setSelectedDate("2026-09-10");
-  };
-
   const handleQuickAdd = (type: "task" | "event", dateStr?: string) => {
     setActiveItemId(null);
     setModalType(type);
@@ -108,7 +101,7 @@ export function BordioPlanner({
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen bg-[#111315] text-[#f1f3f5] overflow-hidden select-none font-sans">
-      {/* ===== 1. TOOLS SIDEBAR (Matching Screenshot 2 Left Navigation) ===== */}
+      {/* ===== 1. TOOLS SIDEBAR (Screenshot 2 Left Navigation) ===== */}
       <aside
         className={`${
           toolsSidebarOpen ? "w-44" : "w-0"
@@ -206,7 +199,7 @@ export function BordioPlanner({
               <span>Add new</span>
             </button>
 
-            {/* "Today ∨" Dropdown Button (Opens Dual-Pane Date Popover) */}
+            {/* "Today ∨" Dropdown Button */}
             <div className="relative">
               <button
                 type="button"
@@ -218,7 +211,7 @@ export function BordioPlanner({
               </button>
 
               {/* Dual-Pane Month & Day Grid Popover (Screenshot 3) */}
-              <BordioDatePickerPopover
+              <CalendarDatePickerPopover
                 isOpen={datePickerOpen}
                 onClose={() => setDatePickerOpen(false)}
                 anchorDate={selectedDate}
@@ -316,7 +309,7 @@ export function BordioPlanner({
                 const isSelected = selectedDate === dateStr;
 
                 return (
-                  <BordioDayColumn
+                  <CalendarDayColumn
                     key={dateStr}
                     dateStr={dateStr}
                     dayNum={dayNum}
@@ -334,7 +327,7 @@ export function BordioPlanner({
 
         {toolsTab === "tasks" && (
           <div className="flex-1 flex overflow-hidden">
-            <BordioWaitingList />
+            <CalendarWaitingList />
             <main className="flex-1 p-4 overflow-y-auto bg-[#121417] space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#262a30]">
                 <div>
@@ -413,7 +406,7 @@ export function BordioPlanner({
       </div>
 
       {/* ===== 4. CREATE / EDIT EVENT MODAL (Screenshot 1) ===== */}
-      <BordioItemModal
+      <CalendarItemModal
         itemId={activeItemId}
         isOpen={modalOpen || activeItemId !== null}
         onClose={() => {

@@ -1,17 +1,17 @@
 import { create } from "zustand";
 
-export type BordioItemType = "task" | "event";
-export type BordioPriority = "urgent" | "high" | "medium" | "low";
-export type BordioStatus = "todo" | "in_progress" | "done";
-export type BordioColorTheme = "green" | "teal" | "blue" | "slate";
+export type CalendarItemType = "task" | "event";
+export type CalendarPriority = "urgent" | "high" | "medium" | "low";
+export type CalendarStatus = "todo" | "in_progress" | "done";
+export type CalendarColorTheme = "green" | "teal" | "blue" | "slate";
 
-export interface BordioSubtask {
+export interface CalendarSubtask {
   id: string;
   title: string;
   completed: boolean;
 }
 
-export interface BordioProject {
+export interface CalendarProject {
   id: string;
   name: string;
   color: string;
@@ -19,41 +19,41 @@ export interface BordioProject {
   badgeText: string;
 }
 
-export interface BordioParticipant {
+export interface CalendarParticipant {
   name: string;
   isMe?: boolean;
   avatar?: string;
 }
 
-export interface BordioItem {
+export interface CalendarItem {
   id: string;
-  type: BordioItemType;
+  type: CalendarItemType;
   title: string;
   description?: string;
   date: string | null; // YYYY-MM-DD or null if in Waiting List
   startTime?: string; // e.g. "11:00"
   endTime?: string; // e.g. "12:00"
   durationMinutes: number; // e.g. 15, 30, 45, 60, 90
-  status: BordioStatus;
-  priority: BordioPriority;
+  status: CalendarStatus;
+  priority: CalendarPriority;
   projectId: string;
-  themeColor?: BordioColorTheme;
+  themeColor?: CalendarColorTheme;
   iconEmoji?: string;
   workspaceName?: string;
-  participants?: BordioParticipant[];
+  participants?: CalendarParticipant[];
   repeats?: boolean;
   assignee: {
     name: string;
     avatar?: string;
     role?: string;
   };
-  subtasks: BordioSubtask[];
+  subtasks: CalendarSubtask[];
   meetingLink?: string;
   location?: string;
   createdAt: string;
 }
 
-export const DEFAULT_PROJECTS: BordioProject[] = [
+export const DEFAULT_PROJECTS: CalendarProject[] = [
   {
     id: "recruitment",
     name: "Talent & Hiring",
@@ -98,7 +98,7 @@ export const DEFAULT_PROJECTS: BordioProject[] = [
   },
 ];
 
-const INITIAL_ITEMS: BordioItem[] = [
+const INITIAL_ITEMS: CalendarItem[] = [
   // --- WAITING LIST (Unscheduled) ---
   {
     id: "wl-1",
@@ -493,9 +493,9 @@ const INITIAL_ITEMS: BordioItem[] = [
   },
 ];
 
-interface BordioStore {
-  items: BordioItem[];
-  projects: BordioProject[];
+interface CalendarStore {
+  items: CalendarItem[];
+  projects: CalendarProject[];
   waitingListOpen: boolean;
   selectedDate: string; // YYYY-MM-DD
   viewMode: "week" | "day" | "month" | "board";
@@ -522,8 +522,8 @@ interface BordioStore {
   toggleToolsSidebar: () => void;
 
   // CRUD
-  addItem: (item: Omit<BordioItem, "id" | "createdAt">) => BordioItem;
-  updateItem: (id: string, updates: Partial<BordioItem>) => void;
+  addItem: (item: Omit<CalendarItem, "id" | "createdAt">) => CalendarItem;
+  updateItem: (id: string, updates: Partial<CalendarItem>) => void;
   deleteItem: (id: string) => void;
   toggleItemDone: (id: string) => void;
   moveItemDate: (id: string, targetDate: string | null) => void;
@@ -534,7 +534,7 @@ interface BordioStore {
 
 const STORAGE_KEY = "letgetin_planner_items_v2";
 
-function loadSavedItems(): BordioItem[] {
+function loadSavedItems(): CalendarItem[] {
   if (typeof window !== "undefined") {
     try {
       const saved =
@@ -548,11 +548,11 @@ function loadSavedItems(): BordioItem[] {
   return INITIAL_ITEMS;
 }
 
-export const useBordioStore = create<BordioStore>((set, get) => ({
+export const useCalendarStore = create<CalendarStore>((set, get) => ({
   items: loadSavedItems(),
   projects: DEFAULT_PROJECTS,
   waitingListOpen: true,
-  selectedDate: "2026-09-10", // Thursday Sep 10, 2026 matching screenshot!
+  selectedDate: "2026-09-10",
   viewMode: "week",
   selectedProjectId: "all",
   selectedPriority: "all",
@@ -576,7 +576,7 @@ export const useBordioStore = create<BordioStore>((set, get) => ({
   toggleToolsSidebar: () => set((s) => ({ toolsSidebarOpen: !s.toolsSidebarOpen })),
 
   addItem: (data) => {
-    const newItem: BordioItem = {
+    const newItem: CalendarItem = {
       ...data,
       id: `item-${Date.now()}`,
       createdAt: new Date().toISOString(),
@@ -617,7 +617,7 @@ export const useBordioStore = create<BordioStore>((set, get) => ({
     set((state) => {
       const updated = state.items.map((item) => {
         if (item.id !== id) return item;
-        const nextStatus: BordioStatus = item.status === "done" ? "todo" : "done";
+        const nextStatus: CalendarStatus = item.status === "done" ? "todo" : "done";
         return { ...item, status: nextStatus };
       });
       if (typeof window !== "undefined") {
@@ -660,7 +660,7 @@ export const useBordioStore = create<BordioStore>((set, get) => ({
     set((state) => {
       const updated = state.items.map((item) => {
         if (item.id !== itemId) return item;
-        const newSub: BordioSubtask = {
+        const newSub: CalendarSubtask = {
           id: `st-${Date.now()}`,
           title: title.trim(),
           completed: false,

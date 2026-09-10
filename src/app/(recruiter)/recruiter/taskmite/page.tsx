@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { BordioPlanner } from "@/components/bordio/BordioPlanner";
+import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 
 export default function TaskmitePage() {
   return (
-    <BordioPlanner
+    <CalendarWorkspace
       title="Taskmite Workspace & Productivity"
       subtitle="Sprint task delegation, backlog waiting list, time estimation, and team capacity planning."
       badgeLabel="Taskmite Productivity"

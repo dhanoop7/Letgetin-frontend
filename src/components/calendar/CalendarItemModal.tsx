@@ -5,28 +5,25 @@ import {
   X,
   Plus,
   Calendar as CalendarIcon,
-  Clock,
   MapPin,
   Repeat,
   ChevronDown,
-  UserPlus,
   Trash2,
   Check,
   Star,
-  Sparkles,
 } from "lucide-react";
 import {
-  BordioItem,
-  BordioItemType,
-  BordioPriority,
-  BordioStatus,
-  BordioColorTheme,
+  CalendarItem,
+  CalendarItemType,
+  CalendarPriority,
+  CalendarStatus,
+  CalendarColorTheme,
   DEFAULT_PROJECTS,
-  useBordioStore,
-} from "@/features/recruiter/store/useBordioStore";
+  useCalendarStore,
+} from "@/features/recruiter/store/useCalendarStore";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
 
-interface BordioItemModalProps {
+interface CalendarItemModalProps {
   itemId: string | null;
   isOpen: boolean;
   onClose: () => void;
@@ -34,14 +31,14 @@ interface BordioItemModalProps {
   defaultType?: "task" | "event";
 }
 
-export function BordioItemModal({
+export function CalendarItemModal({
   itemId,
   isOpen,
   onClose,
   defaultDate = "2026-09-10",
   defaultType = "event",
-}: BordioItemModalProps) {
-  const { items, updateItem, deleteItem, addItem } = useBordioStore();
+}: CalendarItemModalProps) {
+  const { items, updateItem, deleteItem, addItem } = useCalendarStore();
   const { orgProfile } = useRecruiterStore();
 
   const currentItem = itemId ? items.find((i) => i.id === itemId) : null;
@@ -49,22 +46,20 @@ export function BordioItemModal({
 
   // Form State
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<BordioItemType>(defaultType);
+  const [type, setType] = useState<CalendarItemType>(defaultType);
   const [date, setDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState("11:00");
   const [endTime, setEndTime] = useState("12:00");
-  const [locationType, setLocationType] = useState("Location");
   const [locationValue, setLocationValue] = useState("");
   const [agenda, setAgenda] = useState("");
   const [workspace, setWorkspace] = useState("Personal Workspace");
   const [eventType, setEventType] = useState("Meeting");
   const [repeats, setRepeats] = useState(false);
-  const [themeColor, setThemeColor] = useState<BordioColorTheme>("teal");
+  const [themeColor, setThemeColor] = useState<CalendarColorTheme>("teal");
   const [participants, setParticipants] = useState<string[]>(["Me"]);
   const [newParticipantInput, setNewParticipantInput] = useState("");
   const [showAddParticipant, setShowAddParticipant] = useState(false);
 
-  // Sync state when modal opens or item changes
   useEffect(() => {
     if (currentItem) {
       setTitle(currentItem.title || "");
@@ -165,7 +160,7 @@ export function BordioItemModal({
         className="w-full max-w-2xl bg-[#1e2227] border border-[#2e333d] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Top Header (Matching Screenshot 1) */}
+        {/* Modal Top Header */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-[#2b3039]">
           <h2 className="text-lg font-black text-white tracking-tight">
             {isEditing ? (type === "event" ? "Edit event" : "Edit task") : type === "event" ? "Create event" : "Create task"}
@@ -195,13 +190,12 @@ export function BordioItemModal({
           </div>
         </div>
 
-        {/* Modal Body: Split into Left Form & Right Meta Column */}
+        {/* Modal Body: Left Form & Right Meta Column */}
         <form onSubmit={handleSubmit} className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Left Column (Primary Inputs) */}
+          {/* Left Column */}
           <div className="flex-1 p-6 space-y-4 overflow-y-auto">
             {/* Date & Time Row */}
             <div className="flex items-center gap-2.5 flex-wrap">
-              {/* Date button / pill */}
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-bold text-ink">
                 <CalendarIcon className="w-3.5 h-3.5 text-ink-soft" />
                 <input
@@ -212,7 +206,6 @@ export function BordioItemModal({
                 />
               </div>
 
-              {/* Time Range */}
               <div className="flex items-center gap-1.5">
                 <input
                   type="time"
@@ -230,7 +223,7 @@ export function BordioItemModal({
               </div>
             </div>
 
-            {/* Event Name Input with blue focus border */}
+            {/* Event Name Input */}
             <div className="space-y-1">
               <input
                 type="text"
@@ -243,7 +236,7 @@ export function BordioItemModal({
               />
             </div>
 
-            {/* Location Row with Dropdown & Input */}
+            {/* Location Row */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-semibold text-ink-soft shrink-0">
                 <MapPin className="w-3.5 h-3.5 text-ink-soft" />
@@ -260,7 +253,7 @@ export function BordioItemModal({
               />
             </div>
 
-            {/* Event Agenda / Description Textarea */}
+            {/* Event Agenda Textarea */}
             <div className="space-y-1">
               <textarea
                 rows={5}
@@ -271,7 +264,7 @@ export function BordioItemModal({
               />
             </div>
 
-            {/* Bottom Actions Row: Cancel & Create event */}
+            {/* Bottom Actions */}
             <div className="flex items-center justify-between pt-3 border-t border-[#2b3039]">
               {isEditing ? (
                 <button
@@ -305,9 +298,9 @@ export function BordioItemModal({
             </div>
           </div>
 
-          {/* Right Column (Sidebar Meta matching Screenshot 1) */}
+          {/* Right Column */}
           <div className="w-full md:w-56 bg-[#181a1f] border-t md:border-t-0 md:border-l border-[#2b3039] p-5 space-y-5 text-xs">
-            {/* Create in (Workspace) */}
+            {/* Create in */}
             <div className="space-y-1.5">
               <span className="text-[11px] font-bold text-ink-soft/70">Create in</span>
               <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#242931] border border-[#313743]">
@@ -352,7 +345,7 @@ export function BordioItemModal({
                   <button
                     key={c.key}
                     type="button"
-                    onClick={() => setThemeColor(c.key as BordioColorTheme)}
+                    onClick={() => setThemeColor(c.key as CalendarColorTheme)}
                     className={`w-6 h-6 rounded-lg ${c.bg} border transition flex items-center justify-center cursor-pointer ${
                       themeColor === c.key ? "border-white ring-2 ring-white/30" : "border-transparent"
                     }`}

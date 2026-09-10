@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { BordioPlanner } from "@/components/bordio/BordioPlanner";
+import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 
 export default function WorkforceCalendarPage() {
   return (
-    <BordioPlanner
+    <CalendarWorkspace
       title="Workforce Calendar & Day Planner"
       subtitle="Unified daily & weekly schedules, corporate events, and team capacity tracking."
       badgeLabel="Workforce Calendar"
