@@ -42,6 +42,13 @@ const COUNTRY_CODES = [
   { code: "+65", country: "SG" },
 ];
 
+const rawGoogleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const hasValidGoogleClientId = Boolean(
+  rawGoogleClientId &&
+  !rawGoogleClientId.includes("placeholder") &&
+  rawGoogleClientId.trim().length > 10
+);
+
 export default function AuthPage() {
   const router = useRouter();
   const {
@@ -383,8 +390,8 @@ export default function AuthPage() {
                 </button>
               </div>
 
-              {/* Official Google OAuth Component — hidden for Recruiter signup (OTP-only account creation) */}
-              {!(mode === "signup" && accountRole === "recruiter") && (
+              {/* Official Google OAuth Component — hidden if client ID not configured or recruiter signup */}
+              {hasValidGoogleClientId && !(mode === "signup" && accountRole === "recruiter") && (
                 <>
                   <div className="w-full mb-6">
                     <div className="flex p-1 bg-surface rounded-xl border border-border justify-center">

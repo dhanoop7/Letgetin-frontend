@@ -3,11 +3,20 @@
 import React from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "1234567890-placeholder.apps.googleusercontent.com";
+const rawClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const hasValidClientId = Boolean(
+  rawClientId &&
+  !rawClientId.includes("placeholder") &&
+  rawClientId.trim().length > 10
+);
 
 export function GoogleAuthProvider({ children }: { children: React.ReactNode }) {
+  if (!hasValidClientId) {
+    return <>{children}</>;
+  }
+
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>
+    <GoogleOAuthProvider clientId={rawClientId!}>
       {children}
     </GoogleOAuthProvider>
   );
