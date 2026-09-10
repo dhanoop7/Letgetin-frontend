@@ -78,34 +78,34 @@ export function CalendarDayColumn({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex-1 min-w-[220px] flex flex-col h-full border-r border-[#262a30] transition-colors select-none ${
-        isDragOver ? "bg-[#18202b]/40 ring-1 ring-primary/40" : ""
+      className={`flex-1 min-w-[220px] flex flex-col h-full border-r border-border transition-colors select-none ${
+        isDragOver ? "bg-primary/5 ring-1 ring-primary/40" : ""
       }`}
     >
       {/* Column Header */}
       <div
         onClick={onSelectColumn}
-        className="px-3 pt-2.5 pb-2 flex flex-col cursor-pointer border-b border-[#262a30] group"
+        className="px-3 pt-2.5 pb-2 flex flex-col cursor-pointer border-b border-border group bg-surface/50 hover:bg-surface transition-colors"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 font-bold text-ink">
-            <span className="text-sm sm:text-base font-extrabold">{dayNum}</span>
+            <span className="text-sm sm:text-base font-black">{dayNum}</span>
             <span className="text-xs sm:text-sm font-semibold text-ink-soft">{weekdayLabel}</span>
           </div>
 
           {totalMinutes > 0 && (
-            <span className="text-[11px] font-mono text-ink-soft/70">
+            <span className="text-[11px] font-mono text-ink-soft">
               {timeString}
             </span>
           )}
         </div>
 
-        {/* Active Blue Indicator Underline */}
+        {/* Active Brand Indicator Underline */}
         <div className="pt-1.5 -mb-2">
           {isSelected ? (
-            <div className="h-[2.5px] bg-[#0091ff] rounded-full w-full shadow-sm animate-in fade-in duration-200" />
+            <div className="h-[2.5px] bg-gradient-brand rounded-full w-full shadow-glow animate-in fade-in duration-200" />
           ) : (
-            <div className="h-[2.5px] bg-transparent rounded-full w-full group-hover:bg-[#2e343d]" />
+            <div className="h-[2.5px] bg-transparent rounded-full w-full group-hover:bg-border" />
           )}
         </div>
       </div>
@@ -117,7 +117,7 @@ export function CalendarDayColumn({
         ))}
 
         {dayItems.length === 0 && (
-          <div className="h-28 border border-dashed border-[#2b3038] rounded-2xl flex flex-col items-center justify-center text-center p-3 text-ink-soft/50 text-[11px]">
+          <div className="h-28 border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-3 text-ink-soft/60 text-[11px] bg-surface-alt/20">
             <span>No tasks or events</span>
           </div>
         )}
@@ -127,7 +127,7 @@ export function CalendarDayColumn({
           <button
             type="button"
             onClick={() => onQuickAddTask(dateStr)}
-            className="w-7 h-7 rounded-full border border-[#3b414d] hover:border-[#0091ff] hover:text-[#0091ff] text-ink-soft/80 bg-[#1e2228] flex items-center justify-center transition cursor-pointer shadow-2xs"
+            className="w-7 h-7 rounded-full border border-border hover:border-primary hover:text-primary-glow text-ink-soft bg-surface hover:bg-surface-alt flex items-center justify-center transition cursor-pointer shadow-2xs"
             title="Quick add task"
           >
             <Check className="w-3.5 h-3.5" />
@@ -136,7 +136,7 @@ export function CalendarDayColumn({
           <button
             type="button"
             onClick={() => onQuickAddEvent(dateStr)}
-            className="w-7 h-7 rounded-full border border-[#3b414d] hover:border-[#0091ff] hover:text-[#0091ff] text-ink-soft/80 bg-[#1e2228] flex items-center justify-center transition cursor-pointer shadow-2xs"
+            className="w-7 h-7 rounded-full border border-border hover:border-primary hover:text-primary-glow text-ink-soft bg-surface hover:bg-surface-alt flex items-center justify-center transition cursor-pointer shadow-2xs"
             title="Quick add event"
           >
             <Calendar className="w-3.5 h-3.5" />

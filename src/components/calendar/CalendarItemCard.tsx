@@ -19,40 +19,35 @@ interface CalendarItemCardProps {
 const THEME_STYLES: Record<
   CalendarColorTheme,
   {
-    bg: string;
-    border: string;
-    text: string;
-    hover: string;
-    durationColor: string;
+    leftBar: string;
+    badgeBg: string;
+    badgeText: string;
+    borderAccent: string;
   }
 > = {
   green: {
-    bg: "bg-[#1c4d36]",
-    border: "border-[#276749]/60",
-    text: "text-white",
-    hover: "hover:bg-[#225e42]",
-    durationColor: "text-emerald-200/80",
+    leftBar: "bg-emerald-500",
+    badgeBg: "bg-emerald-500/10",
+    badgeText: "text-emerald-600 dark:text-emerald-400",
+    borderAccent: "hover:border-emerald-500/40",
   },
   teal: {
-    bg: "bg-[#0c576d]",
-    border: "border-[#12718e]/60",
-    text: "text-white",
-    hover: "hover:bg-[#106b86]",
-    durationColor: "text-cyan-200/80",
+    leftBar: "bg-cyan-500",
+    badgeBg: "bg-cyan-500/10",
+    badgeText: "text-cyan-600 dark:text-cyan-400",
+    borderAccent: "hover:border-cyan-500/40",
   },
   blue: {
-    bg: "bg-[#184e85]",
-    border: "border-[#2268b0]/60",
-    text: "text-white",
-    hover: "hover:bg-[#1e5d9e]",
-    durationColor: "text-blue-200/80",
+    leftBar: "bg-primary",
+    badgeBg: "bg-primary/10",
+    badgeText: "text-primary-glow",
+    borderAccent: "hover:border-primary/40",
   },
   slate: {
-    bg: "bg-[#222831]",
-    border: "border-[#393e46]/60",
-    text: "text-white",
-    hover: "hover:bg-[#2b333e]",
-    durationColor: "text-slate-300/80",
+    leftBar: "bg-slate-400 dark:bg-slate-500",
+    badgeBg: "bg-slate-500/10",
+    badgeText: "text-slate-600 dark:text-slate-400",
+    borderAccent: "hover:border-slate-500/40",
   },
 };
 
@@ -61,16 +56,18 @@ export function CalendarItemCard({ item }: CalendarItemCardProps) {
 
   let themeKey: CalendarColorTheme = item.themeColor || "teal";
   if (!item.themeColor) {
-    if (item.projectId === "growth" || item.projectId === "engineering") {
+    if (item.projectId === "growth" || item.projectId === "recruitment") {
       themeKey = "blue";
-    } else if (item.projectId === "ops" || item.projectId === "campus") {
+    } else if (item.projectId === "ops" || item.projectId === "campus" || item.projectId === "engineering") {
       themeKey = "green";
-    } else {
+    } else if (item.projectId === "funding") {
       themeKey = "teal";
+    } else {
+      themeKey = "slate";
     }
   }
 
-  const theme = THEME_STYLES[themeKey];
+  const theme = THEME_STYLES[themeKey] || THEME_STYLES.teal;
   const isDone = item.status === "done";
   const isEvent = item.type === "event";
 
@@ -88,10 +85,13 @@ export function CalendarItemCard({ item }: CalendarItemCardProps) {
       draggable
       onDragStart={handleDragStart}
       onClick={() => setActiveItemId(item.id)}
-      className={`p-3 rounded-2xl border ${theme.bg} ${theme.border} ${theme.hover} transition-all duration-150 cursor-grab active:cursor-grabbing group shadow-sm flex flex-col justify-between select-none ${
+      className={`p-3 pl-3.5 rounded-2xl bg-surface border border-border ${theme.borderAccent} hover:shadow-md transition-all duration-150 cursor-grab active:cursor-grabbing group shadow-2xs flex flex-col justify-between select-none relative overflow-hidden ${
         isDone ? "opacity-60 saturate-50" : ""
       }`}
     >
+      {/* Left Color Accent Stripe */}
+      <div className={`absolute top-0 bottom-0 left-0 w-1 ${theme.leftBar}`} />
+
       {/* Title with Emoji or Icon */}
       <div className="flex items-start gap-1.5">
         {item.iconEmoji ? (
@@ -99,30 +99,32 @@ export function CalendarItemCard({ item }: CalendarItemCardProps) {
             {item.iconEmoji}
           </span>
         ) : isEvent ? (
-          <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5 opacity-90" />
+          <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5 text-primary-glow" />
         ) : null}
 
-        <h4 className={`text-[12px] font-semibold leading-snug tracking-tight ${theme.text} flex-1`}>
+        <h4 className="text-[12px] font-semibold leading-snug tracking-tight text-ink flex-1">
           {item.title}
         </h4>
       </div>
 
       {/* Sub-row: Duration and event time / meeting tag */}
-      <div className="flex items-center justify-between gap-1 pt-1.5 text-[11px] font-mono">
-        <span className={theme.durationColor}>{durationText}</span>
+      <div className="flex items-center justify-between gap-1 pt-2 text-[11px] font-mono">
+        <span className="text-ink-soft">{durationText}</span>
 
-        {isEvent && item.startTime && (
-          <span className="text-[10px] font-sans bg-black/20 px-1.5 py-0.5 rounded-md text-white/90">
-            {item.startTime} {item.endTime ? `– ${item.endTime}` : ""}
-          </span>
-        )}
+        <div className="flex items-center gap-1 font-sans">
+          {isEvent && item.startTime && (
+            <span className="text-[10px] font-medium bg-surface-alt border border-border/80 px-1.5 py-0.5 rounded-md text-ink-soft">
+              {item.startTime} {item.endTime ? `– ${item.endTime}` : ""}
+            </span>
+          )}
 
-        {item.meetingLink && (
-          <span className="text-[9.5px] font-sans font-bold bg-white/20 px-1.5 py-0.5 rounded text-white flex items-center gap-1">
-            <Video className="w-2.5 h-2.5" />
-            <span>Join</span>
-          </span>
-        )}
+          {item.meetingLink && (
+            <span className="text-[9.5px] font-bold bg-primary/10 border border-primary/20 text-primary-glow px-1.5 py-0.5 rounded-md flex items-center gap-1">
+              <Video className="w-2.5 h-2.5" />
+              <span>Join</span>
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

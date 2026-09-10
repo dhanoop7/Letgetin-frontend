@@ -76,17 +76,17 @@ export function CalendarWaitingList() {
       <button
         type="button"
         onClick={toggleWaitingList}
-        className="hidden lg:flex flex-col items-center gap-2 py-4 px-2 bg-[#16181b] border-r border-[#262a30] hover:bg-[#1e2227] transition text-ink-soft hover:text-white cursor-pointer select-none"
+        className="hidden lg:flex flex-col items-center gap-2 py-4 px-2 bg-surface border-r border-border hover:bg-surface-alt transition text-ink-soft hover:text-ink cursor-pointer select-none"
         title="Open Waiting List (Backlog)"
       >
-        <Inbox className="w-5 h-5 text-[#0091ff]" />
+        <Inbox className="w-5 h-5 text-primary-glow" />
         <span
           className="text-[11px] font-bold tracking-wider uppercase text-center"
           style={{ writingMode: "vertical-rl" }}
         >
           Waiting List
         </span>
-        <span className="w-5 h-5 rounded-full bg-[#0091ff]/20 text-[#0091ff] text-[10px] font-bold flex items-center justify-center">
+        <span className="w-5 h-5 rounded-full bg-primary/15 text-primary-glow text-[10px] font-bold flex items-center justify-center">
           {waitingItems.length}
         </span>
       </button>
@@ -97,16 +97,16 @@ export function CalendarWaitingList() {
     <aside
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className="w-72 sm:w-80 shrink-0 bg-[#16181b] border-r border-[#262a30] flex flex-col h-full overflow-hidden select-none transition-all duration-200"
+      className="w-72 sm:w-80 shrink-0 bg-surface border-r border-border flex flex-col h-full overflow-hidden select-none transition-all duration-200 shadow-2xs"
     >
       {/* Header */}
-      <div className="p-3.5 border-b border-[#262a30] flex items-center justify-between">
+      <div className="p-3.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Inbox className="w-4 h-4 text-[#0091ff]" />
-          <h3 className="text-xs font-bold text-white tracking-wide">
+          <Inbox className="w-4 h-4 text-primary-glow" />
+          <h3 className="text-xs font-bold text-ink tracking-wide">
             Waiting List
           </h3>
-          <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#0091ff]/20 text-[#0091ff]">
+          <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-primary/15 text-primary-glow border border-primary/25">
             {waitingItems.length}
           </span>
         </div>
@@ -114,7 +114,7 @@ export function CalendarWaitingList() {
         <button
           type="button"
           onClick={toggleWaitingList}
-          className="p-1 rounded-lg text-ink-soft hover:text-white hover:bg-[#242931] transition cursor-pointer"
+          className="p-1 rounded-lg text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer"
           title="Collapse Waiting List"
         >
           <span className="text-xs font-bold">✕</span>
@@ -122,7 +122,7 @@ export function CalendarWaitingList() {
       </div>
 
       {/* Quick Add Form */}
-      <div className="p-3 border-b border-[#262a30]">
+      <div className="p-3 border-b border-border">
         {isAdding ? (
           <form onSubmit={handleQuickAdd} className="space-y-2 text-xs">
             <input
@@ -131,13 +131,13 @@ export function CalendarWaitingList() {
               placeholder="What needs to be done?"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-xl bg-[#242931] border border-[#313743] text-white placeholder:text-ink-soft/60 focus:outline-none focus:border-[#0091ff]"
+              className="w-full px-2.5 py-1.5 rounded-xl bg-surface-alt border border-border text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-primary"
             />
             <div className="flex items-center justify-between gap-1">
               <select
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="px-2 py-1 rounded-lg bg-[#242931] border border-[#313743] text-[11px] text-white focus:outline-none"
+                className="px-2 py-1 rounded-lg bg-surface-alt border border-border text-[11px] text-ink focus:outline-none"
               >
                 {DEFAULT_PROJECTS.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -149,7 +149,7 @@ export function CalendarWaitingList() {
               <select
                 value={selectedDuration}
                 onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                className="px-2 py-1 rounded-lg bg-[#242931] border border-[#313743] text-[11px] text-white focus:outline-none"
+                className="px-2 py-1 rounded-lg bg-surface-alt border border-border text-[11px] text-ink focus:outline-none"
               >
                 <option value={15}>15m</option>
                 <option value={30}>30m</option>
@@ -160,7 +160,7 @@ export function CalendarWaitingList() {
 
               <button
                 type="submit"
-                className="px-2.5 py-1 bg-[#0091ff] text-white font-bold rounded-lg text-[11px] cursor-pointer"
+                className="px-2.5 py-1 bg-gradient-brand text-primary-foreground font-bold rounded-lg text-[11px] cursor-pointer shadow-glow"
               >
                 Add
               </button>
@@ -170,7 +170,7 @@ export function CalendarWaitingList() {
           <button
             type="button"
             onClick={() => setIsAdding(true)}
-            className="w-full py-1.5 px-2.5 rounded-xl border border-dashed border-[#313743] text-xs font-semibold text-ink-soft hover:text-white hover:border-[#0091ff] hover:bg-[#242931] transition flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-1.5 px-2.5 rounded-xl border border-dashed border-border text-xs font-semibold text-ink-soft hover:text-primary-glow hover:border-primary hover:bg-surface-alt transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Task to Backlog</span>
@@ -186,10 +186,10 @@ export function CalendarWaitingList() {
             draggable
             onDragStart={(e) => handleDragStart(e, item.id)}
             onClick={() => setActiveItemId(item.id)}
-            className="p-3 rounded-2xl bg-[#1f2329] border border-[#2d333d] hover:border-[#0091ff]/60 hover:bg-[#252a32] transition cursor-grab active:cursor-grabbing text-xs space-y-1.5 group shadow-2xs"
+            className="p-3 rounded-2xl bg-surface-alt/70 hover:bg-surface-alt border border-border hover:border-primary/40 transition cursor-grab active:cursor-grabbing text-xs space-y-1.5 group shadow-2xs"
           >
             <div className="flex items-start justify-between gap-1.5">
-              <div className="flex items-center gap-1.5 font-semibold text-white truncate">
+              <div className="flex items-center gap-1.5 font-semibold text-ink truncate">
                 {item.iconEmoji && <span>{item.iconEmoji}</span>}
                 <span className="truncate">{item.title}</span>
               </div>
@@ -199,9 +199,9 @@ export function CalendarWaitingList() {
             <div className="flex items-center justify-between text-[10px] text-ink-soft pt-1">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                <span>{item.durationMinutes}m</span>
+                <span className="font-mono">{item.durationMinutes}m</span>
               </span>
-              <span className="text-[9.5px] font-bold text-white/70 bg-[#2d333d] px-1.5 py-0.5 rounded">
+              <span className="text-[9.5px] font-medium text-ink-soft bg-surface border border-border px-1.5 py-0.5 rounded">
                 Drag to schedule
               </span>
             </div>
@@ -209,10 +209,10 @@ export function CalendarWaitingList() {
         ))}
 
         {waitingItems.length === 0 && (
-          <div className="h-40 border border-dashed border-[#2b3038] rounded-2xl flex flex-col items-center justify-center text-center p-4 text-ink-soft/50 text-xs">
-            <Inbox className="w-6 h-6 mb-2 opacity-40" />
+          <div className="h-40 border border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center p-4 text-ink-soft/60 text-xs bg-surface-alt/10">
+            <Inbox className="w-6 h-6 mb-2 opacity-40 text-primary-glow" />
             <span>Backlog is empty</span>
-            <span className="text-[10px] mt-1 text-ink-soft/40">
+            <span className="text-[10px] mt-1 text-ink-soft/50">
               Drag unscheduled tasks here
             </span>
           </div>

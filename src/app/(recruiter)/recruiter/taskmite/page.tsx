@@ -1,15 +1,14 @@
 "use client";
 
 import React from "react";
-import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
+import { TaskmiteWorkspace } from "@/components/taskmite/TaskmiteWorkspace";
 
 export default function TaskmitePage() {
   return (
-    <CalendarWorkspace
+    <TaskmiteWorkspace
       title="Taskmite Workspace & Productivity"
       subtitle="Sprint task delegation, backlog waiting list, time estimation, and team capacity planning."
       badgeLabel="Taskmite Productivity"
-      defaultView="week"
     />
   );
 }

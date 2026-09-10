@@ -1,29 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
-import { format, addDays, subDays, startOfWeek, parseISO } from "date-fns";
+import React, { useState, useEffect } from "react";
+import {
+  format,
+  addDays,
+  subDays,
+  startOfWeek,
+  parseISO,
+  addMonths,
+  subMonths,
+} from "date-fns";
 import { CalendarDayColumn } from "./CalendarDayColumn";
+import { CalendarMonthView } from "./CalendarMonthView";
 import { CalendarItemModal } from "./CalendarItemModal";
 import { CalendarDatePickerPopover } from "./CalendarDatePickerPopover";
 import { CalendarWaitingList } from "./CalendarWaitingList";
 import {
   CalendarItem,
-  DEFAULT_PROJECTS,
   useCalendarStore,
 } from "@/features/recruiter/store/useCalendarStore";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import {
   Plus,
-  CalendarDays,
-  CheckSquare,
-  FileText,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   Search,
   Bell,
   X,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 
 export interface CalendarWorkspaceProps {
@@ -45,15 +52,18 @@ export function CalendarWorkspace({
     items,
     selectedDate,
     setSelectedDate,
+    viewMode,
+    setViewMode,
     activeItemId,
     setActiveItemId,
-    toolsTab,
-    setToolsTab,
-    toolsSidebarOpen,
-    toggleToolsSidebar,
     searchQuery,
     setSearchQuery,
+    fetchTasks,
   } = useCalendarStore();
+
+  useEffect(() => {
+    fetchTasks().catch(() => {});
+  }, [fetchTasks]);
 
   const { orgProfile } = useRecruiterStore();
   const { user } = useAuthStore();
@@ -70,26 +80,37 @@ export function CalendarWorkspace({
   // Search input visible state
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Notes state for "Notes" tab
-  const [notesContent, setNotesContent] = useState(
-    "• Candidate review pipeline meeting scheduled for 2:00 PM\n• Finalize Super Dream offer letters for campus drive finalists\n• Seed round data room updates for Peak XV & Lightspeed"
-  );
-
   // Current anchor date calculation
-  const currentAnchor = parseISO(selectedDate || "2026-09-10");
-  const weekStart = startOfWeek(currentAnchor, { weekStartsOn: 3 }); // Wednesday (9 Wed) like Screenshot 2!
-  const displayDays = Array.from({ length: 4 }, (_, i) => addDays(weekStart, i)); // 9 Wed, 10 Thu, 11 Fri, 12 Sat
+  const currentAnchor = parseISO(selectedDate || format(new Date(), "yyyy-MM-dd"));
+  const isMonthMode = viewMode === "month";
+  const isWeekMode = viewMode === "week";
+  const weekStart = startOfWeek(currentAnchor, { weekStartsOn: 1 }); // Monday
+  const displayDays = isWeekMode
+    ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)) // 7 days Mon - Sun
+    : Array.from({ length: 4 }, (_, i) => addDays(currentAnchor, i)); // 4 rolling days starting from current anchor
 
   const monthYearLabel = format(currentAnchor, "MMMM yyyy");
 
   const handlePrevDays = () => {
-    const prev = subDays(currentAnchor, 1);
-    setSelectedDate(format(prev, "yyyy-MM-dd"));
+    if (isMonthMode) {
+      const prev = subMonths(currentAnchor, 1);
+      setSelectedDate(format(prev, "yyyy-MM-dd"));
+    } else {
+      const shift = isWeekMode ? 7 : 1;
+      const prev = subDays(currentAnchor, shift);
+      setSelectedDate(format(prev, "yyyy-MM-dd"));
+    }
   };
 
   const handleNextDays = () => {
-    const next = addDays(currentAnchor, 1);
-    setSelectedDate(format(next, "yyyy-MM-dd"));
+    if (isMonthMode) {
+      const next = addMonths(currentAnchor, 1);
+      setSelectedDate(format(next, "yyyy-MM-dd"));
+    } else {
+      const shift = isWeekMode ? 7 : 1;
+      const next = addDays(currentAnchor, shift);
+      setSelectedDate(format(next, "yyyy-MM-dd"));
+    }
   };
 
   const handleQuickAdd = (type: "task" | "event", dateStr?: string) => {
@@ -100,208 +121,187 @@ export function CalendarWorkspace({
   };
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen bg-[#111315] text-[#f1f3f5] overflow-hidden select-none font-sans">
-      {/* ===== 1. TOOLS SIDEBAR (Screenshot 2 Left Navigation) ===== */}
-      <aside
-        className={`${
-          toolsSidebarOpen ? "w-44" : "w-0"
-        } shrink-0 bg-[#16181b] border-r border-[#262a30] transition-all duration-200 flex flex-col justify-between overflow-hidden`}
-      >
-        <div className="p-3 space-y-4">
-          <div className="px-2 pt-1">
-            <h2 className="text-xs font-bold text-ink-soft/70 uppercase tracking-wider">
-              Tools
-            </h2>
-          </div>
-
-          <nav className="space-y-1">
-            {/* Tasks Tool */}
-            <button
-              type="button"
-              onClick={() => setToolsTab("tasks")}
-              className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
-                toolsTab === "tasks"
-                  ? "bg-[#242931] text-white font-bold"
-                  : "text-ink-soft hover:text-white hover:bg-[#1e2227]"
-              }`}
-            >
-              <CheckSquare className="w-4 h-4 text-ink-soft" />
-              <span>Tasks</span>
-            </button>
-
-            {/* Calendar Tool (Active blue highlight as in Screenshot 2) */}
-            <button
-              type="button"
-              onClick={() => setToolsTab("calendar")}
-              className={`w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2.5 transition cursor-pointer ${
-                toolsTab === "calendar"
-                  ? "bg-[#18314f] text-[#3894ff] border border-[#1f4a7a]/60 shadow-xs"
-                  : "text-ink-soft hover:text-white hover:bg-[#1e2227]"
-              }`}
-            >
-              <CalendarDays className="w-4 h-4 text-[#3894ff]" />
-              <span>Calendar</span>
-            </button>
-
-            {/* Notes Tool */}
-            <button
-              type="button"
-              onClick={() => setToolsTab("notes")}
-              className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition cursor-pointer ${
-                toolsTab === "notes"
-                  ? "bg-[#242931] text-white font-bold"
-                  : "text-ink-soft hover:text-white hover:bg-[#1e2227]"
-              }`}
-            >
-              <FileText className="w-4 h-4 text-ink-soft" />
-              <span>Notes</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* Hide Tools Toggle at Bottom (Screenshot 2: "< Hide tools") */}
-        <div className="p-3 border-t border-[#262a30]">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] lg:h-screen bg-background text-foreground overflow-hidden select-none font-sans">
+      {/* ===== 1. TOP HEADER BAR (+ Add new, Today v, Search, Bell, Avatar) ===== */}
+      <header className="h-14 px-4 sm:px-6 bg-surface border-b border-border flex items-center justify-between shrink-0 relative z-30 shadow-2xs">
+        {/* Left Action Buttons */}
+        <div className="flex items-center gap-2.5">
+          {/* "+ Add new" Brand Gradient Pill Button */}
           <button
             type="button"
-            onClick={toggleToolsSidebar}
-            className="w-full px-2 py-1.5 text-xs text-ink-soft hover:text-white flex items-center gap-2 transition cursor-pointer"
+            onClick={() => handleQuickAdd("event")}
+            className="px-4 py-1.5 rounded-full bg-gradient-brand hover:opacity-95 text-primary-foreground text-xs font-bold flex items-center gap-1.5 shadow-glow transition cursor-pointer"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Hide tools</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add new</span>
           </button>
-        </div>
-      </aside>
 
-      {/* ===== 2. MAIN PLANNER WORKSPACE ===== */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#121417] overflow-hidden">
-        {/* Top Header Bar (Screenshot 2: + Add new, Today v, Search, Bell, Avatar) */}
-        <header className="h-14 px-4 sm:px-6 bg-[#16181b] border-b border-[#262a30] flex items-center justify-between shrink-0 relative z-30">
-          {/* Left Action Buttons */}
-          <div className="flex items-center gap-2.5">
-            {!toolsSidebarOpen && (
+          {/* "Today ∨" Dropdown Button */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setDatePickerOpen(!datePickerOpen)}
+              className="px-3.5 py-1.5 rounded-full bg-surface-alt hover:bg-surface border border-border text-xs font-bold text-ink flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+            >
+              <span>Today</span>
+              {datePickerOpen ? (
+                <ChevronUp className="w-3.5 h-3.5 text-ink-soft" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-ink-soft" />
+              )}
+            </button>
+
+            {/* Dual-Pane Month & Day Grid Popover */}
+            <CalendarDatePickerPopover
+              isOpen={datePickerOpen}
+              onClose={() => setDatePickerOpen(false)}
+              anchorDate={selectedDate}
+              onSelectDate={(newDate) => setSelectedDate(newDate)}
+            />
+          </div>
+        </div>
+
+        {/* Right Controls: Search, Notifications Bell, User Avatar */}
+        <div className="flex items-center gap-2.5">
+          {searchOpen ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-alt border border-border">
+              <Search className="w-3.5 h-3.5 text-ink-soft" />
+              <input
+                type="text"
+                placeholder="Search tasks & events..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none w-36 sm:w-48"
+                autoFocus
+              />
               <button
                 type="button"
-                onClick={toggleToolsSidebar}
-                className="p-1.5 rounded-xl bg-[#242931] border border-[#313743] text-ink-soft hover:text-white transition cursor-pointer mr-1"
-                title="Show tools"
+                onClick={() => setSearchOpen(false)}
+                className="text-ink-soft hover:text-ink"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="w-8 h-8 rounded-full bg-surface-alt hover:bg-surface border border-border text-ink-soft hover:text-ink flex items-center justify-center transition cursor-pointer shadow-2xs"
+              title="Search"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="w-8 h-8 rounded-full bg-surface-alt hover:bg-surface border border-border text-ink-soft hover:text-ink flex items-center justify-center transition cursor-pointer relative shadow-2xs"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+          </button>
+
+          {/* Avatar matching LetGetIn branding */}
+          <div className="w-8 h-8 rounded-full bg-gradient-brand text-primary-foreground flex items-center justify-center text-xs font-black shadow-glow ring-1 ring-primary/20">
+            {user?.fullName?.charAt(0) || "D"}
+          </div>
+        </div>
+      </header>
+
+      {/* ===== 2. MAIN PLANNER WORKSPACE (Waiting List + Day Columns) ===== */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Collapsible Backlog / Waiting List */}
+        <CalendarWaitingList />
+
+        {/* Day Columns Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
+          {/* Date Strip Header: Month/Year, Navigation, Today Jump, and View Mode */}
+          <div className="px-4 py-2 bg-surface/70 backdrop-blur-xs border-b border-border flex items-center justify-between shrink-0 gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-ink min-w-[100px]">
+                {monthYearLabel}
+              </span>
+
+              <button
+                type="button"
+                onClick={handlePrevDays}
+                className="p-1 rounded-lg hover:bg-surface-alt text-ink-soft hover:text-ink transition cursor-pointer"
+                title={isWeekMode ? "Previous week" : "Previous day"}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextDays}
+                className="p-1 rounded-lg hover:bg-surface-alt text-ink-soft hover:text-ink transition cursor-pointer"
+                title={isWeekMode ? "Next week" : "Next day"}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
-            )}
 
-            {/* "+ Add new" Bright Blue Pill Button */}
-            <button
-              type="button"
-              onClick={() => handleQuickAdd("event")}
-              className="px-4 py-1.5 rounded-full bg-[#0091ff] hover:bg-[#007fe0] text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add new</span>
-            </button>
-
-            {/* "Today ∨" Dropdown Button */}
-            <div className="relative">
               <button
                 type="button"
-                onClick={() => setDatePickerOpen(!datePickerOpen)}
-                className="px-3.5 py-1.5 rounded-full bg-[#242931] hover:bg-[#2b313b] border border-[#313743] text-xs font-bold text-white flex items-center gap-1.5 transition cursor-pointer"
+                onClick={() => setSelectedDate(format(new Date(), "yyyy-MM-dd"))}
+                className="px-2 py-0.5 text-[11px] font-semibold rounded-md border border-border bg-surface hover:bg-surface-alt text-ink-soft hover:text-ink transition cursor-pointer"
               >
-                <span>Today</span>
-                <ChevronDown className="w-3.5 h-3.5 text-ink-soft" />
+                Today
               </button>
+            </div>
 
-              {/* Dual-Pane Month & Day Grid Popover (Screenshot 3) */}
-              <CalendarDatePickerPopover
-                isOpen={datePickerOpen}
-                onClose={() => setDatePickerOpen(false)}
-                anchorDate={selectedDate}
-                onSelectDate={(newDate) => setSelectedDate(newDate)}
-              />
+            <div className="flex items-center gap-2">
+              {/* View Mode Toggle: Month (Normal Calendar) vs Week (7D) vs 4-Day */}
+              <div className="flex items-center p-0.5 rounded-lg bg-surface-alt border border-border text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("month")}
+                  className={`px-2.5 py-0.5 rounded-md transition cursor-pointer flex items-center gap-1.5 ${
+                    isMonthMode
+                      ? "bg-primary text-primary-foreground font-bold shadow-2xs"
+                      : "text-ink-soft hover:text-ink font-medium"
+                  }`}
+                  title="Normal Calendar (Month Grid)"
+                >
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  <span>Month</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("week")}
+                  className={`px-2.5 py-0.5 rounded-md transition cursor-pointer ${
+                    isWeekMode
+                      ? "bg-primary text-primary-foreground font-bold shadow-2xs"
+                      : "text-ink-soft hover:text-ink font-medium"
+                  }`}
+                >
+                  Week (7D)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("day")}
+                  className={`px-2.5 py-0.5 rounded-md transition cursor-pointer ${
+                    viewMode === "day"
+                      ? "bg-primary text-primary-foreground font-bold shadow-2xs"
+                      : "text-ink-soft hover:text-ink font-medium"
+                  }`}
+                >
+                  4-Day
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Right Controls: Search, Notifications Bell, User Avatar */}
-          <div className="flex items-center gap-2.5">
-            {searchOpen ? (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#242931] border border-[#313743]">
-                <Search className="w-3.5 h-3.5 text-ink-soft" />
-                <input
-                  type="text"
-                  placeholder="Search tasks & events..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-transparent text-xs text-white placeholder:text-ink-soft/60 focus:outline-none w-36 sm:w-48"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setSearchOpen(false)}
-                  className="text-ink-soft hover:text-white"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="w-8 h-8 rounded-full bg-[#242931] hover:bg-[#2b313b] border border-[#313743] text-ink-soft hover:text-white flex items-center justify-center transition cursor-pointer"
-                title="Search"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="w-8 h-8 rounded-full bg-[#242931] hover:bg-[#2b313b] border border-[#313743] text-ink-soft hover:text-white flex items-center justify-center transition cursor-pointer relative"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#0091ff]" />
-            </button>
-
-            {/* Avatar matching screenshot */}
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-sm ring-1 ring-white/20">
-              {user?.fullName?.charAt(0) || "D"}
-            </div>
-          </div>
-        </header>
-
-        {/* ===== 3. BODY: CALENDAR vs TASKS vs NOTES ===== */}
-        {toolsTab === "calendar" && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Date Strip Header: "September 2026" and Navigation Arrows */}
-            <div className="px-4 py-2 bg-[#16181b]/70 border-b border-[#262a30] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-ink-soft">
-                  {monthYearLabel}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={handlePrevDays}
-                  className="p-1 rounded-lg hover:bg-[#242931] text-ink-soft hover:text-white transition cursor-pointer"
-                  title="Previous days"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleNextDays}
-                  className="p-1 rounded-lg hover:bg-[#242931] text-ink-soft hover:text-white transition cursor-pointer"
-                  title="Next days"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Day Columns Grid (Screenshot 2: 9 Wed, 10 Thu, 11 Fri, 12 Sat) */}
-            <main className="flex-1 flex overflow-x-auto overflow-y-hidden bg-[#121417]">
+          {/* Main Planner Content: Month Grid View OR Day Columns Grid */}
+          {isMonthMode ? (
+            <CalendarMonthView
+              anchorDate={currentAnchor}
+              onSelectDate={(dt) => setSelectedDate(dt)}
+              onQuickAddTask={(dt) => handleQuickAdd("task", dt)}
+              onQuickAddEvent={(dt) => handleQuickAdd("event", dt)}
+            />
+          ) : (
+            <main className="flex-1 flex overflow-x-auto overflow-y-hidden bg-background">
               {displayDays.map((d) => {
                 const dateStr = format(d, "yyyy-MM-dd");
                 const dayNum = format(d, "d");
@@ -322,90 +322,11 @@ export function CalendarWorkspace({
                 );
               })}
             </main>
-          </div>
-        )}
-
-        {toolsTab === "tasks" && (
-          <div className="flex-1 flex overflow-hidden">
-            <CalendarWaitingList />
-            <main className="flex-1 p-4 overflow-y-auto bg-[#121417] space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[#262a30]">
-                <div>
-                  <h3 className="text-base font-bold text-white">Task Management & Sprint Backlog</h3>
-                  <p className="text-xs text-ink-soft">Drag items between Waiting List and active scheduled dates.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleQuickAdd("task")}
-                  className="px-3.5 py-1.5 rounded-full bg-[#0091ff] text-white text-xs font-bold flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New Task</span>
-                </button>
-              </div>
-
-              {/* Grouped Tasks by Project */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {DEFAULT_PROJECTS.map((proj) => {
-                  const projItems = items.filter((i) => i.projectId === proj.id);
-                  return (
-                    <div key={proj.id} className="p-4 rounded-2xl bg-[#1a1d22] border border-[#282d36] space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">{proj.name}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${proj.badgeBg} ${proj.badgeText}`}>
-                          {projItems.length}
-                        </span>
-                      </div>
-                      <div className="space-y-1.5 max-h-60 overflow-y-auto scrollbar-thin">
-                        {projItems.map((item) => (
-                          <div
-                            key={item.id}
-                            onClick={() => {
-                              setActiveItemId(item.id);
-                              setModalOpen(true);
-                            }}
-                            className="p-2.5 rounded-xl bg-[#22272f] hover:bg-[#282e37] border border-[#313743] transition cursor-pointer text-xs space-y-1"
-                          >
-                            <div className="font-semibold text-white truncate flex items-center gap-1.5">
-                              {item.iconEmoji && <span>{item.iconEmoji}</span>}
-                              <span>{item.title}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px] text-ink-soft">
-                              <span>{item.date ? item.date : "Waiting list"}</span>
-                              <span>{item.durationMinutes}m</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </main>
-          </div>
-        )}
-
-        {toolsTab === "notes" && (
-          <div className="flex-1 p-6 overflow-y-auto bg-[#121417] max-w-4xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#262a30]">
-              <div>
-                <h3 className="text-base font-bold text-white">Workspace Notes & Meeting Agendas</h3>
-                <p className="text-xs text-ink-soft">Quick scratchpad for candidate interviews, sprint thoughts, and meeting minutes.</p>
-              </div>
-            </div>
-
-            <textarea
-              rows={16}
-              value={notesContent}
-              onChange={(e) => setNotesContent(e.target.value)}
-              placeholder="Jot down notes, action items, or agenda topics..."
-              className="w-full p-5 rounded-2xl bg-[#1a1d22] border border-[#282d36] text-xs text-white leading-relaxed font-mono focus:outline-none focus:border-[#0091ff] resize-none"
-            />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* ===== 4. CREATE / EDIT EVENT MODAL (Screenshot 1) ===== */}
+      {/* ===== 3. CREATE / EDIT EVENT & TASK MODAL ===== */}
       <CalendarItemModal
         itemId={activeItemId}
         isOpen={modalOpen || activeItemId !== null}

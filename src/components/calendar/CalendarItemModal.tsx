@@ -155,14 +155,14 @@ export function CalendarItemModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs select-none">
       <div
-        className="w-full max-w-2xl bg-[#1e2227] border border-[#2e333d] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl bg-surface border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Top Header */}
-        <div className="px-6 py-4 flex items-center justify-between border-b border-[#2b3039]">
-          <h2 className="text-lg font-black text-white tracking-tight">
+        <div className="px-6 py-4 flex items-center justify-between border-b border-border bg-surface">
+          <h2 className="text-lg font-black text-ink tracking-tight">
             {isEditing ? (type === "event" ? "Edit event" : "Edit task") : type === "event" ? "Create event" : "Create task"}
           </h2>
 
@@ -172,8 +172,8 @@ export function CalendarItemModal({
               onClick={() => setRepeats(!repeats)}
               className={`text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-xl transition cursor-pointer ${
                 repeats
-                  ? "bg-[#0091ff]/20 text-[#0091ff]"
-                  : "text-ink-soft hover:text-ink hover:bg-[#282d36]"
+                  ? "bg-primary/15 text-primary-glow border border-primary/25 font-bold"
+                  : "text-ink-soft hover:text-ink hover:bg-surface-alt border border-border"
               }`}
             >
               <Repeat className="w-3.5 h-3.5" />
@@ -183,7 +183,7 @@ export function CalendarItemModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-xl text-ink-soft hover:text-ink hover:bg-[#282d36] transition cursor-pointer"
+              className="p-1 rounded-xl text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -191,18 +191,18 @@ export function CalendarItemModal({
         </div>
 
         {/* Modal Body: Left Form & Right Meta Column */}
-        <form onSubmit={handleSubmit} className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-col md:flex-row flex-1 overflow-hidden bg-surface">
           {/* Left Column */}
           <div className="flex-1 p-6 space-y-4 overflow-y-auto">
             {/* Date & Time Row */}
             <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-bold text-ink">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-alt border border-border text-xs font-bold text-ink">
                 <CalendarIcon className="w-3.5 h-3.5 text-ink-soft" />
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="bg-transparent text-white font-medium focus:outline-none cursor-pointer text-xs"
+                  className="bg-transparent text-ink font-medium focus:outline-none cursor-pointer text-xs"
                 />
               </div>
 
@@ -211,14 +211,14 @@ export function CalendarItemModal({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-mono text-white focus:outline-none focus:border-[#0091ff]"
+                  className="px-3 py-1.5 rounded-xl bg-surface-alt border border-border text-xs font-mono text-ink focus:outline-none focus:border-primary"
                 />
                 <span className="text-ink-soft font-bold">–</span>
                 <input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-mono text-white focus:outline-none focus:border-[#0091ff]"
+                  className="px-3 py-1.5 rounded-xl bg-surface-alt border border-border text-xs font-mono text-ink focus:outline-none focus:border-primary"
                 />
               </div>
             </div>
@@ -232,13 +232,13 @@ export function CalendarItemModal({
                 placeholder={type === "event" ? "Event name" : "Task name"}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#262b32] border border-[#353c47] text-sm text-white placeholder:text-ink-soft/60 focus:outline-none focus:border-[#0091ff] focus:ring-1 focus:ring-[#0091ff]"
+                className="w-full px-4 py-2.5 rounded-xl bg-surface-alt border border-border text-sm text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
               />
             </div>
 
             {/* Location Row */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-semibold text-ink-soft shrink-0">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-alt border border-border text-xs font-semibold text-ink-soft shrink-0">
                 <MapPin className="w-3.5 h-3.5 text-ink-soft" />
                 <span>Location</span>
                 <ChevronDown className="w-3 h-3 text-ink-soft/60" />
@@ -249,7 +249,7 @@ export function CalendarItemModal({
                 placeholder="Event location or Google Meet link"
                 value={locationValue}
                 onChange={(e) => setLocationValue(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl bg-[#262b32] border border-[#353c47] text-xs text-white placeholder:text-ink-soft/60 focus:outline-none focus:border-[#0091ff]"
+                className="flex-1 px-3 py-2 rounded-xl bg-surface-alt border border-border text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-primary"
               />
             </div>
 
@@ -260,17 +260,17 @@ export function CalendarItemModal({
                 placeholder="Event agenda"
                 value={agenda}
                 onChange={(e) => setAgenda(e.target.value)}
-                className="w-full p-4 rounded-xl bg-[#262b32] border border-[#353c47] text-xs text-white placeholder:text-ink-soft/60 focus:outline-none focus:border-[#0091ff] resize-none leading-relaxed"
+                className="w-full p-4 rounded-xl bg-surface-alt border border-border text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-primary resize-none leading-relaxed"
               />
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-[#2b3039]">
+            <div className="flex items-center justify-between pt-3 border-t border-border">
               {isEditing ? (
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition cursor-pointer flex items-center gap-1"
+                  className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 px-2.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete</span>
@@ -283,14 +283,14 @@ export function CalendarItemModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-ink-soft hover:text-white transition cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer border border-border"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#0091ff] hover:bg-[#007fe0] text-white text-xs font-bold shadow-md transition cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-gradient-brand hover:opacity-95 text-primary-foreground text-xs font-bold shadow-glow transition cursor-pointer"
                 >
                   {isEditing ? "Save changes" : type === "event" ? "Create event" : "Create task"}
                 </button>
@@ -299,15 +299,15 @@ export function CalendarItemModal({
           </div>
 
           {/* Right Column */}
-          <div className="w-full md:w-56 bg-[#181a1f] border-t md:border-t-0 md:border-l border-[#2b3039] p-5 space-y-5 text-xs">
+          <div className="w-full md:w-56 bg-surface-alt/70 border-t md:border-t-0 md:border-l border-border p-5 space-y-5 text-xs">
             {/* Create in */}
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-ink-soft/70">Create in</span>
-              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#242931] border border-[#313743]">
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-orange-400 to-rose-500 flex items-center justify-center text-[10px] text-white font-bold shrink-0">
+              <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">Create in</span>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface border border-border">
+                <div className="w-5 h-5 rounded-full bg-gradient-brand flex items-center justify-center text-[10px] text-primary-foreground font-bold shrink-0 shadow-2xs">
                   {workspace.charAt(0)}
                 </div>
-                <span className="font-semibold text-white truncate text-xs">
+                <span className="font-semibold text-ink truncate text-xs">
                   {workspace}
                 </span>
               </div>
@@ -315,42 +315,42 @@ export function CalendarItemModal({
 
             {/* Type Selector */}
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-ink-soft/70">Type</span>
-              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#242931] border border-[#313743]">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-600 shrink-0" />
+              <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">Type</span>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface border border-border">
+                <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
                 <select
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
-                  className="bg-transparent text-white font-semibold text-xs focus:outline-none w-full cursor-pointer"
+                  className="bg-transparent text-ink font-semibold text-xs focus:outline-none w-full cursor-pointer"
                 >
-                  <option value="Meeting" className="bg-[#1e2227]">Meeting</option>
-                  <option value="Placement Drive" className="bg-[#1e2227]">Placement Drive</option>
-                  <option value="Candidate Screen" className="bg-[#1e2227]">Candidate Screen</option>
-                  <option value="Sprint Review" className="bg-[#1e2227]">Sprint Review</option>
-                  <option value="Personal Task" className="bg-[#1e2227]">Personal Task</option>
+                  <option value="Meeting">Meeting</option>
+                  <option value="Placement Drive">Placement Drive</option>
+                  <option value="Candidate Screen">Candidate Screen</option>
+                  <option value="Sprint Review">Sprint Review</option>
+                  <option value="Personal Task">Personal Task</option>
                 </select>
               </div>
             </div>
 
             {/* Theme Color Selector */}
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-ink-soft/70">Card Color</span>
+              <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">Card Color</span>
               <div className="flex items-center gap-2">
                 {[
-                  { key: "green", bg: "bg-[#1c4d36]" },
-                  { key: "teal", bg: "bg-[#0c576d]" },
-                  { key: "blue", bg: "bg-[#184e85]" },
-                  { key: "slate", bg: "bg-[#222831]" },
+                  { key: "green", bg: "bg-emerald-500" },
+                  { key: "teal", bg: "bg-cyan-500" },
+                  { key: "blue", bg: "bg-primary" },
+                  { key: "slate", bg: "bg-slate-400 dark:bg-slate-500" },
                 ].map((c) => (
                   <button
                     key={c.key}
                     type="button"
                     onClick={() => setThemeColor(c.key as CalendarColorTheme)}
                     className={`w-6 h-6 rounded-lg ${c.bg} border transition flex items-center justify-center cursor-pointer ${
-                      themeColor === c.key ? "border-white ring-2 ring-white/30" : "border-transparent"
+                      themeColor === c.key ? "border-ink ring-2 ring-primary/40" : "border-transparent"
                     }`}
                   >
-                    {themeColor === c.key && <Check className="w-3 h-3 text-white" />}
+                    {themeColor === c.key && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
                   </button>
                 ))}
               </div>
@@ -358,22 +358,22 @@ export function CalendarItemModal({
 
             {/* Participants */}
             <div className="space-y-2">
-              <span className="text-[11px] font-bold text-ink-soft/70">Participants</span>
+              <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">Participants</span>
 
               <div className="space-y-1.5">
                 {participants.map((p, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <div className="relative">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-600 flex items-center justify-center text-[10px] text-white font-bold">
+                      <div className="w-6 h-6 rounded-full bg-gradient-brand flex items-center justify-center text-[10px] text-primary-foreground font-bold shadow-2xs">
                         {p.charAt(0)}
                       </div>
                       {p === "Me" && (
-                        <div className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-[#0091ff] flex items-center justify-center">
+                        <div className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-primary flex items-center justify-center">
                           <Star className="w-2 h-2 text-white fill-white" />
                         </div>
                       )}
                     </div>
-                    <span className="font-semibold text-white text-xs">{p}</span>
+                    <span className="font-semibold text-ink text-xs">{p}</span>
                   </div>
                 ))}
               </div>
@@ -385,12 +385,12 @@ export function CalendarItemModal({
                     placeholder="Name"
                     value={newParticipantInput}
                     onChange={(e) => setNewParticipantInput(e.target.value)}
-                    className="w-full px-2 py-1 rounded-lg bg-[#242931] border border-[#313743] text-xs text-white focus:outline-none"
+                    className="w-full px-2 py-1 rounded-lg bg-surface border border-border text-xs text-ink focus:outline-none focus:border-primary"
                   />
                   <button
                     type="button"
                     onClick={handleAddParticipant}
-                    className="px-2 py-1 bg-[#0091ff] text-white rounded-lg text-xs font-bold cursor-pointer"
+                    className="px-2.5 py-1 bg-gradient-brand text-primary-foreground rounded-lg text-xs font-bold cursor-pointer shadow-glow"
                   >
                     Add
                   </button>
@@ -399,9 +399,9 @@ export function CalendarItemModal({
                 <button
                   type="button"
                   onClick={() => setShowAddParticipant(true)}
-                  className="text-xs font-semibold text-ink-soft hover:text-white flex items-center gap-1 transition cursor-pointer pt-1"
+                  className="text-xs font-semibold text-primary-glow hover:underline flex items-center gap-1 transition cursor-pointer pt-1"
                 >
-                  <Plus className="w-3.5 h-3.5 text-[#0091ff]" />
+                  <Plus className="w-3.5 h-3.5 text-primary" />
                   <span>Add participants</span>
                 </button>
               )}
