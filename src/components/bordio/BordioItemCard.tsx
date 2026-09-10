@@ -7,13 +7,11 @@ import {
   Clock,
   Video,
   MapPin,
-  ExternalLink,
-  GripVertical,
-  Calendar,
   Sparkles,
 } from "lucide-react";
 import {
   BordioItem,
+  BordioColorTheme,
   DEFAULT_PROJECTS,
   useBordioStore,
 } from "@/features/recruiter/store/useBordioStore";
@@ -22,146 +20,115 @@ interface BordioItemCardProps {
   item: BordioItem;
 }
 
+const THEME_STYLES: Record<
+  BordioColorTheme,
+  {
+    bg: string;
+    border: string;
+    text: string;
+    hover: string;
+    durationColor: string;
+  }
+> = {
+  green: {
+    bg: "bg-[#1c4d36]",
+    border: "border-[#276749]/60",
+    text: "text-white",
+    hover: "hover:bg-[#225e42]",
+    durationColor: "text-emerald-200/80",
+  },
+  teal: {
+    bg: "bg-[#0c576d]",
+    border: "border-[#12718e]/60",
+    text: "text-white",
+    hover: "hover:bg-[#106b86]",
+    durationColor: "text-cyan-200/80",
+  },
+  blue: {
+    bg: "bg-[#184e85]",
+    border: "border-[#2268b0]/60",
+    text: "text-white",
+    hover: "hover:bg-[#1e5d9e]",
+    durationColor: "text-blue-200/80",
+  },
+  slate: {
+    bg: "bg-[#222831]",
+    border: "border-[#393e46]/60",
+    text: "text-white",
+    hover: "hover:bg-[#2b333e]",
+    durationColor: "text-slate-300/80",
+  },
+};
+
 export function BordioItemCard({ item }: BordioItemCardProps) {
   const { toggleItemDone, setActiveItemId } = useBordioStore();
 
-  const project =
-    DEFAULT_PROJECTS.find((p) => p.id === item.projectId) || DEFAULT_PROJECTS[0];
+  // Resolve theme color
+  let themeKey: BordioColorTheme = item.themeColor || "teal";
+  if (!item.themeColor) {
+    if (item.projectId === "growth" || item.projectId === "engineering") {
+      themeKey = "blue";
+    } else if (item.projectId === "ops" || item.projectId === "campus") {
+      themeKey = "green";
+    } else {
+      themeKey = "teal";
+    }
+  }
+
+  const theme = THEME_STYLES[themeKey];
   const isDone = item.status === "done";
   const isEvent = item.type === "event";
+
+  // Duration formatting e.g. 0:30h, 1:15h
+  const hours = Math.floor((item.durationMinutes || 30) / 60);
+  const mins = (item.durationMinutes || 30) % 60;
+  const durationText = `${hours}:${mins < 10 ? `0${mins}` : mins}h`;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", item.id);
     e.dataTransfer.effectAllowed = "move";
   };
 
-  if (isEvent) {
-    return (
-      <div
-        draggable
-        onDragStart={handleDragStart}
-        onClick={() => setActiveItemId(item.id)}
-        className="p-3 rounded-2xl border border-border/80 bg-surface-alt/40 hover:bg-surface-alt hover:border-primary/40 transition-all cursor-grab active:cursor-grabbing group shadow-2xs space-y-2 relative overflow-hidden"
-      >
-        {/* Left Color Accent Bar */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-1"
-          style={{ backgroundColor: project.color }}
-        />
-
-        <div className="pl-1">
-          {/* Time & Meeting Indicator */}
-          <div className="flex items-center justify-between gap-1 text-[10.5px]">
-            <span className="font-extrabold text-primary-glow flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              <span>
-                {item.startTime} {item.endTime ? `– ${item.endTime}` : ""}
-              </span>
-            </span>
-
-            {item.meetingLink && (
-              <a
-                href={item.meetingLink}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 text-[9.5px] font-bold text-primary-glow hover:underline bg-primary/10 px-1.5 py-0.5 rounded-md"
-              >
-                <Video className="w-3 h-3" />
-                <span>Join</span>
-              </a>
-            )}
-          </div>
-
-          <h4 className="text-xs font-bold text-ink leading-snug mt-1 group-hover:text-primary-glow transition-colors">
-            {item.title}
-          </h4>
-
-          {item.location && (
-            <div className="flex items-center gap-1 text-[10px] text-ink-soft mt-1">
-              <MapPin className="w-3 h-3 text-ink-soft" />
-              <span className="truncate">{item.location}</span>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-2 pt-1 mt-1">
-            <span
-              className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${project.badgeBg} ${project.badgeText}`}
-            >
-              {project.name}
-            </span>
-
-            <span className="text-[10px] text-ink-soft truncate max-w-[100px]">
-              {item.assignee.name}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Task Card
   return (
     <div
       draggable
       onDragStart={handleDragStart}
       onClick={() => setActiveItemId(item.id)}
-      className={`p-3 rounded-2xl border transition-all cursor-grab active:cursor-grabbing group hover:shadow-md ${
-        isDone
-          ? "bg-surface-alt/30 border-border/60 opacity-60"
-          : "bg-surface border-border hover:border-primary/40 shadow-2xs"
+      className={`p-3 rounded-2xl border ${theme.bg} ${theme.border} ${theme.hover} transition-all duration-150 cursor-grab active:cursor-grabbing group shadow-sm flex flex-col justify-between select-none ${
+        isDone ? "opacity-60 saturate-50" : ""
       }`}
     >
-      <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleItemDone(item.id);
-          }}
-          className="mt-0.5 text-ink-soft hover:text-primary transition shrink-0 cursor-pointer"
-        >
-          {isDone ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />
-          ) : (
-            <Circle className="w-4 h-4 text-ink-soft hover:text-primary" />
-          )}
-        </button>
+      {/* Title with Emoji or Icon */}
+      <div className="flex items-start gap-1.5">
+        {item.iconEmoji ? (
+          <span className="text-[13px] leading-tight shrink-0 select-none">
+            {item.iconEmoji}
+          </span>
+        ) : isEvent ? (
+          <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5 opacity-90" />
+        ) : null}
 
-        <div className="flex-1 min-w-0">
-          <h4
-            className={`text-xs font-semibold leading-snug break-words group-hover:text-ink transition-colors ${
-              isDone ? "line-through text-ink-soft" : "text-ink"
-            }`}
-          >
-            {item.title}
-          </h4>
+        <h4 className={`text-[12px] font-semibold leading-snug tracking-tight ${theme.text} flex-1`}>
+          {item.title}
+        </h4>
+      </div>
 
-          <div className="flex items-center flex-wrap gap-1.5 mt-2">
-            {/* Project Tag */}
-            <span
-              className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${project.badgeBg} ${project.badgeText}`}
-            >
-              {project.name}
-            </span>
+      {/* Sub-row: Duration and event time / meeting tag */}
+      <div className="flex items-center justify-between gap-1 pt-1.5 text-[11px] font-mono">
+        <span className={theme.durationColor}>{durationText}</span>
 
-            {/* Duration Tag */}
-            <span className="inline-flex items-center gap-1 text-[10px] text-ink-soft font-medium bg-surface-alt px-1.5 py-0.5 rounded-md">
-              <Clock className="w-3 h-3 text-ink-soft" />
-              <span>{item.durationMinutes}m</span>
-            </span>
+        {isEvent && item.startTime && (
+          <span className="text-[10px] font-sans bg-black/20 px-1.5 py-0.5 rounded-md text-white/90">
+            {item.startTime} {item.endTime ? `– ${item.endTime}` : ""}
+          </span>
+        )}
 
-            {/* Subtasks Count */}
-            {item.subtasks.length > 0 && (
-              <span className="text-[10px] text-ink-soft bg-surface-alt px-1.5 py-0.5 rounded-md font-medium">
-                ✓ {item.subtasks.filter((st) => st.completed).length}/
-                {item.subtasks.length}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <GripVertical className="w-3.5 h-3.5 text-ink-soft/30 group-hover:text-ink-soft shrink-0" />
+        {item.meetingLink && (
+          <span className="text-[9.5px] font-sans font-bold bg-white/20 px-1.5 py-0.5 rounded text-white flex items-center gap-1">
+            <Video className="w-2.5 h-2.5" />
+            <span>Join</span>
+          </span>
+        )}
       </div>
     </div>
   );

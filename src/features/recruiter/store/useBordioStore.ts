@@ -3,6 +3,7 @@ import { create } from "zustand";
 export type BordioItemType = "task" | "event";
 export type BordioPriority = "urgent" | "high" | "medium" | "low";
 export type BordioStatus = "todo" | "in_progress" | "done";
+export type BordioColorTheme = "green" | "teal" | "blue" | "slate";
 
 export interface BordioSubtask {
   id: string;
@@ -13,9 +14,15 @@ export interface BordioSubtask {
 export interface BordioProject {
   id: string;
   name: string;
-  color: string; // Tailwind color or hex
+  color: string;
   badgeBg: string;
   badgeText: string;
+}
+
+export interface BordioParticipant {
+  name: string;
+  isMe?: boolean;
+  avatar?: string;
 }
 
 export interface BordioItem {
@@ -24,12 +31,17 @@ export interface BordioItem {
   title: string;
   description?: string;
   date: string | null; // YYYY-MM-DD or null if in Waiting List
-  startTime?: string; // e.g. "10:00 AM"
-  endTime?: string; // e.g. "11:30 AM"
-  durationMinutes: number; // e.g. 30, 45, 60, 90, 120
+  startTime?: string; // e.g. "11:00"
+  endTime?: string; // e.g. "12:00"
+  durationMinutes: number; // e.g. 15, 30, 45, 60, 90
   status: BordioStatus;
   priority: BordioPriority;
   projectId: string;
+  themeColor?: BordioColorTheme;
+  iconEmoji?: string;
+  workspaceName?: string;
+  participants?: BordioParticipant[];
+  repeats?: boolean;
   assignee: {
     name: string;
     avatar?: string;
@@ -98,6 +110,8 @@ const INITIAL_ITEMS: BordioItem[] = [
     status: "todo",
     priority: "high",
     projectId: "campus",
+    themeColor: "teal",
+    iconEmoji: "🤝",
     assignee: { name: "Sarah Johnson", role: "TPO Lead" },
     subtasks: [
       { id: "st-1", title: "Review standard legal terms", completed: true },
@@ -115,21 +129,9 @@ const INITIAL_ITEMS: BordioItem[] = [
     status: "todo",
     priority: "medium",
     projectId: "recruitment",
+    themeColor: "blue",
+    iconEmoji: "💻",
     assignee: { name: "Amal Benny", role: "Tech Lead" },
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "wl-3",
-    type: "task",
-    title: "Design student placement brochure 2026-27 edition",
-    description: "Include placement stats, top visiting companies, and faculty research highlights.",
-    date: null,
-    durationMinutes: 90,
-    status: "todo",
-    priority: "low",
-    projectId: "growth",
-    assignee: { name: "Maya Chen", role: "Designer" },
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
@@ -143,6 +145,8 @@ const INITIAL_ITEMS: BordioItem[] = [
     status: "todo",
     priority: "urgent",
     projectId: "funding",
+    themeColor: "green",
+    iconEmoji: "📊",
     assignee: { name: "Co-Founder", role: "CEO" },
     subtasks: [
       { id: "st-f1", title: "Update ARR churn curves", completed: true },
@@ -151,210 +155,339 @@ const INITIAL_ITEMS: BordioItem[] = [
     createdAt: new Date().toISOString(),
   },
 
-  // --- MONDAY ---
-  {
-    id: "item-mon-1",
-    type: "event",
-    title: "Weekly All-Hands & Sprint Planning",
-    description: "Review recruitment velocity, open requisitions, and weekly team capacity.",
-    date: "2026-09-07",
-    startTime: "09:30 AM",
-    endTime: "10:30 AM",
-    durationMinutes: 60,
-    status: "done",
-    priority: "high",
-    projectId: "ops",
-    assignee: { name: "Alex Rivera", role: "Team Lead" },
-    meetingLink: "https://meet.google.com/abc-defg-hij",
-    location: "Main Boardroom / Virtual",
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "item-mon-2",
-    type: "task",
-    title: "Screen 25 Inbound Applications for SDE-1",
-    description: "Shortlist candidates meeting CGPA > 8.0 criteria and strong React / Node experience.",
-    date: "2026-09-07",
-    durationMinutes: 60,
-    status: "done",
-    priority: "urgent",
-    projectId: "recruitment",
-    assignee: { name: "Sarah Johnson", role: "Recruiter" },
-    subtasks: [
-      { id: "st-m1", title: "Batch export resumes", completed: true },
-      { id: "st-m2", title: "Send assessment links", completed: true },
-    ],
-    createdAt: new Date().toISOString(),
-  },
-
-  // --- TUESDAY ---
-  {
-    id: "item-tue-1",
-    type: "event",
-    title: "Campus Drive Kickoff: Google India Tech Talk",
-    description: "Orientation keynote for 2026 engineering batch in Auditorium 1.",
-    date: "2026-09-08",
-    startTime: "11:00 AM",
-    endTime: "12:30 PM",
-    durationMinutes: 90,
-    status: "done",
-    priority: "urgent",
-    projectId: "campus",
-    assignee: { name: "Dr. Anita Sharma", role: "Dean" },
-    location: "Grand Auditorium",
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "item-tue-2",
-    type: "task",
-    title: "Verify Student Academic Dossiers & Backlog Clearances",
-    description: "Audit CSV registry against university controller of examinations record.",
-    date: "2026-09-08",
-    durationMinutes: 75,
-    status: "done",
-    priority: "high",
-    projectId: "campus",
-    assignee: { name: "Amal Benny", role: "Coordinator" },
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-  },
-
-  // --- WEDNESDAY (TODAY) ---
+  // --- WEDNESDAY (2026-09-09) ---
   {
     id: "item-wed-1",
-    type: "event",
-    title: "Executive Interview Round with Lead Product Architect",
-    description: "Final behavioral & systems architecture review for Finalist candidate Priya Sharma.",
-    date: "2026-09-09",
-    startTime: "02:00 PM",
-    endTime: "03:00 PM",
-    durationMinutes: 60,
-    status: "todo",
-    priority: "urgent",
-    projectId: "recruitment",
-    assignee: { name: "Alex Rivera", role: "Interviewer" },
-    meetingLink: "https://meet.google.com/xyz-uvwx-rst",
-    subtasks: [
-      { id: "st-w1", title: "Review interview questions", completed: true },
-      { id: "st-w2", title: "Submit feedback rubric", completed: false },
-    ],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "item-wed-2",
     type: "task",
-    title: "Publish 4 Job Listings on Campus Portal",
-    description: "GET - DevOps, Frontend React Engineer, Product Analyst, Data Scientist.",
-    date: "2026-09-09",
-    durationMinutes: 45,
-    status: "in_progress",
-    priority: "high",
-    projectId: "recruitment",
-    assignee: { name: "Sarah Johnson", role: "Recruiter" },
-    subtasks: [
-      { id: "st-w3", title: "Draft JD specs", completed: true },
-      { id: "st-w4", title: "Set eligibility cutoffs", completed: true },
-      { id: "st-w5", title: "Publish live", completed: false },
-    ],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "item-wed-3",
-    type: "task",
-    title: "Synchronize Calendar Bookings with TPO Boardroom",
-    description: "Ensure no schedule clashes for tomorrow's visiting corporate interview panels.",
+    title: "Plan your week",
+    description: "Map key milestones, interviews, and sprint goals.",
     date: "2026-09-09",
     durationMinutes: 30,
     status: "todo",
     priority: "medium",
     projectId: "ops",
-    assignee: { name: "Maya Chen", role: "Coordinator" },
+    themeColor: "green",
+    iconEmoji: "🗓️",
+    assignee: { name: "Me" },
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
   {
-    id: "item-wed-startup-1",
-    type: "event",
-    title: "Partner Intro Pitch: Lightspeed India (Seed Fund)",
-    description: "Introductory pitch call with Hemant Mohapatra regarding autonomous agent recruitment architecture.",
+    id: "item-wed-2",
+    type: "task",
+    title: "Download mobile app on your phone",
+    description: "Install LetGetIn mobile suite for instant recruitment alerts.",
     date: "2026-09-09",
-    startTime: "04:30 PM",
-    endTime: "05:15 PM",
+    durationMinutes: 15,
+    status: "todo",
+    priority: "low",
+    projectId: "growth",
+    themeColor: "teal",
+    iconEmoji: "📲",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-wed-3",
+    type: "task",
+    title: "Watch a 2-min video: How to be productive",
+    description: "Quick walkthrough of time blocking and capacity scheduling.",
+    date: "2026-09-09",
+    durationMinutes: 20,
+    status: "todo",
+    priority: "low",
+    projectId: "ops",
+    themeColor: "green",
+    iconEmoji: "🎬",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-wed-4",
+    type: "task",
+    title: "Do a mind sweep: Write down all your to-dos",
+    description: "Capture loose backlog items into Waiting List.",
+    date: "2026-09-09",
     durationMinutes: 45,
     status: "todo",
-    priority: "urgent",
-    projectId: "funding",
-    assignee: { name: "Founding Team", role: "CEO" },
-    meetingLink: "https://meet.google.com/ls-seed-pitch",
-    location: "Virtual Meeting Room",
+    priority: "high",
+    projectId: "ops",
+    themeColor: "green",
+    iconEmoji: "🧠",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-wed-5",
+    type: "task",
+    title: "Connect your Google Calendar",
+    description: "Two-way synchronization for candidate interview invites.",
+    date: "2026-09-09",
+    durationMinutes: 15,
+    status: "todo",
+    priority: "medium",
+    projectId: "recruitment",
+    themeColor: "teal",
+    iconEmoji: "🔗",
+    assignee: { name: "Me" },
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
 
-  // --- THURSDAY ---
+  // --- THURSDAY (2026-09-10 - TODAY) ---
   {
     id: "item-thu-1",
-    type: "event",
-    title: "Deloitte USI Placement Drive: Written Aptitude Test",
-    description: "Online coding test across CS Computer Labs 1, 2, and 3 for 180 shortlisted students.",
+    type: "task",
+    title: "Add birthday & holiday reminders",
+    description: "Keep workforce and team milestones synchronized.",
     date: "2026-09-10",
-    startTime: "10:00 AM",
-    endTime: "12:00 PM",
-    durationMinutes: 120,
+    durationMinutes: 30,
     status: "todo",
-    priority: "urgent",
-    projectId: "campus",
-    assignee: { name: "Amal Benny", role: "TPO" },
-    location: "Computer Labs 1, 2 & 3",
+    priority: "low",
+    projectId: "ops",
+    themeColor: "green",
+    iconEmoji: "🎂",
+    assignee: { name: "Me" },
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
   {
     id: "item-thu-2",
     type: "task",
-    title: "Generate Offer Letters & CTC Breakdown for 12 Finalists",
-    description: "Super Dream category offers (₹24+ LPA) requiring Dean signature & seal.",
+    title: "Create recurring tasks and events",
+    description: "Automate bi-weekly sprint standups and reports.",
     date: "2026-09-10",
-    durationMinutes: 90,
+    durationMinutes: 20,
     status: "todo",
-    priority: "high",
-    projectId: "recruitment",
-    assignee: { name: "Sarah Johnson", role: "TPO Lead" },
+    priority: "medium",
+    projectId: "ops",
+    themeColor: "teal",
+    iconEmoji: "🔁",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-thu-3",
+    type: "task",
+    title: "Set up daily habit reminders",
+    description: "Calendar notifications 10 mins before candidate calls.",
+    date: "2026-09-10",
+    durationMinutes: 15,
+    status: "todo",
+    priority: "low",
+    projectId: "growth",
+    themeColor: "teal",
+    iconEmoji: "🔔",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-thu-4",
+    type: "task",
+    title: "Upload your profile picture",
+    description: "Personalize your recruiter and placement profile avatar.",
+    date: "2026-09-10",
+    durationMinutes: 10,
+    status: "todo",
+    priority: "low",
+    projectId: "growth",
+    themeColor: "teal",
+    iconEmoji: "👤",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-thu-5",
+    type: "task",
+    title: "Operations & team sync",
+    description: "Synchronize weekly placement drive allocations.",
+    date: "2026-09-10",
+    durationMinutes: 25,
+    status: "todo",
+    priority: "medium",
+    projectId: "ops",
+    themeColor: "teal",
+    iconEmoji: "⚙️",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-thu-6",
+    type: "event",
+    title: "Seed Round Partner Intro: Lightspeed India",
+    description: "Introductory pitch call regarding autonomous agent recruitment architecture.",
+    date: "2026-09-10",
+    startTime: "11:00",
+    endTime: "12:00",
+    durationMinutes: 60,
+    status: "todo",
+    priority: "urgent",
+    projectId: "funding",
+    themeColor: "teal",
+    iconEmoji: "🚀",
+    workspaceName: "Personal Workspace",
+    location: "Google Meet",
+    meetingLink: "https://meet.google.com/ls-seed-pitch",
+    participants: [{ name: "Me", isMe: true }, { name: "Hemant M." }],
+    assignee: { name: "Me" },
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
 
-  // --- FRIDAY ---
+  // --- FRIDAY (2026-09-11) ---
   {
     id: "item-fri-1",
-    type: "event",
-    title: "Weekly Recruitment Retrospective & Metrics Review",
-    description: "Analyze candidate pipeline, placement rates, and time-to-hire statistics.",
+    type: "task",
+    title: "Declutter your space",
+    description: "Clean desk and organize drive documentation folders.",
     date: "2026-09-11",
-    startTime: "04:00 PM",
-    endTime: "05:00 PM",
-    durationMinutes: 60,
+    durationMinutes: 30,
     status: "todo",
-    priority: "medium",
+    priority: "low",
     projectId: "ops",
-    assignee: { name: "Alex Rivera", role: "Team Lead" },
-    meetingLink: "https://meet.google.com/ret-rose-pec",
+    themeColor: "blue",
+    iconEmoji: "🏡",
+    assignee: { name: "Me" },
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
   {
     id: "item-fri-2",
     type: "task",
-    title: "Distribute Weekend Prep Guide for Amazon SDE Drive",
-    description: "Share DSA cheat sheet, system design tips, and behavioral STAR framework.",
+    title: "Set your personal and professional goals",
+    description: "Define placement targets and quarter headcount milestones.",
+    date: "2026-09-11",
+    durationMinutes: 30,
+    status: "todo",
+    priority: "high",
+    projectId: "ops",
+    themeColor: "green",
+    iconEmoji: "🎯",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-fri-3",
+    type: "task",
+    title: "Buy a gift for your s/o",
+    description: "Personal reminder.",
+    date: "2026-09-11",
+    durationMinutes: 15,
+    status: "todo",
+    priority: "low",
+    projectId: "growth",
+    themeColor: "blue",
+    iconEmoji: "🎁",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-fri-4",
+    type: "task",
+    title: "Define your key time wasters & distractions and remove them",
+    description: "Audit calendar meetings and streamline candidate review loops.",
     date: "2026-09-11",
     durationMinutes: 45,
     status: "todo",
     priority: "medium",
+    projectId: "ops",
+    themeColor: "green",
+    iconEmoji: "🥞",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-fri-5",
+    type: "event",
+    title: "Google India Super Dream Placement Drive Kickoff",
+    description: "Campus drive presentation in Grand Auditorium.",
+    date: "2026-09-11",
+    startTime: "02:00",
+    endTime: "03:30",
+    durationMinutes: 90,
+    status: "todo",
+    priority: "urgent",
     projectId: "campus",
-    assignee: { name: "Maya Chen", role: "Coordinator" },
+    themeColor: "green",
+    iconEmoji: "🏢",
+    location: "Grand Auditorium",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+
+  // --- SATURDAY (2026-09-12) ---
+  {
+    id: "item-sat-1",
+    type: "task",
+    title: "Create projects for every idea you have and add tasks there",
+    description: "Organize hiring roadmap and campus drive collateral.",
+    date: "2026-09-12",
+    durationMinutes: 30,
+    status: "todo",
+    priority: "medium",
+    projectId: "engineering",
+    themeColor: "green",
+    iconEmoji: "💼",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-sat-2",
+    type: "task",
+    title: "Try home exercising in the morning",
+    description: "30 min workout and stretch routine.",
+    date: "2026-09-12",
+    durationMinutes: 30,
+    status: "todo",
+    priority: "low",
+    projectId: "growth",
+    themeColor: "blue",
+    iconEmoji: "🏋️",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-sat-3",
+    type: "task",
+    title: "Read a book in the evening",
+    description: "Read 2 chapters on high-velocity team leadership.",
+    date: "2026-09-12",
+    durationMinutes: 45,
+    status: "todo",
+    priority: "low",
+    projectId: "growth",
+    themeColor: "blue",
+    iconEmoji: "📕",
+    assignee: { name: "Me" },
+    subtasks: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "item-sat-4",
+    type: "task",
+    title: "Turn on \"Don't disturb mode\" on your phone at night",
+    description: "Sleep hygiene routine.",
+    date: "2026-09-12",
+    durationMinutes: 10,
+    status: "todo",
+    priority: "low",
+    projectId: "ops",
+    themeColor: "green",
+    iconEmoji: "🌙",
+    assignee: { name: "Me" },
     subtasks: [],
     createdAt: new Date().toISOString(),
   },
@@ -370,7 +503,9 @@ interface BordioStore {
   selectedPriority: string | "all";
   hideCompleted: boolean;
   searchQuery: string;
-  activeItemId: string | null; // For modal / drawer
+  activeItemId: string | null;
+  toolsTab: "calendar" | "tasks" | "notes";
+  toolsSidebarOpen: boolean;
 
   // Actions
   setWaitingListOpen: (open: boolean) => void;
@@ -382,6 +517,9 @@ interface BordioStore {
   setHideCompleted: (hide: boolean) => void;
   setSearchQuery: (query: string) => void;
   setActiveItemId: (id: string | null) => void;
+  setToolsTab: (tab: "calendar" | "tasks" | "notes") => void;
+  setToolsSidebarOpen: (open: boolean) => void;
+  toggleToolsSidebar: () => void;
 
   // CRUD
   addItem: (item: Omit<BordioItem, "id" | "createdAt">) => BordioItem;
@@ -394,14 +532,14 @@ interface BordioStore {
   deleteSubtask: (itemId: string, subtaskId: string) => void;
 }
 
-const STORAGE_KEY = "letgetin_planner_items_v1";
+const STORAGE_KEY = "letgetin_planner_items_v2";
 
 function loadSavedItems(): BordioItem[] {
   if (typeof window !== "undefined") {
     try {
       const saved =
         localStorage.getItem(STORAGE_KEY) ||
-        localStorage.getItem("letgetin_bordio_items_v1");
+        localStorage.getItem("letgetin_planner_items_v1");
       if (saved) {
         return JSON.parse(saved);
       }
@@ -414,13 +552,15 @@ export const useBordioStore = create<BordioStore>((set, get) => ({
   items: loadSavedItems(),
   projects: DEFAULT_PROJECTS,
   waitingListOpen: true,
-  selectedDate: "2026-09-09", // Default today
+  selectedDate: "2026-09-10", // Thursday Sep 10, 2026 matching screenshot!
   viewMode: "week",
   selectedProjectId: "all",
   selectedPriority: "all",
   hideCompleted: false,
   searchQuery: "",
   activeItemId: null,
+  toolsTab: "calendar",
+  toolsSidebarOpen: true,
 
   setWaitingListOpen: (open) => set({ waitingListOpen: open }),
   toggleWaitingList: () => set((s) => ({ waitingListOpen: !s.waitingListOpen })),
@@ -431,6 +571,9 @@ export const useBordioStore = create<BordioStore>((set, get) => ({
   setHideCompleted: (hideCompleted) => set({ hideCompleted }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setActiveItemId: (activeItemId) => set({ activeItemId }),
+  setToolsTab: (toolsTab) => set({ toolsTab }),
+  setToolsSidebarOpen: (toolsSidebarOpen) => set({ toolsSidebarOpen }),
+  toggleToolsSidebar: () => set((s) => ({ toolsSidebarOpen: !s.toolsSidebarOpen })),
 
   addItem: (data) => {
     const newItem: BordioItem = {

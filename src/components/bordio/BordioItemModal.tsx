@@ -3,465 +3,416 @@
 import React, { useState, useEffect } from "react";
 import {
   X,
-  Clock,
-  Calendar as CalendarIcon,
-  Video,
-  MapPin,
-  Trash2,
-  CheckCircle2,
-  Circle,
   Plus,
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  Repeat,
+  ChevronDown,
+  UserPlus,
+  Trash2,
+  Check,
+  Star,
   Sparkles,
-  Inbox,
-  Tag,
-  AlertCircle,
-  Users,
 } from "lucide-react";
 import {
   BordioItem,
   BordioItemType,
   BordioPriority,
   BordioStatus,
+  BordioColorTheme,
   DEFAULT_PROJECTS,
   useBordioStore,
 } from "@/features/recruiter/store/useBordioStore";
+import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
 
 interface BordioItemModalProps {
   itemId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  defaultDate?: string;
+  defaultType?: "task" | "event";
 }
 
 export function BordioItemModal({
   itemId,
   isOpen,
   onClose,
+  defaultDate = "2026-09-10",
+  defaultType = "event",
 }: BordioItemModalProps) {
-  const {
-    items,
-    updateItem,
-    deleteItem,
-    addSubtask,
-    toggleSubtask,
-    deleteSubtask,
-  } = useBordioStore();
+  const { items, updateItem, deleteItem, addItem } = useBordioStore();
+  const { orgProfile } = useRecruiterStore();
 
-  const item = items.find((i) => i.id === itemId);
+  const currentItem = itemId ? items.find((i) => i.id === itemId) : null;
+  const isEditing = !!currentItem;
 
+  // Form State
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [type, setType] = useState<BordioItemType>("task");
-  const [status, setStatus] = useState<BordioStatus>("todo");
-  const [priority, setPriority] = useState<BordioPriority>("medium");
-  const [projectId, setProjectId] = useState("recruitment");
-  const [date, setDate] = useState<string | "waiting">("waiting");
-  const [startTime, setStartTime] = useState("10:00 AM");
-  const [endTime, setEndTime] = useState("11:00 AM");
-  const [durationMinutes, setDurationMinutes] = useState(45);
-  const [meetingLink, setMeetingLink] = useState("");
-  const [location, setLocation] = useState("");
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [type, setType] = useState<BordioItemType>(defaultType);
+  const [date, setDate] = useState(defaultDate);
+  const [startTime, setStartTime] = useState("11:00");
+  const [endTime, setEndTime] = useState("12:00");
+  const [locationType, setLocationType] = useState("Location");
+  const [locationValue, setLocationValue] = useState("");
+  const [agenda, setAgenda] = useState("");
+  const [workspace, setWorkspace] = useState("Personal Workspace");
+  const [eventType, setEventType] = useState("Meeting");
+  const [repeats, setRepeats] = useState(false);
+  const [themeColor, setThemeColor] = useState<BordioColorTheme>("teal");
+  const [participants, setParticipants] = useState<string[]>(["Me"]);
+  const [newParticipantInput, setNewParticipantInput] = useState("");
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
 
+  // Sync state when modal opens or item changes
   useEffect(() => {
-    if (item) {
-      setTitle(item.title);
-      setDescription(item.description || "");
-      setType(item.type);
-      setStatus(item.status);
-      setPriority(item.priority);
-      setProjectId(item.projectId);
-      setDate(item.date || "waiting");
-      setStartTime(item.startTime || "10:00 AM");
-      setEndTime(item.endTime || "11:00 AM");
-      setDurationMinutes(item.durationMinutes || 45);
-      setMeetingLink(item.meetingLink || "");
-      setLocation(item.location || "");
-      setNewSubtaskTitle("");
+    if (currentItem) {
+      setTitle(currentItem.title || "");
+      setType(currentItem.type || "event");
+      setDate(currentItem.date || defaultDate);
+      setStartTime(currentItem.startTime || "11:00");
+      setEndTime(currentItem.endTime || "12:00");
+      setLocationValue(currentItem.location || currentItem.meetingLink || "");
+      setAgenda(currentItem.description || "");
+      setWorkspace(currentItem.workspaceName || (orgProfile?.name ? `${orgProfile.name} Workspace` : "Personal Workspace"));
+      setThemeColor(currentItem.themeColor || "teal");
+      setRepeats(!!currentItem.repeats);
+      if (currentItem.participants?.length) {
+        setParticipants(currentItem.participants.map((p) => p.name));
+      } else {
+        setParticipants(["Me"]);
+      }
+    } else {
+      setTitle("");
+      setType(defaultType);
+      setDate(defaultDate);
+      setStartTime("11:00");
+      setEndTime("12:00");
+      setLocationValue("");
+      setAgenda("");
+      setWorkspace(orgProfile?.name ? `${orgProfile.name} Workspace` : "Personal Workspace");
+      setEventType("Meeting");
+      setThemeColor("teal");
+      setRepeats(false);
+      setParticipants(["Me"]);
     }
-  }, [item]);
+  }, [currentItem, isOpen, defaultDate, defaultType, orgProfile]);
 
-  if (!isOpen || !item) return null;
+  if (!isOpen) return null;
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    updateItem(item.id, {
-      title: title.trim(),
-      description: description.trim(),
-      type,
-      status,
-      priority,
-      projectId,
-      date: date === "waiting" ? null : date,
-      startTime: type === "event" ? startTime : undefined,
-      endTime: type === "event" ? endTime : undefined,
-      durationMinutes: Number(durationMinutes),
-      meetingLink: meetingLink.trim() || undefined,
-      location: location.trim() || undefined,
-    });
+    if (isEditing && itemId) {
+      updateItem(itemId, {
+        title: title.trim(),
+        type,
+        date: date || null,
+        startTime,
+        endTime,
+        location: locationValue,
+        description: agenda,
+        workspaceName: workspace,
+        themeColor,
+        repeats,
+        participants: participants.map((name) => ({ name, isMe: name === "Me" })),
+      });
+    } else {
+      addItem({
+        title: title.trim(),
+        type,
+        date: date || null,
+        startTime,
+        endTime,
+        durationMinutes: 60,
+        status: "todo",
+        priority: "medium",
+        projectId: "recruitment",
+        themeColor,
+        iconEmoji: type === "event" ? "📅" : "📝",
+        location: locationValue,
+        description: agenda,
+        workspaceName: workspace,
+        repeats,
+        participants: participants.map((name) => ({ name, isMe: name === "Me" })),
+        assignee: { name: "Me" },
+        subtasks: [],
+      });
+    }
 
     onClose();
   };
 
   const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this item?")) {
-      deleteItem(item.id);
+    if (itemId) {
+      deleteItem(itemId);
       onClose();
     }
   };
 
-  const handleAddSub = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSubtaskTitle.trim()) return;
-    addSubtask(item.id, newSubtaskTitle.trim());
-    setNewSubtaskTitle("");
+  const handleAddParticipant = () => {
+    if (newParticipantInput.trim()) {
+      setParticipants([...participants, newParticipantInput.trim()]);
+      setNewParticipantInput("");
+      setShowAddParticipant(false);
+    }
   };
 
-  const project =
-    DEFAULT_PROJECTS.find((p) => p.id === projectId) || DEFAULT_PROJECTS[0];
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs select-none">
       <div
-        className="w-full max-w-lg bg-surface border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-2xl bg-[#1e2227] border border-[#2e333d] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
-          {/* Type Toggle: Task vs Event */}
-          <div className="flex items-center gap-1 p-1 rounded-2xl bg-surface-alt border border-border/80">
-            <button
-              type="button"
-              onClick={() => setType("task")}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                type === "task"
-                  ? "bg-gradient-brand text-primary-foreground shadow-glow"
-                  : "text-ink-soft hover:text-ink"
-              }`}
-            >
-              Task
-            </button>
-            <button
-              type="button"
-              onClick={() => setType("event")}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                type === "event"
-                  ? "bg-gradient-brand text-primary-foreground shadow-glow"
-                  : "text-ink-soft hover:text-ink"
-              }`}
-            >
-              Calendar Event
-            </button>
-          </div>
+        {/* Modal Top Header (Matching Screenshot 1) */}
+        <div className="px-6 py-4 flex items-center justify-between border-b border-[#2b3039]">
+          <h2 className="text-lg font-black text-white tracking-tight">
+            {isEditing ? (type === "event" ? "Edit event" : "Edit task") : type === "event" ? "Create event" : "Create task"}
+          </h2>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={handleDelete}
-              className="p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
-              title="Delete Item"
+              onClick={() => setRepeats(!repeats)}
+              className={`text-xs font-semibold flex items-center gap-1.5 px-2.5 py-1 rounded-xl transition cursor-pointer ${
+                repeats
+                  ? "bg-[#0091ff]/20 text-[#0091ff]"
+                  : "text-ink-soft hover:text-ink hover:bg-[#282d36]"
+              }`}
             >
-              <Trash2 className="w-4 h-4" />
+              <Repeat className="w-3.5 h-3.5" />
+              <span>{repeats ? "Repeats active" : "Set repeats"}</span>
             </button>
+
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer"
+              className="p-1 rounded-xl text-ink-soft hover:text-ink hover:bg-[#282d36] transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Scrollable Form Body */}
-        <form
-          onSubmit={handleSave}
-          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 scrollbar-thin"
-        >
-          {/* Title Input */}
-          <div className="space-y-1">
-            <input
-              type="text"
-              required
-              placeholder={
-                type === "task"
-                  ? "Task title (e.g. Screen resume batch)"
-                  : "Event title (e.g. Technical Interview Round)"
-              }
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-base sm:text-lg font-bold text-ink bg-transparent border-b border-border/80 pb-2 focus:outline-none focus:border-primary placeholder:text-ink-soft/50"
-            />
-          </div>
-
-          {/* Quick Schedule Grid: Date & Time/Duration */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-surface-alt/50 border border-border">
-            {/* Scheduling Date */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
-                <CalendarIcon className="w-3.5 h-3.5 text-primary-glow" />
-                <span>Date / Placement</span>
-              </label>
-              <select
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-xs text-ink font-semibold focus:outline-none focus:border-primary"
-              >
-                <option value="waiting">📥 Waiting List (Unscheduled)</option>
-                <option value="2026-09-07">Mon, Sep 7, 2026</option>
-                <option value="2026-09-08">Tue, Sep 8, 2026</option>
-                <option value="2026-09-09">Wed, Sep 9, 2026 (Today)</option>
-                <option value="2026-09-10">Thu, Sep 10, 2026</option>
-                <option value="2026-09-11">Fri, Sep 11, 2026</option>
-                <option value="2026-09-12">Sat, Sep 12, 2026</option>
-                <option value="2026-09-13">Sun, Sep 13, 2026</option>
-              </select>
-            </div>
-
-            {/* Time or Duration */}
-            {type === "task" ? (
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-primary-glow" />
-                  <span>Estimated Duration</span>
-                </label>
-                <select
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-xs text-ink font-semibold focus:outline-none focus:border-primary"
-                >
-                  <option value={15}>15 minutes</option>
-                  <option value={30}>30 minutes</option>
-                  <option value={45}>45 minutes</option>
-                  <option value={60}>1 hour</option>
-                  <option value={90}>1.5 hours</option>
-                  <option value={120}>2 hours</option>
-                  <option value={180}>3 hours</option>
-                  <option value={240}>4 hours</option>
-                </select>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Meeting Time Slot</span>
-                </label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    placeholder="09:30 AM"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-1/2 px-2.5 py-2 rounded-xl bg-surface border border-border text-xs text-ink font-semibold focus:outline-none focus:border-primary"
-                  />
-                  <span className="text-xs text-ink-soft">–</span>
-                  <input
-                    type="text"
-                    placeholder="10:30 AM"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-1/2 px-2.5 py-2 rounded-xl bg-surface border border-border text-xs text-ink font-semibold focus:outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Project Tag & Priority */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-ink-soft">
-                Project / Category
-              </label>
-              <select
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-xs text-ink font-semibold focus:outline-none focus:border-primary"
-              >
-                {DEFAULT_PROJECTS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-ink-soft">
-                Priority
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as BordioPriority)}
-                className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-xs text-ink font-semibold focus:outline-none focus:border-primary capitalize"
-              >
-                <option value="urgent">🔴 Urgent</option>
-                <option value="high">🟠 High</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🔵 Low</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Status (For Tasks) */}
-          {type === "task" && (
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-ink-soft">Status</label>
-              <div className="flex items-center gap-2">
-                {(["todo", "in_progress", "done"] as BordioStatus[]).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStatus(s)}
-                    className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold border transition cursor-pointer capitalize ${
-                      status === s
-                        ? "bg-primary/15 text-primary-glow border-primary/40 shadow-xs"
-                        : "bg-surface-alt/40 border-border text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {s.replace("_", " ")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Event-Specific Fields: Virtual link & Location */}
-          {type === "event" && (
-            <div className="space-y-3 p-3.5 rounded-2xl bg-surface-alt/40 border border-border">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
-                  <Video className="w-3.5 h-3.5 text-primary-glow" />
-                  <span>Video Meeting Link (Google Meet / Zoom)</span>
-                </label>
+        {/* Modal Body: Split into Left Form & Right Meta Column */}
+        <form onSubmit={handleSubmit} className="flex flex-col md:flex-row flex-1 overflow-hidden">
+          {/* Left Column (Primary Inputs) */}
+          <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+            {/* Date & Time Row */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {/* Date button / pill */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-bold text-ink">
+                <CalendarIcon className="w-3.5 h-3.5 text-ink-soft" />
                 <input
-                  type="url"
-                  placeholder="https://meet.google.com/..."
-                  value={meetingLink}
-                  onChange={(e) => setMeetingLink(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-xs text-ink focus:outline-none focus:border-primary"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="bg-transparent text-white font-medium focus:outline-none cursor-pointer text-xs"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-ink-soft" />
-                  <span>Location / Auditorium</span>
-                </label>
+              {/* Time Range */}
+              <div className="flex items-center gap-1.5">
                 <input
-                  type="text"
-                  placeholder="e.g. Auditorium 1 / Boardroom B"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-xs text-ink focus:outline-none focus:border-primary"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-mono text-white focus:outline-none focus:border-[#0091ff]"
+                />
+                <span className="text-ink-soft font-bold">–</span>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-mono text-white focus:outline-none focus:border-[#0091ff]"
                 />
               </div>
             </div>
-          )}
 
-          {/* Subtasks Checklist */}
-          <div className="space-y-2 pt-1 border-t border-border/70">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-ink">Subtasks / Checklist</span>
-              {item.subtasks.length > 0 && (
-                <span className="text-[11px] font-semibold text-ink-soft">
-                  {item.subtasks.filter((st) => st.completed).length} of{" "}
-                  {item.subtasks.length} done
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              {item.subtasks.map((st) => (
-                <div
-                  key={st.id}
-                  className="flex items-center justify-between gap-2 p-2 rounded-xl bg-surface-alt/50 border border-border group"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleSubtask(item.id, st.id)}
-                    className="flex items-center gap-2 flex-1 text-left cursor-pointer"
-                  >
-                    {st.completed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-500/20 shrink-0" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-ink-soft shrink-0" />
-                    )}
-                    <span
-                      className={`text-xs ${
-                        st.completed
-                          ? "line-through text-ink-soft"
-                          : "text-ink font-medium"
-                      }`}
-                    >
-                      {st.title}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => deleteSubtask(item.id, st.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-ink-soft hover:text-rose-500 transition"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add Subtask Input */}
-            <div className="flex items-center gap-2 pt-1">
+            {/* Event Name Input with blue focus border */}
+            <div className="space-y-1">
               <input
                 type="text"
-                placeholder="Add a step / checklist item..."
-                value={newSubtaskTitle}
-                onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddSub(e);
-                  }
-                }}
-                className="flex-1 px-3 py-1.5 rounded-xl bg-surface-alt border border-border text-xs text-ink focus:outline-none focus:border-primary"
+                required
+                autoFocus
+                placeholder={type === "event" ? "Event name" : "Task name"}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-[#262b32] border border-[#353c47] text-sm text-white placeholder:text-ink-soft/60 focus:outline-none focus:border-[#0091ff] focus:ring-1 focus:ring-[#0091ff]"
               />
-              <button
-                type="button"
-                onClick={handleAddSub}
-                className="px-3 py-1.5 rounded-xl bg-surface border border-border hover:bg-surface-alt text-xs font-bold text-ink transition cursor-pointer"
-              >
-                Add
-              </button>
+            </div>
+
+            {/* Location Row with Dropdown & Input */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#262b32] border border-[#353c47] text-xs font-semibold text-ink-soft shrink-0">
+                <MapPin className="w-3.5 h-3.5 text-ink-soft" />
+                <span>Location</span>
+                <ChevronDown className="w-3 h-3 text-ink-soft/60" />
+              </div>
+
+              <input
+                type="text"
+                placeholder="Event location or Google Meet link"
+                value={locationValue}
+                onChange={(e) => setLocationValue(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-xl bg-[#262b32] border border-[#353c47] text-xs text-white placeholder:text-ink-soft/60 focus:outline-none focus:border-[#0091ff]"
+              />
+            </div>
+
+            {/* Event Agenda / Description Textarea */}
+            <div className="space-y-1">
+              <textarea
+                rows={5}
+                placeholder="Event agenda"
+                value={agenda}
+                onChange={(e) => setAgenda(e.target.value)}
+                className="w-full p-4 rounded-xl bg-[#262b32] border border-[#353c47] text-xs text-white placeholder:text-ink-soft/60 focus:outline-none focus:border-[#0091ff] resize-none leading-relaxed"
+              />
+            </div>
+
+            {/* Bottom Actions Row: Cancel & Create event */}
+            <div className="flex items-center justify-between pt-3 border-t border-[#2b3039]">
+              {isEditing ? (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition cursor-pointer flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-ink-soft hover:text-white transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-[#0091ff] hover:bg-[#007fe0] text-white text-xs font-bold shadow-md transition cursor-pointer"
+                >
+                  {isEditing ? "Save changes" : type === "event" ? "Create event" : "Create task"}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Description Notes */}
-          <div className="space-y-1 pt-1 border-t border-border/70">
-            <label className="text-xs font-bold text-ink">Description & Notes</label>
-            <textarea
-              rows={3}
-              placeholder="Add details, instructions, agenda, or reference links..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-3 rounded-2xl bg-surface-alt border border-border text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-primary resize-none"
-            />
-          </div>
+          {/* Right Column (Sidebar Meta matching Screenshot 1) */}
+          <div className="w-full md:w-56 bg-[#181a1f] border-t md:border-t-0 md:border-l border-[#2b3039] p-5 space-y-5 text-xs">
+            {/* Create in (Workspace) */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-ink-soft/70">Create in</span>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#242931] border border-[#313743]">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-orange-400 to-rose-500 flex items-center justify-center text-[10px] text-white font-bold shrink-0">
+                  {workspace.charAt(0)}
+                </div>
+                <span className="font-semibold text-white truncate text-xs">
+                  {workspace}
+                </span>
+              </div>
+            </div>
 
-          {/* Modal Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-ink-soft hover:text-ink hover:bg-surface-alt transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:opacity-95 transition cursor-pointer"
-            >
-              Save Changes
-            </button>
+            {/* Type Selector */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-ink-soft/70">Type</span>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#242931] border border-[#313743]">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-600 shrink-0" />
+                <select
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                  className="bg-transparent text-white font-semibold text-xs focus:outline-none w-full cursor-pointer"
+                >
+                  <option value="Meeting" className="bg-[#1e2227]">Meeting</option>
+                  <option value="Placement Drive" className="bg-[#1e2227]">Placement Drive</option>
+                  <option value="Candidate Screen" className="bg-[#1e2227]">Candidate Screen</option>
+                  <option value="Sprint Review" className="bg-[#1e2227]">Sprint Review</option>
+                  <option value="Personal Task" className="bg-[#1e2227]">Personal Task</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Theme Color Selector */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-ink-soft/70">Card Color</span>
+              <div className="flex items-center gap-2">
+                {[
+                  { key: "green", bg: "bg-[#1c4d36]" },
+                  { key: "teal", bg: "bg-[#0c576d]" },
+                  { key: "blue", bg: "bg-[#184e85]" },
+                  { key: "slate", bg: "bg-[#222831]" },
+                ].map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setThemeColor(c.key as BordioColorTheme)}
+                    className={`w-6 h-6 rounded-lg ${c.bg} border transition flex items-center justify-center cursor-pointer ${
+                      themeColor === c.key ? "border-white ring-2 ring-white/30" : "border-transparent"
+                    }`}
+                  >
+                    {themeColor === c.key && <Check className="w-3 h-3 text-white" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Participants */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-ink-soft/70">Participants</span>
+
+              <div className="space-y-1.5">
+                {participants.map((p, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-600 flex items-center justify-center text-[10px] text-white font-bold">
+                        {p.charAt(0)}
+                      </div>
+                      {p === "Me" && (
+                        <div className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-[#0091ff] flex items-center justify-center">
+                          <Star className="w-2 h-2 text-white fill-white" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-semibold text-white text-xs">{p}</span>
+                  </div>
+                ))}
+              </div>
+
+              {showAddParticipant ? (
+                <div className="flex items-center gap-1.5 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={newParticipantInput}
+                    onChange={(e) => setNewParticipantInput(e.target.value)}
+                    className="w-full px-2 py-1 rounded-lg bg-[#242931] border border-[#313743] text-xs text-white focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddParticipant}
+                    className="px-2 py-1 bg-[#0091ff] text-white rounded-lg text-xs font-bold cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAddParticipant(true)}
+                  className="text-xs font-semibold text-ink-soft hover:text-white flex items-center gap-1 transition cursor-pointer pt-1"
+                >
+                  <Plus className="w-3.5 h-3.5 text-[#0091ff]" />
+                  <span>Add participants</span>
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>

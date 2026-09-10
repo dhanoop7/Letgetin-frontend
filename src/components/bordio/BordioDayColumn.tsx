@@ -2,12 +2,9 @@
 
 import React, { useState } from "react";
 import {
+  Check,
+  Calendar,
   Plus,
-  Clock,
-  CheckCircle2,
-  CalendarDays,
-  Sparkles,
-  AlertTriangle,
 } from "lucide-react";
 import {
   BordioItem,
@@ -17,18 +14,22 @@ import { BordioItemCard } from "./BordioItemCard";
 
 interface BordioDayColumnProps {
   dateStr: string; // YYYY-MM-DD
-  dayLabel: string; // e.g. "Mon"
-  dayNum: string; // e.g. "07"
-  isToday: boolean;
-  onQuickAdd: (dateStr: string, type: "task" | "event") => void;
+  dayNum: string; // e.g. "9", "10"
+  weekdayLabel: string; // e.g. "Wed", "Thu"
+  isSelected: boolean;
+  onSelectColumn: () => void;
+  onQuickAddTask: (dateStr: string) => void;
+  onQuickAddEvent: (dateStr: string) => void;
 }
 
 export function BordioDayColumn({
   dateStr,
-  dayLabel,
   dayNum,
-  isToday,
-  onQuickAdd,
+  weekdayLabel,
+  isSelected,
+  onSelectColumn,
+  onQuickAddTask,
+  onQuickAddEvent,
 }: BordioDayColumnProps) {
   const { items, moveItemDate, hideCompleted, selectedProjectId, selectedPriority, searchQuery } =
     useBordioStore();
@@ -50,19 +51,11 @@ export function BordioDayColumn({
     return true;
   });
 
-  const events = dayItems.filter((item) => item.type === "event");
-  const tasks = dayItems.filter((item) => item.type === "task");
-
-  // Calculate workload in minutes
+  // Calculate workload in hours & minutes format e.g. 1:15h
   const totalMinutes = dayItems.reduce((acc, item) => acc + (item.durationMinutes || 30), 0);
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-  const timeString = `${hours > 0 ? `${hours}h ` : ""}${mins > 0 ? `${mins}m` : hours === 0 ? "0m" : ""}`;
-
-  // Workload capacity bar (based on standard 8-hour workday = 480 minutes)
-  const capacityPercent = Math.min(100, Math.round((totalMinutes / 480) * 100));
-  const isOverloaded = totalMinutes > 480;
-  const isHeavy = totalMinutes >= 360 && totalMinutes <= 480;
+  const timeString = `${hours}:${mins < 10 ? `0${mins}` : mins}h`;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -88,139 +81,70 @@ export function BordioDayColumn({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex-1 min-w-[240px] flex flex-col h-full bg-surface border rounded-3xl overflow-hidden transition-all duration-200 select-none ${
-        isDragOver
-          ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-          : isToday
-          ? "border-primary/50 shadow-sm"
-          : "border-border"
+      className={`flex-1 min-w-[220px] flex flex-col h-full border-r border-[#262a30] transition-colors select-none ${
+        isDragOver ? "bg-[#18202b]/40 ring-1 ring-primary/40" : ""
       }`}
     >
-      {/* Day Header */}
+      {/* Column Header */}
       <div
-        className={`p-3.5 border-b transition-colors ${
-          isToday
-            ? "bg-primary/10 border-primary/25"
-            : "bg-surface-alt/40 border-border/70"
-        }`}
+        onClick={onSelectColumn}
+        className="px-3 pt-2.5 pb-2 flex flex-col cursor-pointer border-b border-[#262a30] group"
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-sm font-black tracking-tight ${
-                isToday ? "text-primary-glow" : "text-ink"
-              }`}
-            >
-              {dayLabel}
-            </span>
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
-                isToday
-                  ? "bg-gradient-brand text-primary-foreground shadow-glow"
-                  : "bg-surface text-ink-soft border border-border"
-              }`}
-            >
-              {dayNum}
-            </span>
+          <div className="flex items-center gap-1.5 font-bold text-ink">
+            <span className="text-sm sm:text-base font-extrabold">{dayNum}</span>
+            <span className="text-xs sm:text-sm font-semibold text-ink-soft">{weekdayLabel}</span>
           </div>
 
-          <span className="text-[10px] font-bold text-ink-soft bg-surface px-2 py-0.5 rounded-full border border-border">
-            {dayItems.length} {dayItems.length === 1 ? "item" : "items"}
-          </span>
+          {totalMinutes > 0 && (
+            <span className="text-[11px] font-mono text-ink-soft/70">
+              {timeString}
+            </span>
+          )}
         </div>
 
-        {/* Workload / Estimated Time Capacity Bar (Bordio Signature) */}
-        <div className="mt-2.5 space-y-1">
-          <div className="flex items-center justify-between text-[10px] font-semibold">
-            <span className="text-ink-soft flex items-center gap-1">
-              <Clock className="w-3 h-3 text-ink-soft" />
-              <span>{timeString} planned</span>
-            </span>
-
-            {isOverloaded ? (
-              <span className="text-rose-500 font-bold flex items-center gap-0.5">
-                <AlertTriangle className="w-3 h-3" />
-                <span>Overbooked</span>
-              </span>
-            ) : (
-              <span className="text-ink-soft/70">8h cap</span>
-            )}
-          </div>
-
-          {/* Progress bar */}
-          <div className="w-full h-1.5 rounded-full bg-surface-alt overflow-hidden border border-border/50">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                isOverloaded
-                  ? "bg-rose-500"
-                  : isHeavy
-                  ? "bg-amber-500"
-                  : "bg-emerald-500"
-              }`}
-              style={{ width: `${capacityPercent}%` }}
-            />
-          </div>
+        {/* Active Blue Indicator Underline (Screenshot 2: "10 Thu") */}
+        <div className="pt-1.5 -mb-2">
+          {isSelected ? (
+            <div className="h-[2.5px] bg-[#0091ff] rounded-full w-full shadow-sm animate-in fade-in duration-200" />
+          ) : (
+            <div className="h-[2.5px] bg-transparent rounded-full w-full group-hover:bg-[#2e343d]" />
+          )}
         </div>
       </div>
 
-      {/* Main Items Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
-        {/* Events Block (Fixed time appointments) */}
-        {events.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/70 px-1">
-              Scheduled Events
-            </div>
-            {events.map((event) => (
-              <BordioItemCard key={event.id} item={event} />
-            ))}
-          </div>
-        )}
-
-        {/* Tasks Block */}
-        {tasks.length > 0 && (
-          <div className="space-y-2">
-            {events.length > 0 && (
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/70 px-1 pt-1">
-                Tasks To Do
-              </div>
-            )}
-            {tasks.map((task) => (
-              <BordioItemCard key={task.id} item={task} />
-            ))}
-          </div>
-        )}
+      {/* Cards List Area */}
+      <div className="flex-1 p-2.5 space-y-2 overflow-y-auto scrollbar-thin">
+        {dayItems.map((item) => (
+          <BordioItemCard key={item.id} item={item} />
+        ))}
 
         {dayItems.length === 0 && (
-          <div className="h-36 flex flex-col items-center justify-center text-center p-3 text-ink-soft/60 border border-dashed border-border/50 rounded-2xl">
-            <CalendarDays className="w-6 h-6 mb-1 text-ink-soft/30" />
-            <span className="text-[11px] font-medium">No items scheduled</span>
-            <span className="text-[9.5px] mt-0.5 text-ink-soft/50">
-              Drag from Waiting List or click + below
-            </span>
+          <div className="h-28 border border-dashed border-[#2b3038] rounded-2xl flex flex-col items-center justify-center text-center p-3 text-ink-soft/50 text-[11px]">
+            <span>No tasks or events</span>
           </div>
         )}
-      </div>
 
-      {/* Column Footer: Quick Add Action Buttons */}
-      <div className="p-2.5 border-t border-border/70 bg-surface-alt/30 flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => onQuickAdd(dateStr, "task")}
-          className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-semibold text-ink-soft hover:text-ink hover:bg-surface border border-transparent hover:border-border transition flex items-center justify-center gap-1 cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5 text-primary-glow" />
-          <span>Task</span>
-        </button>
+        {/* Circular Action Buttons at bottom of column (as seen on 11 Fri in Screenshot 2) */}
+        <div className="flex items-center justify-center gap-2 pt-2 pb-1">
+          <button
+            type="button"
+            onClick={() => onQuickAddTask(dateStr)}
+            className="w-7 h-7 rounded-full border border-[#3b414d] hover:border-[#0091ff] hover:text-[#0091ff] text-ink-soft/80 bg-[#1e2228] flex items-center justify-center transition cursor-pointer shadow-2xs"
+            title="Quick add task"
+          >
+            <Check className="w-3.5 h-3.5" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onQuickAdd(dateStr, "event")}
-          className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-semibold text-ink-soft hover:text-ink hover:bg-surface border border-transparent hover:border-border transition flex items-center justify-center gap-1 cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5 text-purple-500" />
-          <span>Event</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => onQuickAddEvent(dateStr)}
+            className="w-7 h-7 rounded-full border border-[#3b414d] hover:border-[#0091ff] hover:text-[#0091ff] text-ink-soft/80 bg-[#1e2228] flex items-center justify-center transition cursor-pointer shadow-2xs"
+            title="Quick add event"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
