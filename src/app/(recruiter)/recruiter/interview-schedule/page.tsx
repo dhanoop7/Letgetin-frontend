@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   CalendarDays,
   KanbanSquare,
@@ -27,14 +28,14 @@ import {
   RefreshCw,
   SlidersHorizontal,
   ChevronDown,
+  Bot,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { interviewService } from "@/features/interview/services/interviewService";
+import { InterviewStage } from "@/features/interview/types";
 
-export type InterviewStage =
-  | "to_schedule"
-  | "upcoming"
-  | "today"
-  | "feedback_pending"
-  | "completed";
+export type { InterviewStage };
 
 export interface ScheduledInterview {
   id: string;
@@ -93,6 +94,13 @@ const STAGE_CONFIG: Record<
     bgBadge: "bg-teal-500/10",
     textBadge: "text-teal-600 dark:text-teal-400",
     borderBadge: "border-teal-500/30",
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "from-rose-500/20 to-rose-600/10",
+    bgBadge: "bg-rose-500/10",
+    textBadge: "text-rose-600 dark:text-rose-400",
+    borderBadge: "border-rose-500/30",
   },
 };
 
@@ -234,9 +242,48 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export default function InterviewSchedulePage() {
   const [activeTab, setActiveTab] = useState<"kanban" | "calendar">("kanban");
   const [interviews, setInterviews] = useState<ScheduledInterview[]>(INITIAL_INTERVIEWS);
+  const [isLoadingBackend, setIsLoadingBackend] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
+
+  // Load from backend on mount
+  const loadBackendInterviews = useCallback(async () => {
+    try {
+      setIsLoadingBackend(true);
+      const data = await interviewService.getInterviews();
+      if (data && data.length > 0) {
+        setInterviews(
+          data.map((item) => ({
+            id: item._id || item.id || `int-${Date.now()}`,
+            candidateName: item.candidateName,
+            candidateEmail: item.candidateEmail,
+            avatarUrl: item.candidateAvatar,
+            position: item.position,
+            department: item.department || "Engineering",
+            roundName: item.roundName || "Technical Round 1",
+            stage: item.stage,
+            date: item.date,
+            time: item.time,
+            durationMinutes: item.durationMinutes || 45,
+            interviewers: item.interviewers || [{ name: "Hiring Lead", role: "Interviewer" }],
+            platform: item.platform || "LetGetIn Room",
+            meetingLink: item.meetingLink || `/recruiter/video-interview?room=${item.roomCode || item._id}`,
+            score: item.score,
+            feedbackNotes: item.feedbackNotes,
+          }))
+        );
+      }
+    } catch {
+      // Graceful fallback to initial state if offline or no backend
+    } finally {
+      setIsLoadingBackend(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBackendInterviews();
+  }, [loadBackendInterviews]);
 
   // Calendar view states
   const today = new Date();
@@ -247,6 +294,17 @@ export default function InterviewSchedulePage() {
   // Modals
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [activeDetailInterview, setActiveDetailInterview] = useState<ScheduledInterview | null>(null);
+  const [modalScore, setModalScore] = useState<number>(4);
+  const [modalFeedback, setModalFeedback] = useState<string>("");
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (activeDetailInterview) {
+      setModalScore(activeDetailInterview.score || 4);
+      setModalFeedback(activeDetailInterview.feedbackNotes || "");
+    }
+  }, [activeDetailInterview]);
 
   // New Interview Form
   const [formCandidateName, setFormCandidateName] = useState("");
@@ -288,12 +346,17 @@ export default function InterviewSchedulePage() {
   }, [interviews]);
 
   // Stage Movement
-  const handleMoveStage = (id: string, newStage: InterviewStage) => {
+  const handleMoveStage = async (id: string, newStage: InterviewStage) => {
     setInterviews((prev) =>
       prev.map((i) => (i.id === id ? { ...i, stage: newStage } : i))
     );
     if (activeDetailInterview && activeDetailInterview.id === id) {
       setActiveDetailInterview((prev) => (prev ? { ...prev, stage: newStage } : null));
+    }
+    try {
+      await interviewService.updateStage(id, newStage);
+    } catch (e) {
+      console.warn("Failed to persist stage update to backend:", e);
     }
   };
 
@@ -355,39 +418,113 @@ export default function InterviewSchedulePage() {
   }, [filteredInterviews, selectedDateStr]);
 
   // Handle Schedule Submit
-  const handleScheduleSubmit = (e: React.FormEvent) => {
+  const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formCandidateName || !formPosition) return;
 
-    const newInterview: ScheduledInterview = {
-      id: `int-${Date.now()}`,
-      candidateName: formCandidateName,
-      candidateEmail: formCandidateEmail || `${formCandidateName.toLowerCase().replace(/\s+/g, ".")}@example.com`,
-      position: formPosition,
-      department: formDepartment,
-      roundName: formRoundName,
-      stage: formDate === new Date().toISOString().slice(0, 10) ? "today" : "upcoming",
-      date: formDate,
-      time: formTime,
-      durationMinutes: formDuration,
-      interviewers: [
-        {
-          name: formInterviewerName || "Hiring Panel",
-          role: "Interviewer",
-        },
-      ],
-      platform: formPlatform,
-      meetingLink: `https://letgetin.com/room/${Math.random().toString(36).substring(2, 9)}`,
-    };
+    const email = formCandidateEmail || `${formCandidateName.toLowerCase().replace(/\s+/g, ".")}@example.com`;
+    const newStage: InterviewStage = formDate === new Date().toISOString().slice(0, 10) ? "today" : "upcoming";
 
-    setInterviews((prev) => [newInterview, ...prev]);
+    try {
+      const created = await interviewService.createInterview({
+        candidateName: formCandidateName,
+        candidateEmail: email,
+        position: formPosition,
+        department: formDepartment,
+        roundName: formRoundName,
+        stage: newStage,
+        date: formDate,
+        time: formTime,
+        durationMinutes: formDuration,
+        platform: formPlatform,
+        interviewers: [{ name: formInterviewerName || "Hiring Panel", role: "Interviewer" }],
+      });
+
+      const mapped: ScheduledInterview = {
+        id: created._id || created.id || `int-${Date.now()}`,
+        candidateName: created.candidateName,
+        candidateEmail: created.candidateEmail,
+        avatarUrl: created.candidateAvatar,
+        position: created.position,
+        department: created.department,
+        roundName: created.roundName,
+        stage: created.stage,
+        date: created.date,
+        time: created.time,
+        durationMinutes: created.durationMinutes,
+        interviewers: created.interviewers,
+        platform: created.platform,
+        meetingLink: created.meetingLink || `/recruiter/video-interview?room=${created.roomCode || created._id}`,
+      };
+
+      setInterviews((prev) => [mapped, ...prev]);
+    } catch {
+      // Fallback local addition
+      const localItem: ScheduledInterview = {
+        id: `int-${Date.now()}`,
+        candidateName: formCandidateName,
+        candidateEmail: email,
+        position: formPosition,
+        department: formDepartment,
+        roundName: formRoundName,
+        stage: newStage,
+        date: formDate,
+        time: formTime,
+        durationMinutes: formDuration,
+        interviewers: [{ name: formInterviewerName || "Hiring Panel", role: "Interviewer" }],
+        platform: formPlatform,
+        meetingLink: `/recruiter/video-interview?room=lgi-${Date.now()}`,
+      };
+      setInterviews((prev) => [localItem, ...prev]);
+    }
+
     setIsScheduleModalOpen(false);
-
-    // Reset Form
     setFormCandidateName("");
     setFormCandidateEmail("");
     setFormPosition("");
     setFormInterviewerName("");
+  };
+
+  const handleSaveFeedback = async (id: string) => {
+    setIsSavingFeedback(true);
+    try {
+      await interviewService.submitFeedback(id, modalScore, modalFeedback);
+      setInterviews((prev) =>
+        prev.map((i) =>
+          i.id === id ? { ...i, score: modalScore, feedbackNotes: modalFeedback, stage: "completed" } : i
+        )
+      );
+      setActiveDetailInterview((prev) =>
+        prev && prev.id === id ? { ...prev, score: modalScore, feedbackNotes: modalFeedback, stage: "completed" } : null
+      );
+    } catch (e) {
+      console.warn("Failed to submit feedback to backend:", e);
+      setInterviews((prev) =>
+        prev.map((i) =>
+          i.id === id ? { ...i, score: modalScore, feedbackNotes: modalFeedback, stage: "completed" } : i
+        )
+      );
+      setActiveDetailInterview((prev) =>
+        prev && prev.id === id ? { ...prev, score: modalScore, feedbackNotes: modalFeedback, stage: "completed" } : null
+      );
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
+
+  const handleDeleteInterview = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await interviewService.deleteInterview(id);
+      setInterviews((prev) => prev.filter((i) => i.id !== id));
+      setActiveDetailInterview(null);
+    } catch (e) {
+      console.warn("Failed to delete interview on backend:", e);
+      setInterviews((prev) => prev.filter((i) => i.id !== id));
+      setActiveDetailInterview(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -1159,6 +1296,24 @@ export default function InterviewSchedulePage() {
               </div>
             </div>
 
+            {/* Quick Action Hub: Video Room & AI Interview Buddy */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Link
+                href={`/recruiter/video-interview?id=${activeDetailInterview.id}&candidate=${encodeURIComponent(activeDetailInterview.candidateName)}`}
+                className="inline-flex items-center justify-center gap-1.5 p-2 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary-glow text-xs font-bold transition text-center cursor-pointer"
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span>Launch Video Room</span>
+              </Link>
+              <Link
+                href={`/recruiter/interview-buddy?id=${activeDetailInterview.id}&role=${encodeURIComponent(activeDetailInterview.position)}`}
+                className="inline-flex items-center justify-center gap-1.5 p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-bold transition text-center cursor-pointer"
+              >
+                <Bot className="w-3.5 h-3.5" />
+                <span>AI Interview Buddy</span>
+              </Link>
+            </div>
+
             {/* Stage Selector */}
             <div className="space-y-1 text-xs">
               <label className="font-bold text-ink">Workflow Stage</label>
@@ -1184,37 +1339,69 @@ export default function InterviewSchedulePage() {
             <div className="space-y-2 pt-2 border-t border-border text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-ink">Scorecard Assessment</span>
-                {activeDetailInterview.score ? (
-                  <span className="text-emerald-500 font-bold">★ {activeDetailInterview.score} / 5.0</span>
-                ) : (
-                  <span className="text-amber-500 font-medium text-[11px]">Score Pending</span>
-                )}
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setModalScore(star)}
+                      className={`text-sm transition cursor-pointer ${
+                        star <= modalScore ? "text-amber-400 scale-110" : "text-border hover:text-amber-300"
+                      }`}
+                      title={`${star} Star`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  <span className="text-[11px] font-bold text-ink ml-1.5">{modalScore} / 5.0</span>
+                </div>
               </div>
               <textarea
-                defaultValue={activeDetailInterview.feedbackNotes || ""}
+                value={modalFeedback}
+                onChange={(e) => setModalFeedback(e.target.value)}
                 placeholder="Add evaluation comments, key strengths, red flags, and hiring recommendation..."
                 rows={3}
                 className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-ink text-xs outline-none focus:border-primary"
               />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
               <button
                 type="button"
-                onClick={() => setActiveDetailInterview(null)}
-                className="px-4 py-2 rounded-xl bg-surface-alt hover:bg-surface-alt/80 text-ink text-xs font-bold transition cursor-pointer"
+                onClick={() => handleSaveFeedback(activeDetailInterview.id)}
+                disabled={isSavingFeedback}
+                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                Close
+                {isSavingFeedback ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>Save Feedback & Finalize Score</span>
               </button>
-              <a
-                href={activeDetailInterview.meetingLink}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:scale-105 transition"
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
+              <button
+                type="button"
+                onClick={() => handleDeleteInterview(activeDetailInterview.id)}
+                disabled={isDeleting}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 text-xs font-bold transition cursor-pointer disabled:opacity-50"
               >
-                <Video className="w-3.5 h-3.5" />
-                <span>Join Interview Now</span>
-              </a>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailInterview(null)}
+                  className="px-4 py-2 rounded-xl bg-surface-alt hover:bg-surface-alt/80 text-ink text-xs font-bold transition cursor-pointer"
+                >
+                  Close
+                </button>
+                <a
+                  href={activeDetailInterview.meetingLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:scale-105 transition"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>Join Call</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
