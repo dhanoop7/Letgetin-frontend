@@ -38,6 +38,29 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-success: var(--success);
+
+  --color-brand-50: #f0f8ff;
+  --color-brand-100: #e6f4ff;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0284c7;
+  --color-brand-600: #0066cc;
+  --color-brand-700: #063970;
+  --color-brand-800: #072e5b;
+  --color-brand-900: #051f3e;
+
+  --color-navy-800: #072e5b;
+  --color-navy-900: #061f3d;
+  --color-navy-950: #030f1e;
+
+  --color-pill-bg: #f0f8ff;
+  --color-pill-text: #0066cc;
+  --color-pill-border: #dbeafe;
+
+  --color-fit-bg: #e6fbf3;
+  --color-fit-text: #059669;
+  --color-fit-border: #a7f3d0;
 }
 
 :root {
@@ -273,4 +296,42 @@
     margin: 0;
   }
 }
+
+/* Landing Page Signature Utilities */
+.card-gradient-blue {
+  background: linear-gradient(90deg, #062b63 0%, #07498c 50%, #087bc1 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn-gradient-blue {
+  background: linear-gradient(90deg, #062b63 0%, #07498c 50%, #087bc1 100%);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-gradient-blue:hover {
+  background: linear-gradient(90deg, #073578 0%, #085aa8 50%, #008be2 100%);
+  box-shadow: 0 10px 25px -5px rgba(8, 123, 193, 0.35);
+}
+
+.text-gradient-blue {
+  background: linear-gradient(90deg, #063a78 0%, #075fad 50%, #087bc1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  display: inline;
+}
+
+.card-banner-gradient {
+  background: linear-gradient(90deg, #062b63 0%, #07498c 50%, #087bc1 100%);
+}
+
+.screenshot-ambient-glow {
+  background: radial-gradient(circle at 85% 30%, rgba(224, 242, 254, 0.6) 0%, rgba(240, 248, 255, 0.3) 45%, transparent 75%);
+}
+
+.subtle-section-bg {
+  background-color: #f8fbfe;
+}
+
 

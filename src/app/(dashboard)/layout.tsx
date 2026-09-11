@@ -28,14 +28,49 @@ export default function DashboardLayout({
     "/skills": "Skill Enhancement Hub",
     "/edupie": "Edupie Learning Suite",
     "/geniustest": "Genius Test AI",
+    "/calendar": "Calendar",
+    "/tasks": "Task Mite",
+    "/talent-score": "Talent Score",
+    "/talent-boost": "Talent Boost",
+    "/career-guidance": "Career Guidance",
+    "/career-guidance/ai": "AI Career Guidance",
+    "/career-guidance/personal": "Personal Career Guidance",
+    "/skills/language": "Language+",
+    "/skills/short-term": "Short Term Courses",
+    "/skills/admissions": "Admissions",
+    "/skills/geniuspie": "Geniuspie.com",
     "/exams": "Certification Exams",
     "/network": "My Network",
     "/team": "My Team",
-    "/market": "App Market",
+    "/market": "App Mart",
+    "/interviews": "Interviews",
+    "/interviews/assessment": "AI Assessment",
+    "/interviews/ai-practice": "AI Interview Practice",
+    "/interviews/buddy": "Interview Buddy",
+    "/interviews/mock": "Mock up Interview",
+    "/interviews/schedule": "Interview Schedule",
+    "/interviews/translator": "Resume Translator",
+    "/my-twin": "My Twin AI",
+    "/final-list": "Final List",
+    "/training": "Training",
+    "/probation": "Probation",
+    "/employee-details": "Employee Details",
+    "/payroll": "Payroll",
+    "/performance": "Performance",
+    "/promotions": "Promotions",
     "/mydive": "My Dive Analytics",
   };
 
   const currentTitle = pageTitles[pathname] || "Dashboard Workspace";
+
+  if (
+    pathname === "/geniustest" ||
+    pathname?.startsWith("/geniustest/") ||
+    pathname === "/myhub" ||
+    pathname?.startsWith("/myhub/")
+  ) {
+    return <AuthGuard>{children}</AuthGuard>;
+  }
 
   return (
     <AuthGuard>

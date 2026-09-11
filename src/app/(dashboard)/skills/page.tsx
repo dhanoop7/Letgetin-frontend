@@ -1,34 +1,75 @@
 "use client";
 
-import React from "react";
-import { BookOpenCheck, BrainCircuit, GraduationCap, ArrowRight, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import {
+  BookOpenCheck,
+  Languages,
+  GraduationCap,
+  Landmark,
+  Brain,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function SkillEnhancementPage() {
+  const [activeTab, setActiveTab] = useState<
+    "edupie" | "language" | "short-term" | "admissions" | "geniuspie"
+  >("edupie");
+
+  const tabs = [
+    { id: "edupie" as const, name: "Edupye.com", icon: BookOpenCheck, href: "/edupie" },
+    { id: "language" as const, name: "Language+", icon: Languages, href: "/skills/language" },
+    { id: "short-term" as const, name: "Short Term Courses", icon: GraduationCap, href: "/skills/short-term" },
+    { id: "admissions" as const, name: "Admissions", icon: Landmark, href: "/skills/admissions" },
+    { id: "geniuspie" as const, name: "Geniuspie.com", icon: Brain, href: "/skills/geniuspie" },
+  ];
+
   const modules = [
     {
-      title: "Edupie Learning Suite",
-      description: "Personalized AI learning paths and targeted course recommendations to bridge critical skill gaps.",
+      id: "edupie",
+      title: "Edupye Learning Suite",
+      description: "Personalized AI learning paths, skill gap analysis, and interactive video curriculum.",
       icon: BookOpenCheck,
       href: "/edupie",
       badge: "AI Powered",
-      cta: "Explore Courses",
+      cta: "Explore Edupye",
     },
     {
-      title: "Genius Test AI",
-      description: "Adaptive AI-driven technical and domain assessments to objectively validate your practical expertise.",
-      icon: BrainCircuit,
-      href: "/geniustest",
-      badge: "Assessment",
-      cta: "Start Assessment",
+      id: "language",
+      title: "Language+ Fluency",
+      description: "Business communication mastery, corporate English, and multi-lingual language certifications.",
+      icon: Languages,
+      href: "/skills/language",
+      badge: "Language",
+      cta: "Explore Language+",
     },
     {
-      title: "Certification Exams",
-      description: "Proctored skill certification exams to earn industry-verified badges for your LetGetIn profile.",
+      id: "short-term",
+      title: "Short Term Intensive Courses",
+      description: "Fast-track technical bootcamps, executive masterclasses, and hands-on micro-credentials.",
       icon: GraduationCap,
-      href: "/exams",
-      badge: "Certifications",
-      cta: "View Exams",
+      href: "/skills/short-term",
+      badge: "Bootcamps",
+      cta: "View Courses",
+    },
+    {
+      id: "admissions",
+      title: "Global Admissions & Degrees",
+      description: "Direct university applications, higher education degree programs, and global credit transfers.",
+      icon: Landmark,
+      href: "/skills/admissions",
+      badge: "University",
+      cta: "Explore Admissions",
+    },
+    {
+      id: "geniuspie",
+      title: "Geniuspie Cognitive Hub",
+      description: "Advanced psychometric testing, cognitive intelligence tracking, and gamified skill challenges.",
+      icon: Brain,
+      href: "/skills/geniuspie",
+      badge: "Cognitive",
+      cta: "Explore Geniuspie",
     },
   ];
 
@@ -44,18 +85,45 @@ export default function SkillEnhancementPage() {
           Accelerate Your Professional Growth
         </h1>
         <p className="text-sm text-ink-soft max-w-2xl">
-          Upgrade your skill set with AI learning paths, take adaptive talent assessments, and earn verified certifications.
+          Upgrade your skill set with AI learning paths, global certifications, intensive bootcamps, and degree programs.
         </p>
       </div>
 
+      {/* Tabs Row */}
+      <div className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto scrollbar-none">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                isActive
+                  ? "bg-gradient-brand text-primary-foreground shadow-glow"
+                  : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Modules Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {modules.map((mod) => {
           const Icon = mod.icon;
+          const isSelected = activeTab === mod.id;
           return (
             <div
-              key={mod.title}
-              className="glass p-6 rounded-3xl border border-border/80 hover:border-primary/40 transition-all hover:shadow-glow flex flex-col justify-between group"
+              key={mod.id}
+              className={`p-6 rounded-3xl border transition-all flex flex-col justify-between group ${
+                isSelected
+                  ? "bg-surface border-primary/40 shadow-glow ring-2 ring-primary/20"
+                  : "bg-surface border-border/80 hover:border-primary/40 hover:shadow-glow"
+              }`}
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

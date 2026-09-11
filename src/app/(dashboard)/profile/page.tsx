@@ -73,6 +73,8 @@ import { AIChat } from "@/features/aiAssistant/components/AIChat";
 import { ComingSoon } from "@/components/common/ComingSoon";
 import { NeuroCareer360 } from "@/features/profile/components/NeuroCareer360";
 import { TalentPulse360 } from "@/features/profile/components/TalentPulse360";
+import { AIWritingAssistant } from "@/features/aiWriting/components/AIWritingAssistant";
+import { QuillBotTextarea } from "@/features/aiWriting/components/QuillBotTextarea";
 import { toast } from "sonner";
 
 export type { Track, Mode, EducationItem, ExperienceItem, ProfileData };
@@ -911,14 +913,28 @@ function PersonalSection({
           </Field>
           <div className="sm:col-span-2">
             <Field label="Bio">
-              <textarea
-                rows={4}
-                className={`input-base ${!isEditing ? "bg-secondary/40 text-ink/90 cursor-default" : ""}`}
-                value={draft.bio || ""}
-                disabled={!isEditing}
-                onChange={(e) => setDraft((prev) => ({ ...prev, bio: e.target.value }))}
-                placeholder="Tell recruiters what makes you, you."
-              />
+              {isEditing ? (
+                <QuillBotTextarea
+                  value={draft.bio || ""}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, bio: e.target.value }))}
+                  onApply={(next) => setDraft((prev) => ({ ...prev, bio: next }))}
+                  context="candidate-bio"
+                  metadata={{
+                    fullName: `${draft.firstName} ${draft.lastName}`.trim(),
+                    targetRole: draft.headline || experience.title || "",
+                  }}
+                  placeholder="Tell recruiters what makes you, you."
+                  rows={4}
+                />
+              ) : (
+                <textarea
+                  rows={4}
+                  className="input-base bg-secondary/40 text-ink/90 cursor-default"
+                  value={draft.bio || ""}
+                  disabled
+                  placeholder="Tell recruiters what makes you, you."
+                />
+              )}
             </Field>
           </div>
         </div>

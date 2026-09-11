@@ -14,11 +14,21 @@ interface AIWritingPreviewProps {
   onGenerate: (instruction?: string, onChunk?: (partial: string) => void) => Promise<string>;
   onReplace: (result: string) => void;
   onInsert: (result: string) => void;
+  onSelectAction?: (action: AIWritingAction) => void;
 }
 
 type ViewState = 'input' | 'loading' | 'result' | 'error';
 
 const needsInstruction = (action: AIWritingAction) => action === 'custom' || action === 'generate';
+
+const QUICK_MODES: { action: AIWritingAction; label: string }[] = [
+  { action: 'improve', label: 'Improve' },
+  { action: 'professional', label: 'Professional' },
+  { action: 'rewrite', label: 'Rewrite' },
+  { action: 'expand', label: 'Expand' },
+  { action: 'shorten', label: 'Shorten' },
+  { action: 'grammar', label: 'Grammar' },
+];
 
 export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
   isOpen,
@@ -29,6 +39,7 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
   onGenerate,
   onReplace,
   onInsert,
+  onSelectAction,
 }) => {
   const [view, setView] = useState<ViewState>('input');
   const [instruction, setInstruction] = useState('');
@@ -86,11 +97,16 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-primary/10 border border-primary/20 rounded-lg text-primary-glow">
+              <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-600 dark:text-emerald-400">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-ink">{ACTION_LABELS[action]}</h2>
+                <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+                  <span>QuillBot AI Assistant</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    {ACTION_LABELS[action]}
+                  </span>
+                </h2>
                 <p className="text-[11px] text-ink-soft">{contextLabel}</p>
               </div>
             </div>
@@ -104,6 +120,30 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
           </div>
 
           <div className="px-5 py-4 overflow-y-auto space-y-4">
+            {onSelectAction && (
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-soft">
+                  QuillBot Modes
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_MODES.map((m) => (
+                    <button
+                      key={m.action}
+                      type="button"
+                      onClick={() => onSelectAction(m.action)}
+                      className={`text-xs font-semibold px-3 py-1 rounded-full border transition cursor-pointer ${
+                        action === m.action
+                          ? 'bg-emerald-600 text-white border-transparent shadow-xs'
+                          : 'bg-surface-alt text-ink-soft border-border hover:text-ink hover:bg-surface'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {view === 'input' && (
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-ink">
@@ -116,8 +156,8 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
                   onChange={(e) => setInstruction(e.target.value.slice(0, MAX_INSTRUCTION_LENGTH))}
                   placeholder={
                     isGenerateAction
-                      ? 'e.g. A cover letter for a Senior Angular Developer role at a fintech startup'
-                      : 'e.g. Make this suitable for a senior Angular developer role'
+                      ? 'e.g. A compelling professional bio highlighting leadership and full-stack expertise'
+                      : 'e.g. Make this suitable for a senior tech role'
                   }
                   className="input-base text-xs leading-relaxed resize-y"
                 />
@@ -130,19 +170,19 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
             {view === 'loading' &&
               (result ? (
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-primary-glow mb-1 flex items-center gap-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
-                    AI Suggestion
+                    AI Suggestion (Streaming...)
                   </div>
-                  <div className="text-xs text-ink bg-primary/5 border border-primary/20 rounded-lg p-3 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  <div className="text-xs text-ink bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
                     {result}
-                    <span className="inline-block w-1.5 h-3.5 bg-primary-glow/70 ml-0.5 align-middle animate-pulse" />
+                    <span className="inline-block w-1.5 h-3.5 bg-emerald-500/70 ml-0.5 align-middle animate-pulse" />
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 gap-3 text-ink-soft">
-                  <RefreshCw className="w-5 h-5 animate-spin text-primary-glow" />
-                  <span className="text-xs font-medium">Generating...</span>
+                  <RefreshCw className="w-5 h-5 animate-spin text-emerald-500" />
+                  <span className="text-xs font-medium">Generating AI suggestion...</span>
                 </div>
               ))}
 
@@ -158,7 +198,7 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
                 {!isGenerateAction && originalText && (
                   <div>
                     <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft mb-1">
-                      Original
+                      Original Text
                     </div>
                     <div className="text-xs text-ink-soft bg-surface-alt border border-border rounded-lg p-3 leading-relaxed whitespace-pre-wrap max-h-32 overflow-y-auto">
                       {originalText}
@@ -166,17 +206,17 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
                   </div>
                 )}
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-primary-glow mb-1 flex items-center gap-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
-                    AI Suggestion
+                    AI Writing Suggestion
                   </div>
-                  <div className="text-xs text-ink bg-primary/5 border border-primary/20 rounded-lg p-3 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  <div className="text-xs text-ink bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
                     {!isGenerateAction && originalText
                       ? diff.map((op, idx) =>
                           op.type === 'remove' ? null : (
                             <span
                               key={idx}
-                              className={op.type === 'add' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-sm' : ''}
+                              className={op.type === 'add' ? 'bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 font-medium rounded-sm' : ''}
                             >
                               {op.value}
                             </span>
@@ -203,7 +243,7 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
                   type="button"
                   disabled={!instruction.trim()}
                   onClick={handleSubmitInstruction}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-brand text-primary-foreground text-xs font-semibold rounded-xl shadow-elegant hover:shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-elegant transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Generate</span>
@@ -223,7 +263,7 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
                 <button
                   type="button"
                   onClick={() => run(needsInstruction(action) ? instruction.trim() : undefined)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-brand text-primary-foreground text-xs font-semibold rounded-xl shadow-elegant hover:shadow-glow transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-elegant transition-all cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Try Again</span>
@@ -246,7 +286,7 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
                   className="flex items-center gap-1.5 px-3.5 py-2 bg-surface-alt hover:bg-surface border border-border text-ink text-xs font-semibold rounded-xl transition-all cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Try Again</span>
+                  <span>Regenerate</span>
                 </button>
                 {!isGenerateAction && originalText && (
                   <button
@@ -267,10 +307,10 @@ export const AIWritingPreview: React.FC<AIWritingPreviewProps> = ({
                     onReplace(result);
                     onClose();
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-brand text-primary-foreground text-xs font-semibold rounded-xl shadow-elegant hover:shadow-glow transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-elegant transition-all cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>{isGenerateAction || !originalText ? 'Use This' : 'Replace'}</span>
+                  <span>Apply to Description</span>
                 </button>
               </>
             )}

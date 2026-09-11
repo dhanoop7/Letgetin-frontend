@@ -58,7 +58,8 @@ apiClient.interceptors.response.use(
       originalRequest.url?.includes('/auth/verify-whatsapp-otp') ||
       originalRequest.url?.includes('/auth/send-otp') ||
       originalRequest.url?.includes('/auth/verify-otp') ||
-      originalRequest.url?.includes('/auth/signup');
+      originalRequest.url?.includes('/auth/signup') ||
+      originalRequest.url?.includes('/auth/register');
 
     if (status === 401 && !originalRequest._retry && !isNonRefreshableEndpoint) {
       if (isRefreshing) {

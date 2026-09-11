@@ -104,15 +104,31 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
 
   return (
     <>
-      <AIWritingMenu
-        context={context}
-        hasSelection={!!selection}
-        disabled={disabled || inFlight}
-        triggerLabel={label}
-        iconOnly={iconOnly}
-        triggerTitle={title}
-        onSelectAction={handleSelectAction}
-      />
+      <div className={`flex items-center justify-between gap-2 mt-2 ${className}`}>
+        <AIWritingMenu
+          context={context}
+          hasSelection={!!selection}
+          disabled={disabled || inFlight}
+          triggerLabel={label || "Write with AI"}
+          iconOnly={iconOnly}
+          triggerTitle={title}
+          onSelectAction={handleSelectAction}
+        />
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            AI Assistant
+          </span>
+          <AIWritingMenu
+            context={context}
+            hasSelection={!!selection}
+            disabled={disabled || inFlight}
+            variant="floating-badge"
+            triggerTitle="QuillBot AI Assistant"
+            onSelectAction={handleSelectAction}
+          />
+        </div>
+      </div>
       <AIWritingPreview
         isOpen={activeAction !== null}
         onClose={handleClosePreview}
@@ -122,6 +138,7 @@ export const AIWritingAssistant: React.FC<AIWritingAssistantProps> = ({
         onGenerate={handleGenerate}
         onReplace={handleReplace}
         onInsert={handleInsert}
+        onSelectAction={handleSelectAction}
       />
     </>
   );
