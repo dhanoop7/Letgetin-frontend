@@ -10,7 +10,7 @@ export interface StoredCookieConsent {
   timestamp?: string;
 }
 
-export const CookieConsent: React.FC = () => {
+export const CookieConsent: React.FC<{ onNavigateToCookiePolicy?: () => void }> = ({ onNavigateToCookiePolicy }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [currentPreferences, setCurrentPreferences] = useState<CookiePreferences>({
@@ -89,8 +89,12 @@ export const CookieConsent: React.FC = () => {
 
   const handleCookiePolicyClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Non-breaking fallback that opens preferences/policy view
-    setIsPreferencesOpen(true);
+    // Close the banner and navigate to the dedicated Cookie Policy full page
+    setIsVisible(false);
+    setIsPreferencesOpen(false);
+    if (onNavigateToCookiePolicy) {
+      onNavigateToCookiePolicy();
+    }
   };
 
   if (!isVisible && !isPreferencesOpen) {
@@ -112,25 +116,25 @@ export const CookieConsent: React.FC = () => {
               analyze site traffic, personalize content, and deliver targeted advertising. We need
               your consent to use non-essential cookies. You can choose which categories to allow
               below. For more details, please see our{' '}
-              <a
-                href="#cookie-policy"
+              <button
+                type="button"
                 onClick={handleCookiePolicyClick}
-                className="text-slate-900 underline underline-offset-2 hover:text-brand-600 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-brand-500 focus:outline-none rounded-xs"
+                className="text-slate-900 underline underline-offset-2 hover:text-brand-600 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-brand-500 focus:outline-none rounded-xs cursor-pointer bg-transparent border-none p-0"
               >
                 Cookie Policy
-              </a>
+              </button>
               .
             </div>
 
             {/* Action buttons & controls matching reference design */}
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0 w-full sm:w-auto justify-start sm:justify-end">
-              <a
-                href="#cookie-policy"
+              <button
+                type="button"
                 onClick={handleCookiePolicyClick}
-                className="text-[13px] sm:text-sm text-slate-900 underline underline-offset-2 hover:text-brand-600 transition-colors font-medium py-1.5 px-1 focus-visible:ring-2 focus-visible:ring-brand-500 focus:outline-none rounded-xs"
+                className="text-[13px] sm:text-sm text-slate-900 underline underline-offset-2 hover:text-brand-600 transition-colors font-medium py-1.5 px-1 focus-visible:ring-2 focus-visible:ring-brand-500 focus:outline-none rounded-xs cursor-pointer bg-transparent border-none"
               >
                 Cookie Policy
-              </a>
+              </button>
 
               <button
                 type="button"

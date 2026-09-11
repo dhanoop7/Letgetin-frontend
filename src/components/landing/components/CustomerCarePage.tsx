@@ -12,11 +12,12 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Loader2, 
-  Paperclip, 
-  ExternalLink,
+  Paperclip,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  BookOpen,
+  ArrowRight
 } from 'lucide-react';
 
 interface CustomerCarePageProps {
@@ -24,7 +25,7 @@ interface CustomerCarePageProps {
   onNavigate?: (path: string) => void;
 }
 
-export const CustomerCarePage: React.FC<CustomerCarePageProps> = () => {
+export const CustomerCarePage: React.FC<CustomerCarePageProps> = ({ onOpenDemo: _onOpenDemo, onNavigate }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -181,17 +182,17 @@ export const CustomerCarePage: React.FC<CustomerCarePageProps> = () => {
               Find help, contact our support team, or get assistance with your LetGetIn experience.
             </p>
 
-            {/* Quick Link to Docs */}
+            {/* Quick Link to Internal Docs */}
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <a
-                href="https://talent.docs.mercor.com/welcome"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors"
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('/help-centre')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-50 hover:bg-sky-50 text-slate-700 hover:text-[#0066cc] text-xs font-semibold border border-slate-200 hover:border-sky-200 transition-all cursor-pointer shadow-2xs group"
               >
+                <BookOpen className="w-3.5 h-3.5 text-[#0066cc]" />
                 <span>Visit Help Centre & Documentation</span>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-              </a>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0066cc] group-hover:translate-x-0.5 transition-all" />
+              </button>
             </div>
 
           </div>

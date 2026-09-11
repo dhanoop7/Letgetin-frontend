@@ -26,7 +26,9 @@ export type ViewType =
   | 'terms'
   | 'policies'
   | 'security'
-  | 'customer-care';
+  | 'customer-care'
+  | 'help-centre'
+  | 'cookie-policy';
 
 export interface NavLinkItem {
   label: string;

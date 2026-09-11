@@ -41,6 +41,8 @@ const TermsOfServicePage = lazy(() => import('./components/TermsOfServicePage').
 const PoliciesPage = lazy(() => import('./components/PoliciesPage').then(m => ({ default: m.PoliciesPage })));
 const SecurityPage = lazy(() => import('./components/SecurityPage').then(m => ({ default: m.SecurityPage })));
 const CustomerCarePage = lazy(() => import('./components/CustomerCarePage').then(m => ({ default: m.CustomerCarePage })));
+const HelpCentrePage = lazy(() => import('./components/HelpCentrePage').then(m => ({ default: m.HelpCentrePage })));
+const CookiePolicyPage = lazy(() => import('./components/CookiePolicyPage').then(m => ({ default: m.CookiePolicyPage })));
 
 const PageFallbackLoader: React.FC = () => (
   <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 bg-[#f8fbfe]">
@@ -76,6 +78,8 @@ const getViewFromPath = (path: string): ViewType => {
   if (normalized === '/policies') return 'policies';
   if (normalized === '/security') return 'security';
   if (normalized === '/customer-care') return 'customer-care';
+  if (normalized === '/help-centre' || normalized === '/help') return 'help-centre';
+  if (normalized === '/cookie-policy') return 'cookie-policy';
   return 'landing';
 };
 
@@ -105,6 +109,8 @@ const getPathFromView = (view: ViewType): string => {
   if (view === 'policies') return '/policies';
   if (view === 'security') return '/security';
   if (view === 'customer-care') return '/customer-care';
+  if (view === 'help-centre') return '/help-centre';
+  if (view === 'cookie-policy') return '/cookie-policy';
   return '/';
 };
 
@@ -228,6 +234,10 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
         return <SecurityPage onOpenDemo={handleOpenDemo} onNavigate={handleNavigate} />;
       case 'customer-care':
         return <CustomerCarePage onOpenDemo={handleOpenDemo} onNavigate={handleNavigate} />;
+      case 'help-centre':
+        return <HelpCentrePage onOpenDemo={handleOpenDemo} onNavigate={handleNavigate} />;
+      case 'cookie-policy':
+        return <CookiePolicyPage onOpenDemo={handleOpenDemo} onNavigate={handleNavigate} />;
       case 'landing':
       default:
         return (
@@ -294,7 +304,7 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
             mode={modalMode}
           />
 
-          <CookieConsent />
+          <CookieConsent onNavigateToCookiePolicy={() => handleNavigate('/cookie-policy')} />
         </div>
       </ToastProvider>
     );
@@ -332,7 +342,7 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
         />
 
         {/* Cookie Consent Banner & Preferences Modal */}
-        <CookieConsent />
+        <CookieConsent onNavigateToCookiePolicy={() => handleNavigate('/cookie-policy')} />
       </div>
     </ToastProvider>
   );
