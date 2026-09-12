@@ -29,6 +29,41 @@ const nextConfig: NextConfig = {
         destination: "/recruiter/jobs/create",
         permanent: false,
       },
+      {
+        source: "/startup",
+        destination: "/recruiter/startup/fundraising-pipeline",
+        permanent: false,
+      },
+      {
+        source: "/startup/fundraising",
+        destination: "/recruiter/startup/fundraising-pipeline",
+        permanent: false,
+      },
+      {
+        source: "/startup/fundraising-pipeline",
+        destination: "/recruiter/startup/fundraising-pipeline",
+        permanent: false,
+      },
+      {
+        source: "/startup/investors-connect",
+        destination: "/recruiter/startup/investors-connect",
+        permanent: false,
+      },
+      {
+        source: "/recruiter/fundraising",
+        destination: "/recruiter/startup/fundraising-pipeline",
+        permanent: false,
+      },
+      {
+        source: "/recruiter/fundraising-pipeline",
+        destination: "/recruiter/startup/fundraising-pipeline",
+        permanent: false,
+      },
+      {
+        source: "/recruiter/investors-connect",
+        destination: "/recruiter/startup/investors-connect",
+        permanent: false,
+      },
     ];
   },
 };

@@ -42,50 +42,17 @@ import {
   Check,
 } from "lucide-react";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
+import { useStartupStore } from "@/features/startup/store/useStartupStore";
+import { startupService } from "@/features/startup/services/startupService";
+import {
+  FundraisingStage,
+  InvestorTier,
+  InvestorDeal,
+  RoundConfig,
+} from "@/features/startup/types";
+import { toast } from "sonner";
 
-export type FundraisingStage =
-  | "prospect"
-  | "contacted"
-  | "engaged"
-  | "meeting"
-  | "diligence"
-  | "termsheet"
-  | "passed";
-
-export type InvestorTier = "Tier 1 VC" | "Growth VC" | "Angel Syndicate" | "Family Office" | "Micro VC";
-
-export interface InvestorDeal {
-  id: string;
-  fundName: string;
-  fundLogoText: string;
-  tier: InvestorTier;
-  leadPartner: string;
-  partnerRole: string;
-  partnerEmail: string;
-  linkedinUrl?: string;
-  stage: FundraisingStage;
-  checkSize: number; // numeric in USD
-  checkSizeText: string;
-  focusTags: string[];
-  lastTouch: string;
-  lastTouchType: "email" | "meeting" | "deck_view" | "call" | "data_room";
-  deckViewsCount: number;
-  timeSpentOnDeck: string;
-  notes: string;
-  followUpDate?: string;
-  probability: number; // percentage 0-100
-  recentDeal: string; // e.g. "Invested in Zepto (4 mos ago)" - RoundFunded recency filter
-}
-
-export interface RoundConfig {
-  roundName: string;
-  targetAmount: number; // e.g. 2,000,000
-  valuationCap: number; // e.g. 12,000,000
-  instrument: string; // "Post-Money SAFE" | "Priced Equity" | "Convertible Note"
-  currency: string;
-  closeDate: string;
-  startupSlug: string;
-}
+export type { FundraisingStage, InvestorTier, InvestorDeal, RoundConfig };
 
 const STAGE_CONFIG: Record<
   FundraisingStage,
@@ -341,9 +308,23 @@ const STORAGE_KEY = "letgetin_roundfunded_pipeline_v1";
 
 export default function StartupFundraisingPipelinePage() {
   const { orgProfile } = useRecruiterStore();
+  const {
+    deals: storeDeals,
+    profile: startupProfile,
+    summary,
+    isLoadingDeals,
+    loadDeals,
+    loadProfile,
+    loadSummary,
+    moveDealStage,
+    createDeal,
+    updateDeal,
+    deleteDeal,
+    updateProfile,
+    addDealActivity,
+  } = useStartupStore();
 
   const [roundConfig, setRoundConfig] = useState<RoundConfig>(INITIAL_ROUND_CONFIG);
-  const [deals, setDeals] = useState<InvestorDeal[]>(INITIAL_DEALS);
   const [viewMode, setViewMode] = useState<"kanban" | "table" | "dataroom">("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTierFilter, setSelectedTierFilter] = useState<string>("all");
@@ -355,28 +336,39 @@ export default function StartupFundraisingPipelinePage() {
   const [isAiOutreachOpen, setIsAiOutreachOpen] = useState(false);
   const [selectedDealForModal, setSelectedDealForModal] = useState<InvestorDeal | null>(null);
   const [isEditRoundOpen, setIsEditRoundOpen] = useState(false);
+  const [dealNoteText, setDealNoteText] = useState("");
 
   // AI Outreach State
   const [outreachInvestor, setOutreachInvestor] = useState<InvestorDeal | null>(null);
   const [generatedPitchEmail, setGeneratedPitchEmail] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-  // Load from local storage
+  // Load from backend on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setDeals(JSON.parse(saved));
-      }
-    } catch {}
-  }, []);
+    loadDeals();
+    loadProfile();
+    loadSummary();
+  }, [loadDeals, loadProfile, loadSummary]);
 
-  const saveDeals = (updated: InvestorDeal[]) => {
-    setDeals(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
-  };
+  // Sync profile data to roundConfig
+  useEffect(() => {
+    if (startupProfile?.fundraisingProfile) {
+      setRoundConfig((prev) => ({
+        ...prev,
+        ...startupProfile.fundraisingProfile,
+        roundName: startupProfile.fundraisingProfile.roundName || prev.roundName,
+        targetAmount: startupProfile.fundraisingProfile.targetAmount || prev.targetAmount,
+        valuationCap: startupProfile.fundraisingProfile.valuationCap || prev.valuationCap,
+        instrument: startupProfile.fundraisingProfile.instrument || prev.instrument,
+        closeDate: startupProfile.fundraisingProfile.closeDate || prev.closeDate,
+        currency: startupProfile.fundraisingProfile.currency || prev.currency,
+        startupSlug: startupProfile.fundraisingProfile.startupSlug || prev.startupSlug,
+      }));
+    }
+  }, [startupProfile]);
+
+  // Active Deals
+  const deals: InvestorDeal[] = storeDeals && storeDeals.length > 0 ? storeDeals : INITIAL_DEALS;
 
   // Metrics Calculations
   const metrics = useMemo(() => {
@@ -388,22 +380,22 @@ export default function StartupFundraisingPipelinePage() {
     );
     const activeDiligenceTotal = activeDiligenceDeals.reduce((acc, curr) => acc + curr.checkSize, 0);
 
-    const target = roundConfig.targetAmount;
+    const target = roundConfig.targetAmount || 2000000;
     const progressPercent = Math.min(100, Math.round((committedTotal / target) * 100));
     const remaining = Math.max(0, target - committedTotal);
 
-    const totalDeckViews = deals.reduce((acc, curr) => acc + curr.deckViewsCount, 0);
+    const totalDeckViews = deals.reduce((acc, curr) => acc + (curr.deckViewsCount || 0), 0);
 
     return {
-      committedTotal,
+      committedTotal: summary?.committedAmount ?? committedTotal,
       activeDiligenceTotal,
-      progressPercent,
-      remaining,
+      progressPercent: summary?.progressPercentage ?? progressPercent,
+      remaining: summary?.remainingAmount ?? remaining,
       totalDeckViews,
-      totalContacts: deals.length,
+      totalContacts: summary?.totalDeals ?? deals.length,
       activeDealsCount: deals.filter((d) => d.stage !== "passed").length,
     };
-  }, [deals, roundConfig]);
+  }, [deals, roundConfig, summary]);
 
   // Stage Totals for Kanban column headers
   const stageSums = useMemo(() => {
@@ -420,7 +412,7 @@ export default function StartupFundraisingPipelinePage() {
     deals.forEach((d) => {
       if (sums[d.stage]) {
         sums[d.stage].count += 1;
-        sums[d.stage].totalSum += d.checkSize;
+        sums[d.stage].totalSum += d.checkSize || 0;
       }
     });
 
@@ -436,14 +428,14 @@ export default function StartupFundraisingPipelinePage() {
         const q = searchQuery.toLowerCase();
         const matchName = deal.fundName.toLowerCase().includes(q);
         const matchPartner = deal.leadPartner.toLowerCase().includes(q);
-        const matchTags = deal.focusTags.some((t) => t.toLowerCase().includes(q));
+        const matchTags = (deal.focusTags || []).some((t) => t.toLowerCase().includes(q));
         if (!matchName && !matchPartner && !matchTags) return false;
       }
       return true;
     });
   }, [deals, selectedTierFilter, selectedStageFilter, searchQuery]);
 
-  // Drag and Drop Handler
+  // Drag and Drop Handler with optimistic persistence
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData("text/plain", id);
     e.dataTransfer.effectAllowed = "move";
@@ -454,53 +446,61 @@ export default function StartupFundraisingPipelinePage() {
     e.dataTransfer.dropEffect = "move";
   };
 
-  const handleDrop = (e: React.DragEvent, targetStage: FundraisingStage) => {
+  const handleDrop = async (e: React.DragEvent, targetStage: FundraisingStage) => {
     e.preventDefault();
     const dealId = e.dataTransfer.getData("text/plain");
     if (!dealId) return;
 
-    const updated = deals.map((d) => (d.id === dealId ? { ...d, stage: targetStage } : d));
-    saveDeals(updated);
+    await moveDealStage(dealId, targetStage);
+    toast.success(`Deal moved to ${STAGE_CONFIG[targetStage]?.label || targetStage}`);
   };
 
   // Copy shareable raise link
   const handleCopyLink = () => {
-    const link = `https://letgetin.com/raise/${roundConfig.startupSlug}`;
+    const link = `https://letgetin.com/raise/${roundConfig.startupSlug || "startup-round"}`;
     navigator.clipboard.writeText(link);
     setCopiedLink(true);
+    toast.success("Public investor raise link copied!");
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
   // Trigger AI Outreach generator
-  const handleOpenAiOutreach = (deal: InvestorDeal) => {
+  const handleOpenAiOutreach = async (deal: InvestorDeal) => {
     setOutreachInvestor(deal);
     setIsGeneratingAi(true);
     setIsAiOutreachOpen(true);
 
-    const startupName = orgProfile?.name || "NeuroPulse AI";
-    const founders = orgProfile?.founders || "Founding Team";
-    const sector = orgProfile?.sector || "Enterprise Autonomous AI";
-    const product = orgProfile?.productDetails || "Autonomous AI Recruiting & Talent Engine";
+    try {
+      const res = await startupService.generateAIPersonalizedPitch({
+        dealId: deal._id || deal.id,
+        investorName: deal.fundName,
+        partnerName: deal.leadPartner,
+      });
+      if (res && res.emailBody) {
+        setGeneratedPitchEmail(res.emailBody);
+      }
+    } catch (err) {
+      const startupName = orgProfile?.name || "NeuroPulse AI";
+      const founders = orgProfile?.founders || "Founding Team";
+      const product = orgProfile?.productDetails || "Autonomous AI Recruiting & Talent Engine";
 
-    setTimeout(() => {
-      setGeneratedPitchEmail(`Hi ${deal.leadPartner.split(" ")[0]},
+      setGeneratedPitchEmail(`Hi ${deal.leadPartner.split(" ")[0] || "there"},
 
-I noticed your recent investments at ${deal.fundName} (${deal.recentDeal}) and your active backing of high-growth ${deal.focusTags[0]} companies.
+I noticed your investments at ${deal.fundName} (${deal.recentDeal || "active early-stage backer"}) and your focus on ${deal.focusTags?.[0] || "AI"}.
 
-I'm one of the co-founders at ${startupName}. We are building ${product} for high-growth enterprises.
-
+We are building ${product} at ${startupName}.
 Highlights on our traction:
-• Seed Round Target: $${(roundConfig.targetAmount / 1000000).toFixed(1)}M (${metrics.progressPercent}% already soft-committed)
-• Valuation Cap: $${(roundConfig.valuationCap / 1000000).toFixed(1)}M Post-Money SAFE
-• Monthly Growth: 32% MoM net revenue retention with enterprise customers
-• Live Data Room & Pitch: https://letgetin.com/raise/${roundConfig.startupSlug}
+• Seed Round Target: $${((roundConfig.targetAmount || 2000000) / 1000000).toFixed(1)}M (${metrics.progressPercent}% committed)
+• Post-Money SAFE valuation cap: $${((roundConfig.valuationCap || 12000000) / 1000000).toFixed(1)}M
+• Growth: 32% MoM revenue retention
 
-Given ${deal.fundName}'s focus on ${deal.focusTags.slice(0, 2).join(" & ")}, I'd love to share our 12-slide investor deck or grab 15 minutes next Tuesday for an intro call.
+Would you have 15 minutes next week for an introductory conversation?
 
 Best regards,
 ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
+    } finally {
       setIsGeneratingAi(false);
-    }, 900);
+    }
   };
 
   return (
@@ -792,9 +792,9 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                 <div className="flex-1 space-y-3 overflow-y-auto scrollbar-thin pr-1">
                   {stageDeals.map((deal) => (
                     <div
-                      key={deal.id}
+                      key={deal._id || deal.id}
                       draggable
-                      onDragStart={(e) => handleDragStart(e, deal.id)}
+                      onDragStart={(e) => handleDragStart(e, deal._id || deal.id || "")}
                       onClick={() => setSelectedDealForModal(deal)}
                       className="p-3.5 rounded-2xl bg-surface-alt/60 border border-border hover:border-primary/40 transition-all cursor-grab active:cursor-grabbing group shadow-2xs space-y-2.5 hover:shadow-md"
                     >
@@ -847,8 +847,8 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                         <div className="flex items-center gap-1 text-ink-soft">
                           <Eye className="w-3 h-3 text-primary-glow" />
                           <span>
-                            {deal.deckViewsCount > 0
-                              ? `${deal.deckViewsCount} views (${deal.timeSpentOnDeck})`
+                            {(deal.deckViewsCount ?? 0) > 0
+                              ? `${deal.deckViewsCount} views (${deal.timeSpentOnDeck || "0m"})`
                               : "Deck unviewed"}
                           </span>
                         </div>
@@ -917,7 +917,7 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                   const stageConfig = STAGE_CONFIG[deal.stage];
                   return (
                     <tr
-                      key={deal.id}
+                      key={deal._id || deal.id}
                       onClick={() => setSelectedDealForModal(deal)}
                       className="hover:bg-surface-alt/40 transition cursor-pointer group"
                     >
@@ -1193,30 +1193,31 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.target as any;
-                const newDeal: InvestorDeal = {
-                  id: `rf-${Date.now()}`,
+                const checkVal = Number(form.checkSize.value) || 500000;
+                const newDeal = {
                   fundName: form.fundName.value,
-                  fundLogoText: form.fundName.value.slice(0, 2).toUpperCase(),
+                  fundLogoText: (form.fundName.value || "VC").slice(0, 2).toUpperCase(),
                   tier: form.tier.value,
                   leadPartner: form.partner.value,
                   partnerRole: "Partner",
                   partnerEmail: form.email.value || "contact@fund.vc",
                   stage: form.stage.value,
-                  checkSize: Number(form.checkSize.value),
-                  checkSizeText: `$${Number(form.checkSize.value).toLocaleString()}`,
+                  checkSize: checkVal,
+                  checkSizeText: `$${checkVal.toLocaleString()}`,
                   focusTags: [form.tag.value || "AI/ML"],
                   lastTouch: "Today",
-                  lastTouchType: "email",
-                  deckViewsCount: 0,
-                  timeSpentOnDeck: "—",
                   notes: form.notes.value || "Added to fundraising pipeline.",
-                  probability: 25,
                   recentDeal: "Active seed backer",
                 };
-                saveDeals([newDeal, ...deals]);
+                try {
+                  await createDeal(newDeal);
+                  toast.success("Investor added to pipeline!");
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to add deal");
+                }
                 setIsAddModalOpen(false);
               }}
               className="space-y-3 text-xs"
@@ -1233,31 +1234,60 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-ink">Lead Partner</label>
-                  <input
-                    name="partner"
-                    placeholder="Partner name"
-                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div className="space-y-1">
                   <label className="font-bold text-ink">Investor Tier</label>
                   <select
                     name="tier"
-                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink font-semibold focus:outline-none focus:border-primary"
+                    defaultValue="Tier 1 VC"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary"
                   >
                     <option value="Tier 1 VC">Tier 1 VC</option>
                     <option value="Growth VC">Growth VC</option>
                     <option value="Angel Syndicate">Angel Syndicate</option>
+                    <option value="Family Office">Family Office</option>
                     <option value="Micro VC">Micro VC</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Pipeline Stage</label>
+                  <select
+                    name="stage"
+                    defaultValue="prospect"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary"
+                  >
+                    {Object.entries(STAGE_CONFIG).map(([k, cfg]) => (
+                      <option key={k} value={k}>
+                        {cfg.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-ink">Estimated Check ($)</label>
+                  <label className="font-bold text-ink">Lead Partner Name</label>
+                  <input
+                    name="partner"
+                    placeholder="e.g. Roelof Botha"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Partner Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="partner@fund.vc"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-ink">Target Check Size ($)</label>
                   <input
                     name="checkSize"
                     type="number"
@@ -1267,28 +1297,13 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-ink">Starting Stage</label>
-                  <select
-                    name="stage"
-                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink font-semibold focus:outline-none focus:border-primary"
-                  >
-                    <option value="prospect">1. Prospect</option>
-                    <option value="contacted">2. Contacted</option>
-                    <option value="engaged">3. Engaged</option>
-                    <option value="meeting">4. Meeting</option>
-                    <option value="diligence">5. Diligence</option>
-                    <option value="termsheet">6. Term Sheet</option>
-                  </select>
+                  <label className="font-bold text-ink">Sector Tag</label>
+                  <input
+                    name="tag"
+                    placeholder="e.g. Enterprise AI"
+                    className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary"
+                  />
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-ink">Primary Sector / Focus</label>
-                <input
-                  name="tag"
-                  placeholder="e.g. Enterprise AI, B2B SaaS"
-                  className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary"
-                />
               </div>
 
               <div className="space-y-1">
@@ -1296,8 +1311,8 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                 <textarea
                   name="notes"
                   rows={2}
-                  placeholder="Context, referral source, or next steps..."
-                  className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary resize-none"
+                  placeholder="e.g. Met at Demo Day. Very bullish on autonomous agents."
+                  className="w-full p-2.5 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary resize-none"
                 />
               </div>
 
@@ -1305,13 +1320,13 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-3 py-1.5 rounded-xl text-ink-soft hover:text-ink"
+                  className="px-4 py-2 rounded-xl border border-border text-ink hover:bg-surface-alt font-bold text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-gradient-brand text-primary-foreground font-bold shadow-glow hover:opacity-95"
+                  className="px-5 py-2 rounded-xl bg-gradient-brand text-primary-foreground font-bold shadow-glow text-xs"
                 >
                   Add to Pipeline
                 </button>
@@ -1321,33 +1336,42 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
         </div>
       )}
 
-      {/* ===== 6. EDIT TARGET ROUND ASK MODAL ===== */}
+      {/* ===== 4. EDIT ROUND MODAL ===== */}
       {isEditRoundOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-surface border border-border rounded-3xl shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-surface border border-border rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="text-sm font-bold text-ink">Configure Fundraising Round</h3>
+              <h3 className="text-base font-extrabold text-ink flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-primary-glow" />
+                <span>Configure Live Round</span>
+              </h3>
               <button
                 type="button"
                 onClick={() => setIsEditRoundOpen(false)}
-                className="p-1.5 rounded-xl text-ink-soft hover:text-ink hover:bg-surface-alt"
+                className="p-1 rounded-lg text-ink-soft hover:text-ink hover:bg-surface-alt"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.target as any;
-                setRoundConfig({
-                  ...roundConfig,
+                const newConfig = {
                   roundName: form.roundName.value,
                   targetAmount: Number(form.targetAmount.value),
                   valuationCap: Number(form.valuationCap.value),
                   instrument: form.instrument.value,
                   closeDate: form.closeDate.value,
-                });
+                };
+                try {
+                  await updateProfile({ fundraisingProfile: newConfig });
+                  setRoundConfig((prev) => ({ ...prev, ...newConfig }));
+                  toast.success("Round configuration saved!");
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to update round config");
+                }
                 setIsEditRoundOpen(false);
               }}
               className="space-y-3 text-xs"
@@ -1473,13 +1497,14 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                 <label className="font-bold text-ink">Pipeline Stage</label>
                 <select
                   value={selectedDealForModal.stage}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const newStage = e.target.value as FundraisingStage;
-                    const updated = deals.map((d) =>
-                      d.id === selectedDealForModal.id ? { ...d, stage: newStage } : d
-                    );
-                    saveDeals(updated);
-                    setSelectedDealForModal({ ...selectedDealForModal, stage: newStage });
+                    const dealId = selectedDealForModal._id || selectedDealForModal.id;
+                    if (dealId) {
+                      await moveDealStage(dealId, newStage);
+                      setSelectedDealForModal({ ...selectedDealForModal, stage: newStage });
+                      toast.success(`Deal moved to ${STAGE_CONFIG[newStage]?.label || newStage}`);
+                    }
                   }}
                   className="w-full px-3 py-2 rounded-xl bg-surface-alt border border-border font-bold text-ink focus:outline-none focus:border-primary"
                 >
@@ -1498,25 +1523,102 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                   value={selectedDealForModal.notes}
                   onChange={(e) => {
                     const updatedNotes = e.target.value;
-                    const updated = deals.map((d) =>
-                      d.id === selectedDealForModal.id ? { ...d, notes: updatedNotes } : d
-                    );
-                    saveDeals(updated);
+                    const dealId = selectedDealForModal._id || selectedDealForModal.id;
+                    if (dealId) {
+                      updateDeal(dealId, { notes: updatedNotes });
+                    }
                     setSelectedDealForModal({ ...selectedDealForModal, notes: updatedNotes });
                   }}
                   className="w-full p-3 rounded-xl bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary resize-none"
                 />
               </div>
 
+              {/* Touchpoint & Activity Timeline */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-ink">Activity Timeline & Notes</label>
+                  <span className="text-[10px] text-ink-soft">
+                    {selectedDealForModal.activities?.length || 0} touchpoints
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Log founder call note or meeting update..."
+                    value={dealNoteText}
+                    onChange={(e) => setDealNoteText(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === "Enter" && dealNoteText.trim()) {
+                        const dealId = selectedDealForModal._id || selectedDealForModal.id;
+                        if (!dealId) return;
+                        const updated = await addDealActivity(dealId, {
+                          type: "note",
+                          note: dealNoteText.trim(),
+                        });
+                        setSelectedDealForModal(updated);
+                        setDealNoteText("");
+                        toast.success("Touchpoint note logged");
+                      }
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-surface-alt border border-border text-xs text-ink focus:outline-none focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!dealNoteText.trim()) return;
+                      const dealId = selectedDealForModal._id || selectedDealForModal.id;
+                      if (!dealId) return;
+                      const updated = await addDealActivity(dealId, {
+                        type: "note",
+                        note: dealNoteText.trim(),
+                      });
+                      setSelectedDealForModal(updated);
+                      setDealNoteText("");
+                      toast.success("Touchpoint note logged");
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-glow cursor-pointer shrink-0"
+                  >
+                    Log
+                  </button>
+                </div>
+
+                <div className="max-h-32 overflow-y-auto space-y-1.5 pt-1 scrollbar-thin">
+                  {selectedDealForModal.activities && selectedDealForModal.activities.length > 0 ? (
+                    selectedDealForModal.activities.map((act) => (
+                      <div
+                        key={act.id}
+                        className="p-2 rounded-lg bg-surface-alt/70 border border-border/70 text-[11px] flex items-start justify-between gap-2"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="text-ink font-medium">{act.note}</p>
+                          <span className="text-[10px] text-ink-soft">
+                            {act.date} • {act.author || "Founder"}
+                          </span>
+                        </div>
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-surface border text-ink-soft shrink-0">
+                          {act.type}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-ink-soft italic">No touchpoints logged yet.</p>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <button
                   type="button"
-                  onClick={() => {
-                    const updated = deals.filter((d) => d.id !== selectedDealForModal.id);
-                    saveDeals(updated);
+                  onClick={async () => {
+                    const dealId = selectedDealForModal._id || selectedDealForModal.id;
+                    if (dealId) {
+                      await deleteDeal(dealId);
+                      toast.success("Deal removed from pipeline");
+                    }
                     setSelectedDealForModal(null);
                   }}
-                  className="text-rose-500 hover:underline font-bold text-xs"
+                  className="text-rose-500 hover:underline font-bold text-xs cursor-pointer"
                 >
                   Delete Deal
                 </button>
@@ -1529,7 +1631,7 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                       setSelectedDealForModal(null);
                       handleOpenAiOutreach(deal);
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-primary/15 text-primary-glow font-bold text-xs hover:bg-primary/25 transition flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-xl bg-primary/15 text-primary-glow font-bold text-xs hover:bg-primary/25 transition flex items-center gap-1 cursor-pointer"
                   >
                     <Bot className="w-3.5 h-3.5" />
                     <span>AI Pitch Email</span>
@@ -1538,7 +1640,7 @@ ${founders.split("&")[0].trim()} | Co-Founder, ${startupName}`);
                   <button
                     type="button"
                     onClick={() => setSelectedDealForModal(null)}
-                    className="px-4 py-1.5 rounded-xl bg-gradient-brand text-primary-foreground font-bold shadow-glow text-xs"
+                    className="px-4 py-1.5 rounded-xl bg-gradient-brand text-primary-foreground font-bold shadow-glow text-xs cursor-pointer"
                   >
                     Done
                   </button>

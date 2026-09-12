@@ -210,10 +210,10 @@ function InterviewBuddyContent() {
         <div className="flex items-center gap-2.5 flex-wrap">
           <Link
             href="/recruiter/video-interview"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:scale-105 transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt border border-border text-ink-soft hover:text-ink text-xs font-bold transition cursor-pointer"
           >
-            <Video className="w-3.5 h-3.5" />
-            <span>Launch Video Room</span>
+            <Video className="w-3.5 h-3.5 text-primary-glow" />
+            <span>Video Room (Coming Soon)</span>
           </Link>
           <Link
             href="/recruiter/interview-schedule"

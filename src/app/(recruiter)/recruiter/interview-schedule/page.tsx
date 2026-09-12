@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   KanbanSquare,
@@ -239,7 +240,14 @@ const MONTH_NAMES = [
 ];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export default function InterviewSchedulePage() {
+function InterviewScheduleContent() {
+  const searchParams = useSearchParams();
+  const paramCandidateName = searchParams?.get("candidateName");
+  const paramCandidateEmail = searchParams?.get("candidateEmail");
+  const paramPosition = searchParams?.get("position");
+  const paramDepartment = searchParams?.get("department");
+  const paramAutoOpen = searchParams?.get("autoOpen");
+
   const [activeTab, setActiveTab] = useState<"kanban" | "calendar">("kanban");
   const [interviews, setInterviews] = useState<ScheduledInterview[]>(INITIAL_INTERVIEWS);
   const [isLoadingBackend, setIsLoadingBackend] = useState(false);
@@ -307,16 +315,28 @@ export default function InterviewSchedulePage() {
   }, [activeDetailInterview]);
 
   // New Interview Form
-  const [formCandidateName, setFormCandidateName] = useState("");
-  const [formCandidateEmail, setFormCandidateEmail] = useState("");
-  const [formPosition, setFormPosition] = useState("");
-  const [formDepartment, setFormDepartment] = useState("Engineering");
+  const [formCandidateName, setFormCandidateName] = useState(paramCandidateName || "");
+  const [formCandidateEmail, setFormCandidateEmail] = useState(paramCandidateEmail || "");
+  const [formPosition, setFormPosition] = useState(paramPosition || "");
+  const [formDepartment, setFormDepartment] = useState(paramDepartment || "Engineering");
   const [formRoundName, setFormRoundName] = useState("Round 1: Screening");
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10));
   const [formTime, setFormTime] = useState("11:00 AM");
   const [formDuration, setFormDuration] = useState(45);
   const [formInterviewerName, setFormInterviewerName] = useState("");
   const [formPlatform, setFormPlatform] = useState<ScheduledInterview["platform"]>("LetGetIn Room");
+
+  useEffect(() => {
+    if (paramCandidateName) {
+      setFormCandidateName(paramCandidateName);
+      if (paramCandidateEmail) setFormCandidateEmail(paramCandidateEmail);
+      if (paramPosition) setFormPosition(paramPosition);
+      if (paramDepartment) setFormDepartment(paramDepartment);
+      if (paramAutoOpen === "true" || paramAutoOpen === "1") {
+        setIsScheduleModalOpen(true);
+      }
+    }
+  }, [paramCandidateName, paramCandidateEmail, paramPosition, paramDepartment, paramAutoOpen]);
 
   // Filtered Interviews
   const filteredInterviews = useMemo(() => {
@@ -1407,5 +1427,20 @@ export default function InterviewSchedulePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function InterviewSchedulePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-10 flex items-center justify-center text-ink-soft">
+          <Loader2 className="w-6 h-6 animate-spin text-primary-glow mr-2" />
+          <span>Loading interview schedule...</span>
+        </div>
+      }
+    >
+      <InterviewScheduleContent />
+    </Suspense>
   );
 }

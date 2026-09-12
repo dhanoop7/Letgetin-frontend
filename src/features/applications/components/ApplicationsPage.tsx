@@ -426,6 +426,16 @@ export function ApplicationsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {app.status === 'interviewing' && (
+                      <Link
+                        href={`/interviews/ai-practice?role=${encodeURIComponent(app.job?.title || '')}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-500/20 transition cursor-pointer"
+                        title="Prepare for this role with AI interview practice"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Prepare with AI</span>
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={() => setSelectedApp(app)}
@@ -516,6 +526,121 @@ export function ApplicationsPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Visual Hiring Stage Progress Bar */}
+            <div className="p-4 rounded-2xl bg-surface-alt/50 border border-border/80 space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] font-bold text-ink-soft uppercase tracking-wider">
+                <span>Hiring Pipeline Stage</span>
+                <span className="text-primary font-black capitalize">
+                  {STATUS_CONFIG[selectedApp.status]?.label || selectedApp.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5 pt-1">
+                {[
+                  { id: 'submitted', label: 'Submitted' },
+                  { id: 'reviewing', label: 'Under Review' },
+                  { id: 'shortlisted', label: 'Shortlisted' },
+                  { id: 'interviewing', label: 'Interview' },
+                  { id: 'offered', label: 'Offer' },
+                ].map((step, idx) => {
+                  const stages = ['submitted', 'reviewing', 'shortlisted', 'interviewing', 'offered'];
+                  const currentIdx = stages.indexOf(selectedApp.status);
+                  const isCompleted = currentIdx >= idx;
+                  const isCurrent = selectedApp.status === step.id;
+
+                  return (
+                    <div key={step.id} className="space-y-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${
+                          isCurrent
+                            ? 'bg-primary shadow-xs'
+                            : isCompleted
+                            ? 'bg-emerald-500'
+                            : 'bg-border'
+                        }`}
+                      />
+                      <span
+                        className={`text-[10px] block text-center truncate ${
+                          isCurrent
+                            ? 'font-bold text-primary'
+                            : isCompleted
+                            ? 'font-semibold text-emerald-600'
+                            : 'text-ink-soft'
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Dynamic Status Follow-Up Action Banners */}
+            {selectedApp.status === 'interviewing' && (
+              <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-600 flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <h4 className="text-sm font-bold text-ink">Interview Stage Active</h4>
+                    <p className="text-xs text-ink-soft leading-relaxed">
+                      You have been invited for an interview! Sharpen your answers with real-time AI voice practice or check your upcoming timeline.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Link
+                    href={`/interviews/ai-practice?role=${encodeURIComponent(selectedApp.job?.title || '')}`}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Launch AI Interview Practice</span>
+                  </Link>
+                  <Link
+                    href="/calendar"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface border border-border hover:bg-surface-alt text-ink font-semibold text-xs transition cursor-pointer"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-ink-soft" />
+                    <span>View Calendar</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {selectedApp.status === 'shortlisted' && (
+              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-2">
+                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-bold text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                  <span>Application Shortlisted!</span>
+                </div>
+                <p className="text-xs text-ink-soft leading-relaxed">
+                  Your profile met the key qualifications. Get ahead by exploring mock interview questions tailored to {selectedApp.job?.title || 'this role'}.
+                </p>
+                <div className="pt-1">
+                  <Link
+                    href={`/interviews/ai-practice?role=${encodeURIComponent(selectedApp.job?.title || '')}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Rehearse Role Questions</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {selectedApp.status === 'offered' && (
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold text-sm">
+                  <Award className="w-5 h-5 text-emerald-600" />
+                  <span>Congratulations! Job Offer Received</span>
+                </div>
+                <p className="text-xs text-ink-soft leading-relaxed">
+                  You have received an employment offer from {selectedApp.job?.company?.name || 'the hiring organization'}. Review the compensation and position requirements below.
+                </p>
+              </div>
+            )}
 
             {/* Application Overview Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">

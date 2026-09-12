@@ -384,20 +384,6 @@ const STARTUP_WORKFORCE_ITEMS: NavItem[] = [
     description: "Centralized workspace and assets",
   },
   {
-    name: "Accelerate",
-    shortName: "Accelerate",
-    href: "/recruiter/startup/accelerate",
-    icon: Rocket,
-    description: "Startup growth accelerator programs & tracks",
-  },
-  {
-    name: "Incubator",
-    shortName: "Incubator",
-    href: "/recruiter/startup/incubator",
-    icon: Building,
-    description: "Ecosystem incubators, lab space & mentorship",
-  },
-  {
     name: "AI Analytics",
     shortName: "Analytics",
     href: "/recruiter/ai-analytics",
@@ -411,9 +397,9 @@ const STARTUP_WORKFORCE_ITEMS: NavItem[] = [
   },
 ];
 
-const STARTUP_FUNDING_ITEMS: NavItem[] = [
+const STARTUP_FUNDRAISING_ITEMS: NavItem[] = [
   {
-    name: "Fund raising pipeline",
+    name: "Fundraising Pipeline",
     shortName: "Pipeline",
     href: "/recruiter/startup/fundraising-pipeline",
     icon: DollarSign,
@@ -433,6 +419,23 @@ const STARTUP_FUNDING_ITEMS: NavItem[] = [
     icon: Send,
     description: "Automated investor pitch distribution engine",
   },
+];
+
+const STARTUP_ECOSYSTEM_ITEMS: NavItem[] = [
+  {
+    name: "Accelerate",
+    shortName: "Accelerate",
+    href: "/recruiter/startup/accelerate",
+    icon: Rocket,
+    description: "Startup growth accelerator programs & tracks",
+  },
+  {
+    name: "Incubator",
+    shortName: "Incubator",
+    href: "/recruiter/startup/incubator",
+    icon: Building,
+    description: "Ecosystem incubators, lab space & mentorship",
+  },
   {
     name: "Grants",
     shortName: "Grants",
@@ -451,6 +454,20 @@ const STARTUP_FUNDING_ITEMS: NavItem[] = [
 
 const STARTUP_DOCUMENTATION_ITEMS: NavItem[] = [
   {
+    name: "Pitch Decks",
+    shortName: "Pitch Decks",
+    href: "/recruiter/startup/pitch-decks",
+    icon: Presentation,
+    description: "Investor slides, pitch versions & engagement analytics",
+  },
+  {
+    name: "Data Room & Docs",
+    shortName: "Data Room",
+    href: "/recruiter/startup/other-documents",
+    icon: Folder,
+    description: "Cap table, financial model, SAFEs & due diligence room",
+  },
+  {
     name: "Incorporation documents",
     shortName: "Incorporation",
     href: "/recruiter/startup/incorporation-documents",
@@ -463,20 +480,6 @@ const STARTUP_DOCUMENTATION_ITEMS: NavItem[] = [
     href: "/recruiter/startup/registrations",
     icon: ClipboardCheck,
     description: "GST, DPIIT, MSME, trademark & IP filings",
-  },
-  {
-    name: "Pitch decks",
-    shortName: "Pitch Decks",
-    href: "/recruiter/startup/pitch-decks",
-    icon: Presentation,
-    description: "Investor slides, product roadmap & data room",
-  },
-  {
-    name: "Other Documents",
-    shortName: "Other Docs",
-    href: "/recruiter/startup/other-documents",
-    icon: Folder,
-    description: "Cap table, SAFEs, ESOP pools & compliance",
   },
 ];
 
@@ -810,7 +813,8 @@ export function RecruiterShell({
           ...RECRUITMENT_MARKETING_ITEMS,
           ...CAREER_GUIDANCE_ITEMS,
           ...STARTUP_WORKFORCE_ITEMS,
-          ...STARTUP_FUNDING_ITEMS,
+          ...STARTUP_FUNDRAISING_ITEMS,
+          ...STARTUP_ECOSYSTEM_ITEMS,
           ...STARTUP_DOCUMENTATION_ITEMS,
           ...STARTUP_BUSINESS_PLUS_ITEMS,
           ...STARTUP_MANAGEMENT_ITEMS,
@@ -1192,7 +1196,8 @@ export function RecruiterShell({
             {renderNavGroup("Recruitment Marketing", RECRUITMENT_MARKETING_ITEMS)}
             {renderNavGroup("Career Guidance", CAREER_GUIDANCE_ITEMS)}
             {renderNavGroup("Workforce", STARTUP_WORKFORCE_ITEMS)}
-            {renderNavGroup("Funding", STARTUP_FUNDING_ITEMS)}
+            {renderNavGroup("Fundraising", STARTUP_FUNDRAISING_ITEMS)}
+            {renderNavGroup("Ecosystem", STARTUP_ECOSYSTEM_ITEMS)}
             {renderNavGroup("Documentation", STARTUP_DOCUMENTATION_ITEMS)}
             {renderNavGroup("Business+", STARTUP_BUSINESS_PLUS_ITEMS)}
             {renderNavGroup("Management", STARTUP_MANAGEMENT_ITEMS)}

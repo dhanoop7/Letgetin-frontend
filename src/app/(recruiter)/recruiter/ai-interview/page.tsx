@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Sparkles,
   Bot,
@@ -34,11 +35,21 @@ const POPULAR_ROLES = [
   "Data Scientist & Analytics Lead",
 ];
 
-export default function AIInterviewPage() {
-  const [role, setRole] = useState("Senior Full Stack Engineer");
+function AIInterviewContent() {
+  const searchParams = useSearchParams();
+  const paramRole = searchParams?.get("role");
+  const paramCandidate = searchParams?.get("candidate");
+
+  const [role, setRole] = useState(paramRole || "Senior Full Stack Engineer");
+  const [candidateName, setCandidateName] = useState(paramCandidate || "");
   const [skillsInput, setSkillsInput] = useState("React, TypeScript, Node.js, Next.js, System Design");
   const [experienceLevel, setExperienceLevel] = useState<"junior" | "mid" | "senior" | "lead">("senior");
   const [questionCount, setQuestionCount] = useState(4);
+
+  useEffect(() => {
+    if (paramRole) setRole(paramRole);
+    if (paramCandidate) setCandidateName(paramCandidate);
+  }, [paramRole, paramCandidate]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [questions, setQuestions] = useState<AiQuestion[]>([]);
@@ -511,5 +522,20 @@ export default function AIInterviewPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AIInterviewPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-10 flex items-center justify-center text-ink-soft">
+          <Loader2 className="w-6 h-6 animate-spin text-primary-glow mr-2" />
+          <span>Loading AI Interview Studio...</span>
+        </div>
+      }
+    >
+      <AIInterviewContent />
+    </Suspense>
   );
 }
