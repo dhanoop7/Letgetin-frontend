@@ -60,6 +60,7 @@ import {
   Presentation,
   Folder,
   FlaskConical,
+  GitBranch,
   type LucideIcon,
 } from "lucide-react";
 
@@ -118,6 +119,25 @@ const HIRING_ITEMS: NavItem[] = [
     href: "/recruiter/jobs",
     icon: KanbanSquare,
     description: "Manage active and draft listings",
+  },
+  {
+    name: "Hiring Pipeline",
+    shortName: "Pipeline",
+    href: "/recruiter/hiring-pipeline/timeline",
+    icon: GitBranch,
+    description: "Hiring journey, stage kanban & candidates",
+    subItems: [
+      { name: "Hiring Timeline", shortName: "Timeline", href: "/recruiter/hiring-pipeline/timeline" },
+      { name: "Kanban Board", shortName: "Kanban", href: "/recruiter/hiring-pipeline/kanban" },
+      { name: "Candidate Listing", shortName: "Candidates", href: "/recruiter/hiring-pipeline/candidates" },
+    ],
+  },
+  {
+    name: "Verified Resumes",
+    shortName: "Verified",
+    href: "/recruiter/verified-resumes",
+    icon: ShieldCheck,
+    description: "Pre-screened candidates with 100% verified credentials",
   },
   {
     name: "Talent Pool",
