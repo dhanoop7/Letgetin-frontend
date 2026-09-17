@@ -63,6 +63,9 @@ export interface RecruiterJob {
   applicantCount?: number;
   eligibilityMinPercent?: number;
   expiresAt?: string;
+  finalShortlistTarget?: number;
+  hiringEngineEnabled?: boolean;
+  hiringEngineConfigId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +87,7 @@ export interface CreateJobInput {
   eligibilityMinPercent?: number;
   deadline?: string;
   saveAsDraft?: boolean;
+  finalShortlistTarget?: number;
   pipelineOptions?: PipelineOptions;
 }
 

@@ -67,6 +67,7 @@ export default function CreateJobPage() {
   });
 
   const [matchVolume, setMatchVolume] = useState<string | null>(null);
+  const [finalShortlistTarget, setFinalShortlistTarget] = useState<number>(5);
   const [customRatioError, setCustomRatioError] = useState<string | null>(null);
 
   const [balance, setBalance] = useState<number | null>(null);
@@ -229,6 +230,7 @@ export default function CreateJobPage() {
         skills: skillsText.split(",").map((s) => s.trim()).filter(Boolean),
         description: description.trim(),
         pipelineOptions: buildPipelineOptions(),
+        finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 5,
       });
       router.push(`/recruiter/jobs/${job._id}`);
     } catch (err: unknown) {
@@ -254,6 +256,7 @@ export default function CreateJobPage() {
         description: description.trim(),
         saveAsDraft: true,
         pipelineOptions: buildPipelineOptions(),
+        finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 5,
       });
       router.push(`/recruiter/jobs/${job._id}`);
     } catch (err: unknown) {
@@ -487,6 +490,30 @@ export default function CreateJobPage() {
                   onToggleSubOption={(key) => toggleSubOption(section, key)}
                 />
               ))}
+
+              {(sectionEnabled.resumeMatch || sectionEnabled.assessment || sectionEnabled.aiInterview) && (
+                <div className="p-4 rounded-xl bg-surface-alt/40 border border-border mt-3 space-y-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <label htmlFor="finalShortlistTarget" className="text-xs font-bold text-ink flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-primary" /> Target Shortlist Candidates
+                      </label>
+                      <p className="text-[11px] text-ink-soft">
+                        How many vetted candidates you want to reach the final hiring pool. The Hiring Engine will dynamically calculate stage pool sizes based on this target.
+                      </p>
+                    </div>
+                    <input
+                      id="finalShortlistTarget"
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={finalShortlistTarget}
+                      onChange={(e) => setFinalShortlistTarget(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 px-3 py-1.5 text-sm font-semibold rounded-lg bg-surface border border-border text-ink text-center focus:outline-none focus:border-primary shrink-0"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

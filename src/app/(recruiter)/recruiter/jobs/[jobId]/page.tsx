@@ -109,6 +109,13 @@ export default function JobDetailPage() {
         {/* Action Bridges into the rest of the Recruiter Suite */}
         <div className="flex items-center gap-2 flex-wrap">
           <Link
+            href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-glow bg-primary/10 border border-primary/20 hover:bg-primary/20 px-3 py-1.5 rounded-xl transition"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span>Hiring Pipeline</span>
+          </Link>
+          <Link
             href="/recruiter/track"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft hover:text-ink bg-surface border border-border px-3 py-1.5 rounded-xl transition"
           >
@@ -173,6 +180,42 @@ export default function JobDetailPage() {
           </div>
         )}
       </div>
+
+      {job.hiringEngineEnabled && (
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/25 rounded-2xl p-5 mb-6 flex items-center justify-between gap-4 flex-wrap shadow-xs">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-primary/20 flex items-center justify-center text-primary-glow shrink-0 border border-primary/30">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <h3 className="text-sm font-extrabold text-ink">Automated Hiring Pipeline Active</h3>
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Autonomous Engine
+                </span>
+              </div>
+              <p className="text-xs text-ink-soft max-w-xl leading-relaxed">
+                Candidates are automatically screened, assigned to Primary & Reserve pools, and progressed through assessments and AI interviews based on your configured targets.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Link
+              href={`/recruiter/hiring-pipeline/kanban?jobId=${jobId}`}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-surface border border-border text-ink hover:bg-surface-alt transition shadow-xs flex items-center gap-1.5"
+            >
+              <span>Kanban Board</span>
+            </Link>
+            <Link
+              href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-brand text-primary-foreground hover:shadow-glow transition shadow-xs flex items-center gap-1.5"
+            >
+              <span>Funnel Timeline</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Applicants List Section */}
       <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6">

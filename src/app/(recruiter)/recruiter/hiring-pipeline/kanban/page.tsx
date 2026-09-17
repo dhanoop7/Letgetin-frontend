@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import Link from "next/link";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   KanbanSquare,
   Search,
@@ -9,481 +9,661 @@ import {
   Plus,
   Sparkles,
   ChevronRight,
-  Star,
   Clock,
-  MoreHorizontal,
-  MoveRight,
   CheckCircle2,
-  Mail,
-  Phone,
-  MapPin,
-  Briefcase,
-  X,
-  Check,
-  Download,
-  SlidersHorizontal,
+  AlertTriangle,
   ArrowRight,
+  UserX,
+  RefreshCw,
   Layers,
+  Award,
+  Loader2,
+  Sliders,
+  Brain,
+  FileText,
+  UserCheck,
+  Eye,
+  PlusCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { HiringPipelineNavTabs } from "@/components/recruiter/HiringPipelineNavTabs";
+import { HiringPipelineHeader } from "@/features/hiringEngine/components/HiringPipelineHeader";
+import { CandidateDetailDrawer } from "@/features/hiringEngine/components/CandidateDetailDrawer";
 import {
-  PIPELINE_STAGES,
-  MOCK_CANDIDATES,
-  PIPELINE_METRICS,
-} from "@/features/hiringPipeline/data/mockPipelineData";
+  ConfirmActionModal,
+  ConfirmModalType,
+} from "@/features/hiringEngine/components/ConfirmActionModal";
+import { InitPipelineModal } from "@/features/hiringEngine/components/InitPipelineModal";
+import { hiringEngineService } from "@/features/hiringEngine/services/hiringEngineService";
+import { recruiterService } from "@/features/recruiter/services/recruiterService";
 import {
-  PipelineStage,
-  PipelineCandidate,
-  PipelineStageId,
-} from "@/features/hiringPipeline/types/pipeline.types";
+  IFunnelMetricsReport,
+  IStageMetrics,
+  HiringEngineCandidate,
+  PopulatedUser,
+  PopulatedResume,
+} from "@/features/hiringEngine/types/hiringEngine.types";
+import { RecruiterJob } from "@/features/recruiter/types";
 
-const STAGE_COLUMN_COLORS: Record<
-  string,
-  {
-    headerBg: string;
-    dotColor: string;
-    badgeBg: string;
-    borderColor: string;
-  }
-> = {
-  "resume-gathering": {
-    headerBg: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-    dotColor: "bg-blue-500",
-    badgeBg: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-    borderColor: "border-blue-500/20",
-  },
-  "resume-shortlisting": {
-    headerBg: "bg-purple-500/10 text-purple-700 dark:text-purple-300",
-    dotColor: "bg-purple-500",
-    badgeBg: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
-    borderColor: "border-purple-500/20",
-  },
-  "interview-round-1": {
-    headerBg: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    dotColor: "bg-amber-500",
-    badgeBg: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-    borderColor: "border-amber-500/20",
-  },
-  "interview-round-2": {
-    headerBg: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
-    dotColor: "bg-indigo-500",
-    badgeBg: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
-    borderColor: "border-indigo-500/20",
-  },
-  "final-shortlist": {
-    headerBg: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
-    dotColor: "bg-rose-500",
-    badgeBg: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-    borderColor: "border-rose-500/20",
-  },
-  hired: {
-    headerBg: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    dotColor: "bg-emerald-500",
-    badgeBg: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-    borderColor: "border-emerald-500/20",
-  },
-};
+export default function HiringKanbanPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const paramJobId = searchParams.get("jobId");
+  const paramStageId = searchParams.get("stageId");
 
-export default function KanbanBoardPage() {
-  const [candidates, setCandidates] = useState<PipelineCandidate[]>(MOCK_CANDIDATES);
+  const [jobs, setJobs] = useState<RecruiterJob[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string>(paramJobId || "");
+  const [metrics, setMetrics] = useState<IFunnelMetricsReport | null>(null);
+  const [stageCandidates, setStageCandidates] = useState<
+    Record<string, { primary: HiringEngineCandidate[]; reserve: HiringEngineCandidate[] }>
+  >({});
+  const [loadingJobs, setLoadingJobs] = useState(true);
+  const [loadingBoard, setLoadingBoard] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRole, setSelectedRole] = useState("All");
-  const [selectedCandidate, setSelectedCandidate] = useState<PipelineCandidate | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
+  // Candidate detail drawer
+  const [selectedCandidate, setSelectedCandidate] = useState<HiringEngineCandidate | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const roles = [
-    "All",
-    "Senior Full Stack Engineer",
-    "Staff AI/ML Engineer",
-    "Lead Product Designer",
-    "DevOps & Infrastructure Lead",
-  ];
+  // Confirmation modal
+  const [confirmModalState, setConfirmModalState] = useState<{
+    isOpen: boolean;
+    type: ConfirmModalType;
+    title: string;
+    description: string;
+    candidate?: HiringEngineCandidate;
+    stageId?: string;
+    stageName?: string;
+  }>({
+    isOpen: false,
+    type: "advance",
+    title: "",
+    description: "",
+  });
 
-  // Quick move candidate to next column (UI simulation)
-  const handleAdvanceCandidate = (candidateId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const stageSequence: PipelineStageId[] = [
-      "resume-gathering",
-      "resume-shortlisting",
-      "interview-round-1",
-      "interview-round-2",
-      "final-shortlist",
-      "hired",
-    ];
+  // Init pipeline modal
+  const [showInitModal, setShowInitModal] = useState(false);
 
-    setCandidates((prev) =>
-      prev.map((c) => {
-        if (c.id === candidateId) {
-          const currentIndex = stageSequence.indexOf(c.stageId);
-          if (currentIndex < stageSequence.length - 1) {
-            const nextStageId = stageSequence[currentIndex + 1];
-            const nextStage = PIPELINE_STAGES.find((s) => s.id === nextStageId);
-            showToast(
-              `Moved ${c.name} to ${nextStage?.name || "next stage"}`
-            );
-            return {
-              ...c,
-              stageId: nextStageId,
-              stageName: nextStage?.name || c.stageName,
-            };
-          }
+  // 1. Load recruiter jobs
+  useEffect(() => {
+    recruiterService
+      .getMyJobs()
+      .then((data) => {
+        setJobs(data || []);
+        if (data && data.length > 0 && !selectedJobId) {
+          const firstJobId = paramJobId || data[0]._id;
+          setSelectedJobId(firstJobId);
         }
-        return c;
       })
-    );
+      .catch((err) => {
+        console.error("Failed to load recruiter jobs:", err);
+      })
+      .finally(() => setLoadingJobs(false));
+  }, [paramJobId, selectedJobId]);
+
+  // 2. Load board data (funnel metrics + candidates for each stage)
+  const loadBoardData = useCallback(async () => {
+    if (!selectedJobId) {
+      setMetrics(null);
+      setStageCandidates({});
+      return;
+    }
+
+    setLoadingBoard(true);
+    try {
+      const metricsData = await hiringEngineService.getFunnelMetrics(selectedJobId);
+      setMetrics(metricsData);
+
+      // Load candidates for every stage
+      if (metricsData?.stages && metricsData.stages.length > 0) {
+        const stageResults = await Promise.all(
+          metricsData.stages.map((stage) =>
+            hiringEngineService
+              .getStageCandidates(selectedJobId, stage.stageId)
+              .catch(() => ({ stageId: stage.stageId, primary: [], reserve: [] }))
+          )
+        );
+
+        const candMap: Record<string, { primary: HiringEngineCandidate[]; reserve: HiringEngineCandidate[] }> = {};
+        stageResults.forEach((res) => {
+          candMap[res.stageId] = {
+            primary: res.primary || [],
+            reserve: res.reserve || [],
+          };
+        });
+        setStageCandidates(candMap);
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        setMetrics(null);
+        setStageCandidates({});
+      } else {
+        toast.error("Failed to load Kanban board data.");
+      }
+    } finally {
+      setLoadingBoard(false);
+    }
+  }, [selectedJobId]);
+
+  useEffect(() => {
+    loadBoardData();
+  }, [loadBoardData]);
+
+  const handleSelectJob = (newJobId: string) => {
+    setSelectedJobId(newJobId);
+    router.push(`/recruiter/hiring-pipeline/kanban?jobId=${newJobId}`);
   };
 
-  // Filter candidates based on search & role
-  const filteredCandidates = useMemo(() => {
-    return candidates.filter((cand) => {
-      const matchesSearch =
-        cand.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cand.appliedRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cand.skills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        cand.currentCompany.toLowerCase().includes(searchQuery.toLowerCase());
+  const selectedJob = jobs.find((j) => j._id === selectedJobId);
 
-      const matchesRole =
-        selectedRole === "All" || cand.appliedRole === selectedRole;
-
-      return matchesSearch && matchesRole;
+  // Actions
+  const handleOpenAdvanceModal = (candidate: HiringEngineCandidate, stageName?: string) => {
+    const user = typeof candidate.userId === "object" ? (candidate.userId as PopulatedUser) : null;
+    const name = user?.fullName || user?.username || "Candidate";
+    setConfirmModalState({
+      isOpen: true,
+      type: "advance",
+      title: "Advance Candidate to Next Stage",
+      description: `Are you sure you want to advance ${name} to the next stage? If this is the final stage, they will reach the shortlist.`,
+      candidate,
+      stageName,
     });
-  }, [candidates, searchQuery, selectedRole]);
+  };
+
+  const handleOpenFailModal = (candidate: HiringEngineCandidate, stageName?: string) => {
+    const user = typeof candidate.userId === "object" ? (candidate.userId as PopulatedUser) : null;
+    const name = user?.fullName || user?.username || "Candidate";
+    setConfirmModalState({
+      isOpen: true,
+      type: "fail",
+      title: "Mark Candidate as Failed",
+      description: `Are you sure you want to disqualify ${name}? If auto-refill is enabled, a reserve candidate will be automatically promoted to meet the stage deficit.`,
+      candidate,
+      stageName,
+    });
+  };
+
+  const handleOpenRefillModal = (stageId: string, stageName: string) => {
+    setConfirmModalState({
+      isOpen: true,
+      type: "refill",
+      title: `Manual Refill: ${stageName}`,
+      description: `Pull candidates from the reserve pool into this stage's primary active pool.`,
+      stageId,
+      stageName,
+    });
+  };
+
+  const handleExecuteModalAction = async (payload: {
+    score?: number;
+    notes?: string;
+    reason?: string;
+    count?: number;
+  }) => {
+    if (!selectedJobId) return;
+
+    try {
+      if (confirmModalState.type === "advance" && confirmModalState.candidate) {
+        const res = await hiringEngineService.advanceCandidate(
+          selectedJobId,
+          confirmModalState.candidate._id,
+          { score: payload.score, notes: payload.notes }
+        );
+        toast.success(
+          res.isFinalShortlist
+            ? "Candidate reached final shortlist!"
+            : `Candidate advanced to next stage.`
+        );
+      } else if (confirmModalState.type === "fail" && confirmModalState.candidate) {
+        const res = await hiringEngineService.failCandidate(
+          selectedJobId,
+          confirmModalState.candidate._id,
+          { reason: payload.reason }
+        );
+        if (res.promotedCount > 0) {
+          toast.success(
+            `Candidate failed. Automatically promoted ${res.promotedCount} candidate(s) from reserve pool.`
+          );
+        } else {
+          toast.success("Candidate marked as failed.");
+        }
+      } else if (confirmModalState.type === "refill" && confirmModalState.stageId) {
+        const res = await hiringEngineService.refillStage(
+          selectedJobId,
+          confirmModalState.stageId,
+          { count: payload.count }
+        );
+        if (res.promotedCount > 0) {
+          toast.success(`Successfully promoted ${res.promotedCount} reserve candidate(s).`);
+        } else {
+          toast.info("No reserve candidates were available or needed.");
+        }
+      }
+
+      await loadBoardData();
+      setIsDrawerOpen(false);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Action failed.");
+    }
+  };
+
+  // Filter helper for candidate cards
+  const filterCandidates = (list: HiringEngineCandidate[]) => {
+    return list.filter((c) => {
+      const user = typeof c.userId === "object" ? (c.userId as PopulatedUser) : null;
+      const name = (user?.fullName || user?.username || "").toLowerCase();
+      const email = (user?.email || "").toLowerCase();
+      const query = searchQuery.toLowerCase().trim();
+
+      const matchesSearch = !query || name.includes(query) || email.includes(query);
+      const matchesStatus = statusFilter === "all" || c.stageStatus === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-8">
-      {/* Toast */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl bg-ink text-surface shadow-2xl text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
+      {/* Header */}
+      <HiringPipelineHeader
+        jobs={jobs}
+        selectedJobId={selectedJobId}
+        onSelectJob={handleSelectJob}
+        metrics={metrics}
+        loadingMetrics={loadingBoard}
+        onRefresh={loadBoardData}
+        onInitPipelineClick={() => setShowInitModal(true)}
+      />
+
+      {/* Tabs */}
+      <HiringPipelineNavTabs jobId={selectedJobId} />
+
+      {/* Board Controls: Search & Status Filters */}
+      {metrics && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-surface border border-border rounded-2xl shadow-xs">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-3.5 h-3.5 text-ink-soft absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search candidate name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-surface-alt/70 border border-border rounded-xl text-ink outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <Filter className="w-3.5 h-3.5 text-ink-soft" />
+            <span className="text-xs text-ink-soft font-semibold">Status:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-surface-alt/70 border border-border rounded-xl text-ink outline-none cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              <option value="invited">Invited</option>
+              <option value="started">Started</option>
+              <option value="passed">Passed</option>
+              <option value="failed">Failed</option>
+              <option value="no_show">No-Show</option>
+            </select>
+          </div>
         </div>
       )}
 
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/80 pb-6">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-ink-soft mb-2">
-            <span>Recruiter</span>
-            <ChevronRight className="w-3 h-3 text-ink-soft/60" />
-            <span>Hiring Pipeline</span>
-            <ChevronRight className="w-3 h-3 text-ink-soft/60" />
-            <span className="font-semibold text-primary">Kanban Board</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
-              Kanban Board
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary-glow border border-primary/20">
-              <KanbanSquare className="w-3 h-3" /> Multi-Stage Flow
-            </span>
-          </div>
-          <p className="text-sm text-ink-soft mt-1">
-            Visual stage-by-stage candidate progression across 6 active recruitment columns.
-          </p>
+      {/* Kanban Board Container */}
+      {loadingJobs || (loadingBoard && !metrics) ? (
+        <div className="p-16 text-center space-y-3 bg-surface border border-border rounded-2xl shadow-xs">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-xs font-semibold text-ink-soft">Loading Kanban Stage Columns & Candidates...</p>
         </div>
-
-        {/* Controls */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-3.5 py-2.5 bg-surface border border-border rounded-xl text-xs font-bold text-ink shadow-xs focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer"
-            >
-              {roles.map((r) => (
-                <option key={r} value={r}>
-                  {r === "All" ? "All Requisitions" : r}
-                </option>
-              ))}
-            </select>
+      ) : !metrics ? (
+        <div className="p-12 text-center space-y-5 bg-surface border border-dashed border-border rounded-2xl shadow-xs max-w-2xl mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto border border-primary/20">
+            <KanbanSquare className="w-7 h-7" />
           </div>
-
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-extrabold text-ink">Hiring Engine Not Initialized</h3>
+            <p className="text-xs text-ink-soft leading-relaxed max-w-md mx-auto">
+              Initialize the automated stage pipeline for <strong className="text-ink">{selectedJob?.title}</strong> to
+              manage candidates on this Kanban board.
+            </p>
+          </div>
           <button
-            onClick={() => showToast("Exported Kanban state snapshot")}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-alt text-xs font-semibold text-ink shadow-xs transition"
+            type="button"
+            onClick={() => setShowInitModal(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 transition"
           >
-            <Download className="w-3.5 h-3.5 text-ink-soft" />
-            <span className="hidden sm:inline">Export Board</span>
+            <PlusCircle className="w-4 h-4" />
+            <span>Initialize Hiring Pipeline</span>
           </button>
         </div>
-      </div>
+      ) : (
+        /* Render Dynamic Kanban Columns */
+        <div className="flex gap-5 overflow-x-auto pb-6 pt-1 items-start min-h-[550px] scrollbar-thin">
+          {metrics.stages.map((stage: IStageMetrics) => {
+            const pool = stageCandidates[stage.stageId] || { primary: [], reserve: [] };
+            const filteredPrimary = filterCandidates(pool.primary);
+            const filteredReserve = filterCandidates(pool.reserve);
 
-      {/* Navigation Tabs */}
-      <HiringPipelineNavTabs />
-
-      {/* Search & Filter Bar */}
-      <div className="p-4 rounded-2xl bg-surface border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Filter candidates by name, skill, company..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-surface-alt/60 border border-border rounded-xl text-xs text-ink placeholder:text-ink-soft/70 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 text-xs text-ink-soft font-semibold">
-          <div className="flex items-center gap-1.5">
-            <Layers className="w-4 h-4 text-primary" />
-            <span>Showing {filteredCandidates.length} Active Candidates</span>
-          </div>
-          <span className="text-border">•</span>
-          <span className="hidden sm:inline">Click any card to inspect dossier</span>
-        </div>
-      </div>
-
-      {/* HORIZONTAL KANBAN COLUMNS */}
-      <div className="overflow-x-auto pb-6">
-        <div className="flex items-start gap-4 min-w-[1300px]">
-          {PIPELINE_STAGES.map((stage) => {
-            const stageCands = filteredCandidates.filter(
-              (c) => c.stageId === stage.id
-            );
-            const style = STAGE_COLUMN_COLORS[stage.id] || STAGE_COLUMN_COLORS["resume-gathering"];
+            const isHighlighted = paramStageId === stage.stageId;
+            const hasDeficit = stage.deficit > 0;
 
             return (
               <div
-                key={stage.id}
-                className="w-80 shrink-0 flex flex-col rounded-2xl bg-surface-alt/40 border border-border/80 shadow-xs max-h-[780px]"
+                key={stage.stageId}
+                className={`w-80 shrink-0 bg-surface-alt/30 border rounded-2xl flex flex-col max-h-[750px] transition-all shadow-xs ${
+                  isHighlighted ? "border-primary ring-2 ring-primary/20" : "border-border"
+                }`}
               >
                 {/* Column Header */}
-                <div
-                  className={`p-4 rounded-t-2xl border-b ${style.borderColor} bg-surface flex items-center justify-between gap-2`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${style.dotColor}`} />
-                    <h3 className="text-xs font-extrabold text-ink tracking-tight">
-                      {stage.name === "Resume Shortlisting" ? "Shortlisted" : stage.name}
-                    </h3>
+                <div className="p-4 border-b border-border/80 bg-surface rounded-t-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-surface-alt border border-border text-ink-soft">
+                        #{stage.order}
+                      </span>
+                      <h3 className="text-xs font-extrabold text-ink truncate max-w-[170px]" title={stage.stageName}>
+                        {stage.stageName}
+                      </h3>
+                    </div>
+                    <span className="text-xs font-extrabold text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                      {pool.primary.length}/{stage.targetCount}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-[10px] font-black px-2 py-0.5 rounded-full ${style.badgeBg}`}
-                    >
-                      {stageCands.length}
-                    </span>
-                    <Link
-                      href={`/recruiter/hiring-pipeline/timeline/${stage.id}`}
-                      className="p-1 rounded-lg text-ink-soft hover:text-ink hover:bg-surface-alt transition"
-                      title="Inspect Stage Details"
-                    >
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
+                  {/* Quota Progress */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-ink-soft">
+                      <span>Target: {stage.targetCount}</span>
+                      {hasDeficit ? (
+                        <span className="text-amber-600 font-bold">Deficit: {stage.deficit}</span>
+                      ) : (
+                        <span className="text-emerald-600 font-bold">Full</span>
+                      )}
+                    </div>
+                    <div className="w-full bg-surface-alt h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          hasDeficit ? "bg-amber-500" : "bg-emerald-500"
+                        }`}
+                        style={{
+                          width: `${Math.min(100, Math.round((pool.primary.length / stage.targetCount) * 100))}%`,
+                        }}
+                      />
+                    </div>
                   </div>
+
+                  {/* Refill Button if deficit and reserve exists */}
+                  {hasDeficit && pool.reserve.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenRefillModal(stage.stageId, stage.stageName)}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[11px] font-bold transition"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Refill Stage from Reserve ({pool.reserve.length} available)</span>
+                    </button>
+                  )}
                 </div>
 
-                {/* Candidate Cards List */}
-                <div className="p-3 space-y-3 overflow-y-auto flex-1">
-                  {stageCands.length === 0 ? (
-                    <div className="py-12 text-center text-xs text-ink-soft border border-dashed border-border/80 rounded-xl">
-                      No candidates in this stage
+                {/* Candidate Cards Scrollable Body */}
+                <div className="p-3 overflow-y-auto flex-1 space-y-4 scrollbar-thin">
+                  {/* ======================================================== */}
+                  {/* 1. PRIMARY CANDIDATES SECTION */}
+                  {/* ======================================================== */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px] px-1 font-bold text-ink uppercase tracking-wider">
+                      <span className="flex items-center gap-1 text-emerald-600">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Primary Candidates ({filteredPrimary.length})
+                      </span>
                     </div>
-                  ) : (
-                    stageCands.map((cand) => (
-                      <div
-                        key={cand.id}
-                        onClick={() => setSelectedCandidate(cand)}
-                        className="group p-3.5 rounded-xl bg-surface border border-border hover:border-primary/50 shadow-2xs hover:shadow-md transition-all cursor-pointer space-y-2.5"
-                      >
-                        {/* Match & Rating */}
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-                            <Sparkles className="w-2.5 h-2.5 text-primary-glow" />
-                            {cand.matchScore}% Match
-                          </span>
-                          <div className="flex items-center gap-1 text-[10px] font-bold text-amber-500">
-                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                            <span>{cand.rating.toFixed(1)}</span>
-                          </div>
-                        </div>
 
-                        {/* Name & Applied Role */}
-                        <div className="flex items-start gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 border border-primary/30 flex items-center justify-center text-primary font-black text-xs shrink-0">
-                            {cand.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-ink group-hover:text-primary transition-colors truncate">
-                              {cand.name}
-                            </h4>
-                            <p className="text-[11px] text-ink-soft truncate">
-                              {cand.appliedRole}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Company & Experience */}
-                        <div className="text-[10px] text-ink-soft flex items-center justify-between border-t border-border/60 pt-2">
-                          <span className="truncate max-w-[140px] font-medium">
-                            {cand.currentCompany}
-                          </span>
-                          <span className="font-semibold text-ink/80">
-                            {cand.experience}
-                          </span>
-                        </div>
-
-                        {/* Skills Chips */}
-                        <div className="flex flex-wrap gap-1">
-                          {cand.skills.slice(0, 2).map((skill) => (
-                            <span
-                              key={skill}
-                              className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-surface-alt text-ink-soft border border-border"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                          {cand.skills.length > 2 && (
-                            <span className="text-[9px] font-bold text-ink-soft self-center">
-                              +{cand.skills.length - 2}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Move stage action if not hired */}
-                        {stage.id !== "hired" && (
-                          <div className="border-t border-border/60 pt-2 flex items-center justify-between text-[10px]">
-                            <span className="text-ink-soft truncate text-[9px]">
-                              {cand.appliedDate}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => handleAdvanceCandidate(cand.id, e)}
-                              className="inline-flex items-center gap-1 font-bold text-primary hover:text-primary-hover transition"
-                            >
-                              <span>Next Stage</span>
-                              <MoveRight className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
+                    {filteredPrimary.length === 0 ? (
+                      <div className="p-4 rounded-xl border border-dashed border-border/80 text-center text-[11px] text-ink-soft bg-surface/50">
+                        No active primary candidates in this stage.
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      filteredPrimary.map((candidate) => (
+                        <CandidateCard
+                          key={candidate._id}
+                          candidate={candidate}
+                          stageName={stage.stageName}
+                          isPrimary={true}
+                          onCardClick={() => {
+                            setSelectedCandidate(candidate);
+                            setIsDrawerOpen(true);
+                          }}
+                          onAdvance={() => handleOpenAdvanceModal(candidate, stage.stageName)}
+                          onFail={() => handleOpenFailModal(candidate, stage.stageName)}
+                        />
+                      ))
+                    )}
+                  </div>
+
+                  {/* ======================================================== */}
+                  {/* 2. RESERVE CANDIDATES SECTION (VISUALLY SECONDARY) */}
+                  {/* ======================================================== */}
+                  <div className="space-y-2 pt-2 border-t border-border/60">
+                    <div className="flex items-center justify-between text-[11px] px-1 font-bold text-ink-soft uppercase tracking-wider">
+                      <span className="flex items-center gap-1 text-amber-600">
+                        <Layers className="w-3.5 h-3.5" />
+                        Reserve Pool ({filteredReserve.length})
+                      </span>
+                      <span className="text-[10px] lowercase text-ink-soft/70">auto-refill backup</span>
+                    </div>
+
+                    {filteredReserve.length === 0 ? (
+                      <div className="p-3 rounded-xl border border-dashed border-border/60 text-center text-[10px] text-ink-soft bg-surface/30">
+                        No reserve candidates in reserve pool.
+                      </div>
+                    ) : (
+                      filteredReserve.map((candidate) => (
+                        <CandidateCard
+                          key={candidate._id}
+                          candidate={candidate}
+                          stageName={stage.stageName}
+                          isPrimary={false}
+                          onCardClick={() => {
+                            setSelectedCandidate(candidate);
+                            setIsDrawerOpen(true);
+                          }}
+                          onAdvance={() => handleOpenAdvanceModal(candidate, stage.stageName)}
+                          onFail={() => handleOpenFailModal(candidate, stage.stageName)}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
-      </div>
+      )}
 
-      {/* Candidate Dossier Modal */}
-      {selectedCandidate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="relative w-full max-w-2xl bg-surface border border-border rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto space-y-6">
-            <button
-              onClick={() => setSelectedCandidate(null)}
-              className="absolute top-5 right-5 p-2 rounded-xl text-ink-soft hover:text-ink hover:bg-surface-alt transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {/* Candidate Detail Drawer */}
+      <CandidateDetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        jobId={selectedJobId}
+        candidate={selectedCandidate}
+        onAdvanceClick={(c) => handleOpenAdvanceModal(c)}
+        onFailClick={(c) => handleOpenFailModal(c)}
+      />
 
-            {/* Modal Header */}
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 via-purple-500/20 to-primary/10 border border-primary/30 flex items-center justify-center text-primary font-black text-lg shadow-xs">
-                {selectedCandidate.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl font-extrabold text-ink">
-                    {selectedCandidate.name}
-                  </h2>
-                  <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {selectedCandidate.matchScore}% Match
-                  </span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-surface-alt border border-border text-ink-soft">
-                    {selectedCandidate.stageName}
-                  </span>
-                </div>
-                <p className="text-xs text-ink-soft mt-1">
-                  {selectedCandidate.appliedRole} • {selectedCandidate.experience} Experience
-                </p>
-                <div className="flex items-center gap-4 text-xs text-ink-soft mt-2 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <Mail className="w-3.5 h-3.5" /> {selectedCandidate.email}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" /> {selectedCandidate.location}
-                  </span>
-                </div>
-              </div>
-            </div>
+      {/* Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={confirmModalState.isOpen}
+        onClose={() => setConfirmModalState((prev) => ({ ...prev, isOpen: false }))}
+        type={confirmModalState.type}
+        title={confirmModalState.title}
+        description={confirmModalState.description}
+        candidateName={
+          confirmModalState.candidate
+            ? typeof confirmModalState.candidate.userId === "object"
+              ? (confirmModalState.candidate.userId as PopulatedUser)?.fullName
+              : "Candidate"
+            : undefined
+        }
+        stageName={confirmModalState.stageName}
+        onConfirm={handleExecuteModalAction}
+      />
 
-            {/* Candidate Summary */}
-            <div className="p-4 rounded-2xl bg-surface-alt/70 border border-border space-y-2.5">
-              <div className="text-xs font-bold text-ink flex items-center justify-between">
-                <span>Recent Milestone & Activity</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                  {selectedCandidate.status}
-                </span>
-              </div>
-              <p className="text-xs text-ink-soft leading-relaxed">
-                {selectedCandidate.lastActivity}
-              </p>
-              <div className="flex items-center justify-between text-[11px] text-ink-soft border-t border-border/60 pt-2">
-                <span>Interviewer: <strong className="text-ink">{selectedCandidate.interviewer}</strong></span>
-                <span>Applied: {selectedCandidate.appliedDate}</span>
-              </div>
-            </div>
+      {/* Init Pipeline Modal */}
+      <InitPipelineModal
+        isOpen={showInitModal}
+        onClose={() => setShowInitModal(false)}
+        jobId={selectedJobId}
+        jobTitle={selectedJob?.title}
+        onSuccess={loadBoardData}
+      />
+    </div>
+  );
+}
 
-            {/* Skills Badges */}
-            <div>
-              <h4 className="text-xs font-bold text-ink mb-2">Verified Skill Badges</h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedCandidate.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="text-xs font-bold px-3 py-1 rounded-xl bg-surface-alt border border-border text-ink flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
+// Subcomponent: Candidate Card
+function CandidateCard({
+  candidate,
+  stageName,
+  isPrimary,
+  onCardClick,
+  onAdvance,
+  onFail,
+}: {
+  candidate: HiringEngineCandidate;
+  stageName: string;
+  isPrimary: boolean;
+  onCardClick: () => void;
+  onAdvance: () => void;
+  onFail: () => void;
+}) {
+  const user = typeof candidate.userId === "object" ? (candidate.userId as PopulatedUser) : null;
+  const name = user?.fullName || user?.username || "Candidate";
+  const email = user?.email;
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-              <button
-                onClick={() => setSelectedCandidate(null)}
-                className="px-4 py-2.5 rounded-xl border border-border text-xs font-bold text-ink hover:bg-surface-alt transition"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  showToast(`Profile for ${selectedCandidate.name} updated!`);
-                  setSelectedCandidate(null);
-                }}
-                className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-xs font-bold shadow-xs transition flex items-center gap-1.5"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Save Evaluation</span>
-              </button>
-            </div>
+  const isFailed = candidate.stageStatus === "failed";
+  const isNoShow = candidate.stageStatus === "no_show";
+  const isPassed = candidate.stageStatus === "passed";
+  const isShortlisted = candidate.status === "shortlisted";
+
+  return (
+    <div
+      onClick={onCardClick}
+      className={`p-3.5 rounded-xl border transition-all cursor-pointer shadow-2xs hover:shadow-xs group space-y-2.5 ${
+        isPrimary
+          ? "bg-surface border-border hover:border-primary/50"
+          : "bg-surface/60 border-border/70 hover:border-amber-500/40 opacity-90 hover:opacity-100"
+      }`}
+    >
+      {/* Top Row: Name & Pool Badge */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+              isPrimary
+                ? "bg-primary/10 text-primary border border-primary/20"
+                : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+            }`}
+          >
+            {name[0]?.toUpperCase() || "C"}
+          </div>
+          <div className="truncate">
+            <h4 className="text-xs font-bold text-ink truncate group-hover:text-primary transition-colors">
+              {name}
+            </h4>
+            {email && <p className="text-[10px] text-ink-soft truncate">{email}</p>}
           </div>
         </div>
+
+        {/* Status Indicator */}
+        <span
+          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase shrink-0 ${
+            isPassed
+              ? "bg-emerald-500/10 text-emerald-600"
+              : isFailed
+              ? "bg-rose-500/10 text-rose-600"
+              : isNoShow
+              ? "bg-amber-500/10 text-amber-600"
+              : "bg-blue-500/10 text-blue-600"
+          }`}
+        >
+          {candidate.stageStatus || "invited"}
+        </span>
+      </div>
+
+      {/* Middle Badges: Match Score, Assessment & AI Interview */}
+      <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+        {candidate.matchScore !== undefined && (
+          <span className="px-1.5 py-0.5 rounded-md bg-surface-alt border border-border/60 text-ink font-semibold">
+            Match: <strong className="text-primary-glow font-bold">{Math.round(candidate.matchScore)}%</strong>
+          </span>
+        )}
+        {candidate.assessmentScore !== undefined && (
+          <span className="px-1.5 py-0.5 rounded-md bg-surface-alt border border-border/60 text-ink font-semibold">
+            Test: <strong>{candidate.assessmentScore}</strong>
+          </span>
+        )}
+        {candidate.aiScore !== undefined && (
+          <span className="px-1.5 py-0.5 rounded-md bg-surface-alt border border-border/60 text-ink font-semibold">
+            AI: <strong>{candidate.aiScore}</strong>
+          </span>
+        )}
+      </div>
+
+      {/* Deadline Notice */}
+      {candidate.stageDeadline && (
+        <div className="text-[10px] text-ink-soft flex items-center gap-1">
+          <Clock className="w-3 h-3 text-ink-soft/70" />
+          <span>
+            Due:{" "}
+            {new Date(candidate.stageDeadline).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+        </div>
       )}
+
+      {/* Quick Recruiter Action Bar on hover */}
+      <div
+        className="pt-2 border-t border-border/50 flex items-center justify-between gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onCardClick}
+          className="text-[10px] font-semibold text-ink-soft hover:text-ink flex items-center gap-1 transition"
+        >
+          <Eye className="w-3 h-3" />
+          <span>History</span>
+        </button>
+
+        {!isFailed && !isNoShow && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onFail}
+              title="Fail candidate"
+              className="p-1 rounded-md text-rose-500 hover:bg-rose-500/10 transition"
+            >
+              <UserX className="w-3.5 h-3.5" />
+            </button>
+            {!isShortlisted && (
+              <button
+                type="button"
+                onClick={onAdvance}
+                title="Advance candidate"
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold transition"
+              >
+                <span>Advance</span>
+                <ArrowRight className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
