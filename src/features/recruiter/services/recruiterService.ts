@@ -2,6 +2,7 @@ import { apiClient } from '@/shared/services/apiClient';
 import {
   AllApplicant,
   Applicant,
+  CollectionStatusReport,
   CreateJobInput,
   CreditPack,
   EmploymentType,
@@ -147,6 +148,31 @@ export const recruiterService = {
 
   async getOverview(): Promise<RecruiterOverview> {
     const res = await apiClient.get<never, ApiResponse<RecruiterOverview>>('/recruiter/overview');
+    return res.data;
+  },
+
+  async getApplicationCollection(jobId: string): Promise<CollectionStatusReport> {
+    const res = await apiClient.get<never, ApiResponse<CollectionStatusReport>>(
+      `/recruiter/jobs/${jobId}/application-collection`
+    );
+    return res.data;
+  },
+
+  async startApplicationCollection(jobId: string): Promise<{ started: boolean; alreadyStarted: boolean }> {
+    const res = await apiClient.post<never, ApiResponse<{ started: boolean; alreadyStarted: boolean }>>(
+      `/recruiter/jobs/${jobId}/application-collection/start`
+    );
+    return res.data;
+  },
+
+  async extendApplicationCollection(
+    jobId: string,
+    days?: number
+  ): Promise<{ extended: boolean; newDeadline: string; extensionsUsed: number; maxExtensions: number }> {
+    const res = await apiClient.post<
+      never,
+      ApiResponse<{ extended: boolean; newDeadline: string; extensionsUsed: number; maxExtensions: number }>
+    >(`/recruiter/jobs/${jobId}/application-collection/extend`, { days });
     return res.data;
   },
 };

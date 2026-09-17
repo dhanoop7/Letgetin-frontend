@@ -20,6 +20,7 @@ import {
   Loader2,
   PlusCircle,
   Award,
+  Briefcase,
 } from "lucide-react";
 import { HiringPipelineNavTabs } from "@/components/recruiter/HiringPipelineNavTabs";
 import { HiringPipelineHeader } from "@/features/hiringEngine/components/HiringPipelineHeader";
@@ -38,6 +39,7 @@ const STAGE_TYPE_ICONS: Record<string, typeof FileText> = {
   assessment: Sliders,
   ai_interview: Brain,
   manual_review: UserCheck,
+  human_interview: UserCheck,
 };
 
 export default function HiringTimelinePage() {
@@ -59,17 +61,20 @@ export default function HiringTimelinePage() {
     recruiterService
       .getMyJobs()
       .then((data) => {
-        setJobs(data || []);
-        if (data && data.length > 0 && !selectedJobId) {
-          const firstJobId = paramJobId || data[0]._id;
-          setSelectedJobId(firstJobId);
+        const jobList = data || [];
+        setJobs(jobList);
+        if (jobList.length > 0) {
+          const matchingJob = (paramJobId && jobList.find((j) => j._id === paramJobId)) || jobList[0];
+          setSelectedJobId(matchingJob._id);
+        } else {
+          setSelectedJobId("");
         }
       })
       .catch((err) => {
         console.error("Failed to load recruiter jobs:", err);
       })
       .finally(() => setLoadingJobs(false));
-  }, [paramJobId, selectedJobId]);
+  }, [paramJobId]);
 
   // 2. Fetch metrics & config whenever selectedJobId changes
   const loadPipelineData = useCallback(async () => {
@@ -90,13 +95,25 @@ export default function HiringTimelinePage() {
       setMetrics(metricsData);
       setConfig(configData);
     } catch (err: any) {
-      const status = err?.response?.status;
-      if (status === 404) {
+      const isNotFound =
+        err?.response?.status === 404 ||
+        err?.statusCode === 404 ||
+        err?.status === 404 ||
+        err?.error?.code === "NOT_FOUND" ||
+        err?.code === "NOT_FOUND";
+
+      if (isNotFound) {
         // Pipeline not configured yet for this job
         setMetrics(null);
         setConfig(null);
+        setError(null);
       } else {
-        setError(err?.response?.data?.message || err?.message || "Failed to load pipeline data");
+        setError(
+          err?.error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load pipeline data"
+        );
       }
     } finally {
       setLoadingMetrics(false);
@@ -148,6 +165,26 @@ export default function HiringTimelinePage() {
           >
             Retry
           </button>
+        </div>
+      ) : jobs.length === 0 ? (
+        /* Empty State: No Jobs Created */
+        <div className="p-12 text-center space-y-5 bg-surface border border-dashed border-border rounded-2xl shadow-xs max-w-2xl mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto border border-primary/20">
+            <Briefcase className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-extrabold text-ink">No Job Requisitions Found</h3>
+            <p className="text-xs text-ink-soft leading-relaxed max-w-md mx-auto">
+              Create your first job listing to activate the automated hiring pipeline and start receiving candidates.
+            </p>
+          </div>
+          <Link
+            href="/recruiter/jobs/create"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 transition"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Create a Job Listing</span>
+          </Link>
         </div>
       ) : !metrics ? (
         /* Empty State: Unconfigured Pipeline */

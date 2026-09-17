@@ -15,10 +15,16 @@ import {
   Users,
   Briefcase,
   ExternalLink,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Play,
+  ArrowRight,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
-import { Applicant, RecruiterJob } from "@/features/recruiter/types";
+import { Applicant, RecruiterJob, CollectionStatusReport } from "@/features/recruiter/types";
 import { ApplicantResumeModal } from "@/features/recruiter/components/ApplicantResumeModal";
 import { CandidateProfileModal } from "@/features/recruiter/components/CandidateProfileModal";
 
@@ -31,10 +37,23 @@ export default function JobDetailPage() {
 
   const [job, setJob] = useState<RecruiterJob | null>(null);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [collectionReport, setCollectionReport] = useState<CollectionStatusReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingCollection, setLoadingCollection] = useState(false);
+  const [startingPipeline, setStartingPipeline] = useState(false);
+  const [extendingDeadline, setExtendingDeadline] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedApplicantForResume, setSelectedApplicantForResume] = useState<Applicant | null>(null);
   const [selectedApplicantForProfile, setSelectedApplicantForProfile] = useState<Applicant | null>(null);
+
+  const loadCollectionStatus = (id: string) => {
+    setLoadingCollection(true);
+    recruiterService
+      .getApplicationCollection(id)
+      .then((rep) => setCollectionReport(rep))
+      .catch((err) => console.warn("Could not load collection report:", err))
+      .finally(() => setLoadingCollection(false));
+  };
 
   useEffect(() => {
     if (!jobId) return;
@@ -46,9 +65,52 @@ export default function JobDetailPage() {
       .then(([jobData, applicantsData]) => {
         setJob(jobData);
         setApplicants(applicantsData);
+        if (jobData.hiringEngineEnabled || jobData.applicationCollection) {
+          loadCollectionStatus(jobId);
+        }
       })
       .finally(() => setLoading(false));
   }, [jobId, router]);
+
+  const handleStartPipeline = async () => {
+    if (!jobId) return;
+    setStartingPipeline(true);
+    try {
+      const res = await recruiterService.startApplicationCollection(jobId);
+      if (res.started) {
+        toast.success("Adaptive Hiring Pipeline started successfully! Stage 1 candidates invited.");
+      } else {
+        toast.info("Pipeline was already started.");
+      }
+      loadCollectionStatus(jobId);
+      const updatedJob = await recruiterService.getMyJobById(jobId);
+      setJob(updatedJob);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to start pipeline.");
+    } finally {
+      setStartingPipeline(false);
+    }
+  };
+
+  const handleExtendDeadline = async () => {
+    if (!jobId) return;
+    setExtendingDeadline(true);
+    try {
+      const res = await recruiterService.extendApplicationCollection(jobId);
+      if (res.extended) {
+        toast.success(`Application window extended to ${new Date(res.newDeadline).toLocaleDateString()}.`);
+      } else {
+        toast.warning("Could not extend application window.");
+      }
+      loadCollectionStatus(jobId);
+      const updatedJob = await recruiterService.getMyJobById(jobId);
+      setJob(updatedJob);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to extend window.");
+    } finally {
+      setExtendingDeadline(false);
+    }
+  };
 
   const handleStatusChange = async (applicationId: string, status: string) => {
     setUpdatingId(applicationId);
@@ -181,38 +243,269 @@ export default function JobDetailPage() {
         )}
       </div>
 
-      {job.hiringEngineEnabled && (
-        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/25 rounded-2xl p-5 mb-6 flex items-center justify-between gap-4 flex-wrap shadow-xs">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-primary/20 flex items-center justify-center text-primary-glow shrink-0 border border-primary/30">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <h3 className="text-sm font-extrabold text-ink">Automated Hiring Pipeline Active</h3>
-                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Autonomous Engine
-                </span>
+      {(collectionReport || job.applicationCollection || job.hiringEngineEnabled) && (
+        <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6 mb-6 space-y-5">
+          {/* Header row: Title + State Badge */}
+          <div className="flex items-start justify-between gap-4 flex-wrap pb-4 border-b border-border/80">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary-glow shrink-0 border border-primary/20">
+                <Sparkles className="w-5 h-5" />
               </div>
-              <p className="text-xs text-ink-soft max-w-xl leading-relaxed">
-                Candidates are automatically screened, assigned to Primary & Reserve pools, and progressed through assessments and AI interviews based on your configured targets.
-              </p>
+              <div>
+                <h2 className="text-base font-extrabold text-ink tracking-tight">Application Collection & Hiring Funnel</h2>
+                <p className="text-xs text-ink-soft">
+                  {collectionReport?.status === "started"
+                    ? "Autonomous hiring pipeline is active. Primary and Reserve candidate pools are engaged."
+                    : "Collecting and evaluating candidate applications against your configured eligibility targets."}
+                </p>
+              </div>
+            </div>
+
+            {/* Visual State Badge for the 10 recruiter states */}
+            {(() => {
+              const status = collectionReport?.status || (job.applicationCollection?.status ?? "collecting");
+              const health = collectionReport?.funnelHealth || "healthy";
+
+              let badgeText = "COLLECTING CANDIDATES";
+              let badgeStyle = "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+
+              if (status === "started") {
+                if (health === "constrained") {
+                  badgeText = "CONSTRAINED POOL";
+                  badgeStyle = "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+                } else {
+                  badgeText = "HIRING PIPELINE ACTIVE";
+                  badgeStyle = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+                }
+              } else if (status === "ready") {
+                badgeText = "READY TO START";
+                badgeStyle = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+              } else if (status === "extended") {
+                badgeText = "APPLICATION WINDOW EXTENDED";
+                badgeStyle = "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
+              } else if (status === "insufficient") {
+                badgeText = "INSUFFICIENT CANDIDATES";
+                badgeStyle = "bg-destructive/10 text-destructive border-destructive/20";
+              } else if (status === "closed") {
+                badgeText = "JOB CLOSED";
+                badgeStyle = "bg-surface-alt text-ink-soft border-border";
+              } else if (status === "collecting" && collectionReport && collectionReport.actualQualifiedCount < collectionReport.minimumIntake) {
+                badgeText = "WAITING FOR CANDIDATES";
+                badgeStyle = "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+              }
+
+              return (
+                <span className={`text-[11px] uppercase font-extrabold px-3 py-1 rounded-full border ${badgeStyle}`}>
+                  {badgeText}
+                </span>
+              );
+            })()}
+          </div>
+
+          {/* Metric Cards Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Final Target */}
+            <div className="p-3.5 rounded-xl bg-surface-alt/60 border border-border space-y-1">
+              <span className="text-[10px] uppercase font-bold text-ink-soft block">Final Shortlist Target</span>
+              <div className="text-xl font-extrabold text-ink">
+                {collectionReport?.finalShortlistTarget || job.finalShortlistTarget || 10}
+              </div>
+              <p className="text-[10px] text-ink-soft">Target shortlisted finalists</p>
+            </div>
+
+            {/* Ideal Intake */}
+            <div className="p-3.5 rounded-xl bg-surface-alt/60 border border-border space-y-1">
+              <span className="text-[10px] uppercase font-bold text-ink-soft block">Ideal Intake</span>
+              <div className="text-xl font-extrabold text-ink">
+                {collectionReport?.idealIntake || job.applicationCollection?.idealIntake || 15}
+              </div>
+              <p className="text-[10px] text-ink-soft">Recommended statistical pool</p>
+            </div>
+
+            {/* Minimum Intake */}
+            <div className="p-3.5 rounded-xl bg-surface-alt/60 border border-border space-y-1">
+              <span className="text-[10px] uppercase font-bold text-ink-soft block">Minimum Intake</span>
+              <div className="text-xl font-extrabold text-ink">
+                {collectionReport?.minimumIntake || job.applicationCollection?.minimumIntake || 8}
+              </div>
+              <p className="text-[10px] text-ink-soft">Required to start pipeline</p>
+            </div>
+
+            {/* Actual Qualified */}
+            <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-primary-glow block">Qualified Candidates</span>
+              <div className="text-xl font-extrabold text-ink flex items-center gap-1.5">
+                <span>{collectionReport?.actualQualifiedCount ?? applicants.length}</span>
+                {collectionReport && collectionReport.actualQualifiedCount >= collectionReport.minimumIntake && (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                )}
+              </div>
+              <p className="text-[10px] text-ink-soft">Eligible & screened applicants</p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 shrink-0">
-            <Link
-              href={`/recruiter/hiring-pipeline/kanban?jobId=${jobId}`}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-surface border border-border text-ink hover:bg-surface-alt transition shadow-xs flex items-center gap-1.5"
-            >
-              <span>Kanban Board</span>
-            </Link>
-            <Link
-              href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-brand text-primary-foreground hover:shadow-glow transition shadow-xs flex items-center gap-1.5"
-            >
-              <span>Funnel Timeline</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
+
+          {/* Progress Bars */}
+          {collectionReport && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              {/* Progress to Minimum */}
+              <div className="p-3 rounded-xl bg-surface-alt/40 border border-border space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-ink flex items-center gap-1.5">
+                    Progress to Minimum Intake
+                    {collectionReport.actualQualifiedCount >= collectionReport.minimumIntake && (
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                        Met ✓
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-bold text-ink">
+                    {collectionReport.actualQualifiedCount} / {collectionReport.minimumIntake}
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-border overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all rounded-full"
+                    style={{
+                      width: `${Math.min(100, Math.round((collectionReport.actualQualifiedCount / Math.max(1, collectionReport.minimumIntake)) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Progress to Ideal */}
+              <div className="p-3 rounded-xl bg-surface-alt/40 border border-border space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-ink">Progress to Ideal Intake</span>
+                  <span className="font-bold text-ink">
+                    {collectionReport.actualQualifiedCount} / {collectionReport.idealIntake}
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-border overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 transition-all rounded-full"
+                    style={{
+                      width: `${Math.min(100, Math.round((collectionReport.actualQualifiedCount / Math.max(1, collectionReport.idealIntake)) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Collection Metadata & Deadline Strip */}
+          <div className="flex items-center justify-between gap-4 flex-wrap text-xs text-ink-soft pt-1">
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Clock className="w-3.5 h-3.5 text-ink-soft" />
+                <span>Application Deadline:</span>
+                <strong className="text-ink">
+                  {collectionReport?.currentDeadline
+                    ? new Date(collectionReport.currentDeadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : job.expiresAt
+                    ? new Date(job.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "No deadline set"}
+                </strong>
+              </span>
+
+              <span className="flex items-center gap-1.5 font-medium">
+                <span>Auto-Extension:</span>
+                <strong className="text-ink">
+                  {collectionReport?.autoExtensionEnabled ?? job.applicationCollection?.autoExtensionEnabled ? "Enabled" : "Disabled"}
+                </strong>
+                <span>
+                  ({collectionReport?.extensionsUsed ?? job.applicationCollection?.extensionsUsed ?? 0} /{" "}
+                  {collectionReport?.maxExtensions ?? job.applicationCollection?.maxExtensions ?? 2} used)
+                </span>
+              </span>
+            </div>
+
+            {/* Manual Extension Trigger */}
+            {collectionReport?.status !== "started" && collectionReport?.status !== "closed" && job.status !== "closed" && (
+              <button
+                type="button"
+                onClick={handleExtendDeadline}
+                disabled={extendingDeadline}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-surface border border-border text-xs font-semibold text-ink transition disabled:opacity-50 cursor-pointer"
+              >
+                {extendingDeadline ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+                <span>Extend Window (+3d)</span>
+              </button>
+            )}
+          </div>
+
+          {/* Constrained / Starved Warnings */}
+          {collectionReport?.funnelHealth === "constrained" && (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                <strong>Capacity Warning:</strong> Current qualified candidate pool ({collectionReport.actualQualifiedCount}) is below the ideal intake ({collectionReport.idealIntake}) and cannot guarantee the configured final shortlist target ({collectionReport.finalShortlistTarget}). The system will recalculate an adaptive funnel using available candidates.
+              </div>
+            </div>
+          )}
+
+          {collectionReport?.funnelHealth === "starved" && collectionReport.status === "insufficient" && (
+            <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/25 flex items-start gap-3">
+              <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <div className="text-xs text-destructive leading-relaxed">
+                <strong>Insufficient Qualified Candidates:</strong> The application deadline has passed with fewer candidates ({collectionReport.actualQualifiedCount}) than the minimum intake ({collectionReport.minimumIntake}). The pipeline cannot guarantee stage progression. Recommended actions: extend the application window manually, broaden matching criteria, or source additional candidates.
+              </div>
+            </div>
+          )}
+
+          {/* Action Footer */}
+          <div className="flex items-center justify-between gap-4 flex-wrap pt-2 border-t border-border/80">
+            {collectionReport?.status === "started" ? (
+              <div className="flex items-center justify-between w-full gap-3 flex-wrap">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> Pipeline is running autonomously
+                </span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/recruiter/hiring-pipeline/kanban?jobId=${jobId}`}
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-surface border border-border text-ink hover:bg-surface-alt transition shadow-xs flex items-center gap-1.5"
+                  >
+                    <span>Kanban Board</span>
+                  </Link>
+                  <Link
+                    href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-brand text-primary-foreground hover:shadow-glow transition shadow-xs flex items-center gap-1.5"
+                  >
+                    <span>Funnel Timeline</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between w-full gap-4 flex-wrap">
+                <p className="text-xs text-ink-soft">
+                  {collectionReport && collectionReport.actualQualifiedCount >= collectionReport.minimumIntake
+                    ? `Minimum intake reached (${collectionReport.actualQualifiedCount}/${collectionReport.minimumIntake}). The adaptive funnel can be launched now.`
+                    : `Need ${Math.max(0, (collectionReport?.minimumIntake || 8) - (collectionReport?.actualQualifiedCount || 0))} more qualified candidates before the funnel can safely start.`}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleStartPipeline}
+                  disabled={
+                    startingPipeline ||
+                    (collectionReport != null && collectionReport.actualQualifiedCount < collectionReport.minimumIntake)
+                  }
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-brand text-primary-foreground hover:shadow-glow transition shadow-xs flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {startingPipeline ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Recalculating & Launching…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Start Adaptive Hiring Pipeline</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-export type FunnelStageType = 'resume_match' | 'assessment' | 'ai_interview' | 'manual_review';
+export type FunnelStageType = 'resume_match' | 'assessment' | 'ai_interview' | 'manual_review' | 'human_interview';
 export type FunnelConfigStatus = 'draft' | 'active' | 'completed' | 'paused';
 export type FunnelHealthState = 'healthy' | 'starved' | 'paused' | 'completed';
 

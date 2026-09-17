@@ -27,6 +27,9 @@ export interface PipelineOptions {
   assessmentTypes: string[];
   aiInterview: boolean;
   aiInterviewTypes: string[];
+  humanInterview?: boolean;
+  humanInterviewTypes?: string[];
+  roundOrder?: string[];
 }
 
 export interface PipelineSubOption {
@@ -46,6 +49,72 @@ export interface MatchVolumeOption {
   credits: number;
 }
 
+export type ApplicationCollectionStatus =
+  | "collecting"
+  | "ready"
+  | "extended"
+  | "started"
+  | "insufficient"
+  | "closed";
+
+export interface ApplicationCollectionInfo {
+  idealIntake: number;
+  minimumIntake: number;
+  actualQualifiedCount: number;
+  initialDeadline?: string;
+  currentDeadline?: string;
+  autoExtensionEnabled: boolean;
+  extensionDurationDays: number;
+  maxExtensions: number;
+  extensionsUsed: number;
+  autoStartEnabled: boolean;
+  status: ApplicationCollectionStatus;
+}
+
+export interface CollectionStatusReport {
+  jobId: string;
+  jobTitle: string;
+  idealIntake: number;
+  minimumIntake: number;
+  actualQualifiedCount: number;
+  finalShortlistTarget: number;
+  initialDeadline?: string;
+  currentDeadline?: string;
+  deadline?: string;
+  autoExtensionEnabled: boolean;
+  extensionDurationDays: number;
+  maxExtensions: number;
+  extensionsUsed: number;
+  autoStartEnabled: boolean;
+  status: ApplicationCollectionStatus;
+  funnelHealth: "healthy" | "constrained" | "starved";
+  canStartPipeline: boolean;
+  idealFunnel: {
+    totalFunnelIntakeTarget: number;
+    stages: Array<{
+      stageId: string;
+      stageName: string;
+      stageType: string;
+      targetCount: number;
+      deadlineHours: number;
+      autoAdvanceScoreThreshold: number;
+    }>;
+  };
+  operationalFunnel: {
+    totalFunnelIntakeTarget: number;
+    stages: Array<{
+      stageId: string;
+      stageName: string;
+      stageType: string;
+      targetCount: number;
+      deadlineHours: number;
+      autoAdvanceScoreThreshold: number;
+    }>;
+    estimatedFinalYield: number;
+    deficit: number;
+  };
+}
+
 export interface RecruiterJob {
   _id: string;
   title: string;
@@ -59,11 +128,15 @@ export interface RecruiterJob {
   status: string;
   recruiterStage?: RecruiterJobStage;
   pipelineOptions?: PipelineOptions;
+  rounds?: string[];
+  roundOrder?: string[];
+  stages?: any[];
   creditsCost?: number;
   applicantCount?: number;
   eligibilityMinPercent?: number;
   expiresAt?: string;
   finalShortlistTarget?: number;
+  applicationCollection?: ApplicationCollectionInfo;
   hiringEngineEnabled?: boolean;
   hiringEngineConfigId?: string;
   createdAt: string;
@@ -88,6 +161,18 @@ export interface CreateJobInput {
   deadline?: string;
   saveAsDraft?: boolean;
   finalShortlistTarget?: number;
+  idealIntake?: number;
+  minimumIntake?: number;
+  collectionDurationDays?: number;
+  autoExtensionEnabled?: boolean;
+  extensionDurationDays?: number;
+  maxExtensions?: number;
+  autoStartEnabled?: boolean;
+  rounds?: string[];
+  roundOrder?: string[];
+  stages?: any[];
+  humanInterview?: boolean;
+  humanInterviewTypes?: string[];
   pipelineOptions?: PipelineOptions;
 }
 

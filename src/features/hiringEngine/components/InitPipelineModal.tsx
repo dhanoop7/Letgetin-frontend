@@ -71,7 +71,12 @@ export function InitPipelineModal({
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || "Failed to initialize pipeline");
+      toast.error(
+        err?.error?.message ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to initialize pipeline"
+      );
     } finally {
       setLoading(false);
     }

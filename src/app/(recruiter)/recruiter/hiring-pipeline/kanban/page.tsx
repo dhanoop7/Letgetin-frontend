@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   KanbanSquare,
@@ -24,6 +25,7 @@ import {
   UserCheck,
   Eye,
   PlusCircle,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HiringPipelineNavTabs } from "@/components/recruiter/HiringPipelineNavTabs";
@@ -90,17 +92,20 @@ export default function HiringKanbanPage() {
     recruiterService
       .getMyJobs()
       .then((data) => {
-        setJobs(data || []);
-        if (data && data.length > 0 && !selectedJobId) {
-          const firstJobId = paramJobId || data[0]._id;
-          setSelectedJobId(firstJobId);
+        const jobList = data || [];
+        setJobs(jobList);
+        if (jobList.length > 0) {
+          const matchingJob = (paramJobId && jobList.find((j) => j._id === paramJobId)) || jobList[0];
+          setSelectedJobId(matchingJob._id);
+        } else {
+          setSelectedJobId("");
         }
       })
       .catch((err) => {
         console.error("Failed to load recruiter jobs:", err);
       })
       .finally(() => setLoadingJobs(false));
-  }, [paramJobId, selectedJobId]);
+  }, [paramJobId]);
 
   // 2. Load board data (funnel metrics + candidates for each stage)
   const loadBoardData = useCallback(async () => {
@@ -135,11 +140,23 @@ export default function HiringKanbanPage() {
         setStageCandidates(candMap);
       }
     } catch (err: any) {
-      if (err?.response?.status === 404) {
+      const isNotFound =
+        err?.response?.status === 404 ||
+        err?.statusCode === 404 ||
+        err?.status === 404 ||
+        err?.error?.code === "NOT_FOUND" ||
+        err?.code === "NOT_FOUND";
+
+      if (isNotFound) {
         setMetrics(null);
         setStageCandidates({});
       } else {
-        toast.error("Failed to load Kanban board data.");
+        toast.error(
+          err?.error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load Kanban board data."
+        );
       }
     } finally {
       setLoadingBoard(false);
@@ -317,6 +334,26 @@ export default function HiringKanbanPage() {
         <div className="p-16 text-center space-y-3 bg-surface border border-border rounded-2xl shadow-xs">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-xs font-semibold text-ink-soft">Loading Kanban Stage Columns & Candidates...</p>
+        </div>
+      ) : jobs.length === 0 ? (
+        /* Empty State: No Jobs Created */
+        <div className="p-12 text-center space-y-5 bg-surface border border-dashed border-border rounded-2xl shadow-xs max-w-2xl mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto border border-primary/20">
+            <Briefcase className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-extrabold text-ink">No Job Requisitions Found</h3>
+            <p className="text-xs text-ink-soft leading-relaxed max-w-md mx-auto">
+              Create your first job listing to activate the automated hiring pipeline and start receiving candidates.
+            </p>
+          </div>
+          <Link
+            href="/recruiter/jobs/create"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 transition"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Create a Job Listing</span>
+          </Link>
         </div>
       ) : !metrics ? (
         <div className="p-12 text-center space-y-5 bg-surface border border-dashed border-border rounded-2xl shadow-xs max-w-2xl mx-auto">

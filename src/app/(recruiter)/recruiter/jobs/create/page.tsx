@@ -67,7 +67,14 @@ export default function CreateJobPage() {
   });
 
   const [matchVolume, setMatchVolume] = useState<string | null>(null);
-  const [finalShortlistTarget, setFinalShortlistTarget] = useState<number>(5);
+  const [finalShortlistTarget, setFinalShortlistTarget] = useState<number>(10);
+  const [idealIntake, setIdealIntake] = useState<number>(15);
+  const [minimumIntake, setMinimumIntake] = useState<number>(8);
+  const [collectionDurationDays, setCollectionDurationDays] = useState<number>(7);
+  const [autoExtensionEnabled, setAutoExtensionEnabled] = useState<boolean>(true);
+  const [extensionDurationDays, setExtensionDurationDays] = useState<number>(3);
+  const [maxExtensions, setMaxExtensions] = useState<number>(2);
+  const [autoStartEnabled, setAutoStartEnabled] = useState<boolean>(false);
   const [customRatioError, setCustomRatioError] = useState<string | null>(null);
 
   const [balance, setBalance] = useState<number | null>(null);
@@ -230,7 +237,14 @@ export default function CreateJobPage() {
         skills: skillsText.split(",").map((s) => s.trim()).filter(Boolean),
         description: description.trim(),
         pipelineOptions: buildPipelineOptions(),
-        finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 5,
+        finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 10,
+        idealIntake: idealIntake > 0 ? idealIntake : 15,
+        minimumIntake: minimumIntake > 0 ? minimumIntake : 8,
+        collectionDurationDays: collectionDurationDays > 0 ? collectionDurationDays : 7,
+        autoExtensionEnabled,
+        extensionDurationDays: extensionDurationDays > 0 ? extensionDurationDays : 3,
+        maxExtensions: maxExtensions >= 0 ? maxExtensions : 2,
+        autoStartEnabled,
       });
       router.push(`/recruiter/jobs/${job._id}`);
     } catch (err: unknown) {
@@ -256,7 +270,14 @@ export default function CreateJobPage() {
         description: description.trim(),
         saveAsDraft: true,
         pipelineOptions: buildPipelineOptions(),
-        finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 5,
+        finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 10,
+        idealIntake: idealIntake > 0 ? idealIntake : 15,
+        minimumIntake: minimumIntake > 0 ? minimumIntake : 8,
+        collectionDurationDays: collectionDurationDays > 0 ? collectionDurationDays : 7,
+        autoExtensionEnabled,
+        extensionDurationDays: extensionDurationDays > 0 ? extensionDurationDays : 3,
+        maxExtensions: maxExtensions >= 0 ? maxExtensions : 2,
+        autoStartEnabled,
       });
       router.push(`/recruiter/jobs/${job._id}`);
     } catch (err: unknown) {
@@ -492,25 +513,162 @@ export default function CreateJobPage() {
               ))}
 
               {(sectionEnabled.resumeMatch || sectionEnabled.assessment || sectionEnabled.aiInterview) && (
-                <div className="p-4 rounded-xl bg-surface-alt/40 border border-border mt-3 space-y-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <label htmlFor="finalShortlistTarget" className="text-xs font-bold text-ink flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-primary" /> Target Shortlist Candidates
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/5 via-surface to-surface-alt/40 border border-border mt-4 space-y-5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary-glow" />
+                    <h3 className="text-xs font-bold text-ink uppercase tracking-wider">Candidate Collection & Funnel Targets</h3>
+                  </div>
+
+                  {/* 3 Core Target Inputs Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    {/* Final Shortlist */}
+                    <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1.5 shadow-xs">
+                      <label htmlFor="finalShortlistTarget" className="text-xs font-bold text-ink block">
+                        Final Shortlist Target
                       </label>
-                      <p className="text-[11px] text-ink-soft">
-                        How many vetted candidates you want to reach the final hiring pool. The Hiring Engine will dynamically calculate stage pool sizes based on this target.
+                      <input
+                        id="finalShortlistTarget"
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={finalShortlistTarget}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setFinalShortlistTarget(val);
+                          setIdealIntake(Math.max(val, Math.ceil(val * 1.5)));
+                          setMinimumIntake(Math.max(1, Math.ceil(val * 0.8)));
+                        }}
+                        className="w-full px-3 py-1.5 text-sm font-bold rounded-lg bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary text-center"
+                      />
+                      <p className="text-[10px] text-ink-soft leading-tight">
+                        How many candidates you ultimately want to reach your final hiring shortlist.
                       </p>
                     </div>
-                    <input
-                      id="finalShortlistTarget"
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={finalShortlistTarget}
-                      onChange={(e) => setFinalShortlistTarget(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-20 px-3 py-1.5 text-sm font-semibold rounded-lg bg-surface border border-border text-ink text-center focus:outline-none focus:border-primary shrink-0"
-                    />
+
+                    {/* Ideal Intake */}
+                    <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1.5 shadow-xs">
+                      <label htmlFor="idealIntake" className="text-xs font-bold text-ink block">
+                        Ideal Candidate Intake
+                      </label>
+                      <input
+                        id="idealIntake"
+                        type="number"
+                        min={1}
+                        max={300}
+                        value={idealIntake}
+                        onChange={(e) => setIdealIntake(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-3 py-1.5 text-sm font-bold rounded-lg bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary text-center"
+                      />
+                      <p className="text-[10px] text-ink-soft leading-tight">
+                        How many qualified candidates the statistical funnel ideally wants to run through all rounds.
+                      </p>
+                    </div>
+
+                    {/* Minimum Intake */}
+                    <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1.5 shadow-xs">
+                      <label htmlFor="minimumIntake" className="text-xs font-bold text-ink block">
+                        Minimum Candidate Intake
+                      </label>
+                      <input
+                        id="minimumIntake"
+                        type="number"
+                        min={1}
+                        max={300}
+                        value={minimumIntake}
+                        onChange={(e) => setMinimumIntake(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-3 py-1.5 text-sm font-bold rounded-lg bg-surface-alt border border-border text-ink focus:outline-none focus:border-primary text-center"
+                      />
+                      <p className="text-[10px] text-ink-soft leading-tight">
+                        The minimum qualified candidates required before the automated funnel is allowed to start.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Window & Extension Settings */}
+                  <div className="pt-2 border-t border-border/80 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div>
+                      <label htmlFor="collectionDurationDays" className="text-xs font-semibold text-ink block mb-1">
+                        Collection Window
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="collectionDurationDays"
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={collectionDurationDays}
+                          onChange={(e) => setCollectionDurationDays(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-20 px-3 py-1.5 text-xs font-semibold rounded-lg bg-surface border border-border text-ink text-center"
+                        />
+                        <span className="text-xs text-ink-soft">days</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-ink block mb-1">
+                        Auto-Extend Window
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer pt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={autoExtensionEnabled}
+                          onChange={(e) => setAutoExtensionEnabled(e.target.checked)}
+                          className="w-4 h-4 rounded text-primary focus:ring-primary/30"
+                        />
+                        <span className="text-xs text-ink-soft">
+                          {autoExtensionEnabled ? "Enabled if under minimum" : "Disabled"}
+                        </span>
+                      </label>
+                    </div>
+
+                    {autoExtensionEnabled && (
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <label className="text-[11px] font-medium text-ink-soft block mb-1">Extend By</label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={1}
+                              max={30}
+                              value={extensionDurationDays}
+                              onChange={(e) => setExtensionDurationDays(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-14 px-2 py-1 text-xs font-semibold rounded-lg bg-surface border border-border text-center text-ink"
+                            />
+                            <span className="text-[11px] text-ink-soft">d</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-medium text-ink-soft block mb-1">Max Times</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={5}
+                            value={maxExtensions}
+                            onChange={(e) => setMaxExtensions(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-14 px-2 py-1 text-xs font-semibold rounded-lg bg-surface border border-border text-center text-ink"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Auto-Start Pipeline Setting */}
+                  <div className="pt-2 border-t border-border/80 flex items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs font-bold text-ink block">Auto-Start Pipeline</span>
+                      <p className="text-[11px] text-ink-soft">
+                        Automatically recalculate and start the funnel as soon as minimum intake ({minimumIntake}) is reached.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={autoStartEnabled}
+                        onChange={(e) => setAutoStartEnabled(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
                   </div>
                 </div>
               )}
