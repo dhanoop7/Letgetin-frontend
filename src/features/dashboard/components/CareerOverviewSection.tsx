@@ -26,9 +26,14 @@ import {
   MapPin,
   DollarSign,
   ArrowRight,
+  FileText,
+  Trash2,
+  LayoutGrid,
 } from 'lucide-react';
 import { applicationService } from '@/features/applications/services/applicationService';
 import { ApplicationItem, ApplicationStats, ApplicationStatus } from '@/features/applications/types';
+import { resolveCandidateStatus } from '@/features/applications/utils/candidateStatusResolver';
+import { ApplicationTrackingModal } from '@/features/applications/components/ApplicationTrackingModal';
 import { StorageProviderFactory } from '@/features/resume/storage/factory';
 import { IResume } from '@/features/resume/types';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
@@ -37,7 +42,7 @@ import { IJob } from '@/features/jobs/types/job.types';
 import { jobService } from '@/features/jobs/services/jobService';
 
 interface CareerOverviewSectionProps {
-  onSwitchTab?: (tab: 'overview' | 'jobs' | 'resume' | 'coverLetter' | 'videoProfile', stageFilter?: string) => void;
+  onSwitchTab?: (tab: 'overview' | 'kanban' | 'calendar' | 'jobs' | 'resume' | 'coverLetter' | 'videoProfile', stageFilter?: string) => void;
   onOpenCreateResume?: () => void;
 }
 
@@ -106,6 +111,18 @@ export function CareerOverviewSection({ onSwitchTab, onOpenCreateResume }: Caree
   const [resumes, setResumes] = useState<IResume[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobForModal, setSelectedJobForModal] = useState<IJob | null>(null);
+  const [trackingModalApp, setTrackingModalApp] = useState<ApplicationItem | null>(null);
+
+  const handleDelete = async (appId: string) => {
+    if (!confirm('Are you sure you want to withdraw or remove this application record?')) return;
+    try {
+      await applicationService.deleteApplication(appId);
+      setApplications((prev) => prev.filter((a) => a._id !== appId));
+      if (trackingModalApp?._id === appId) setTrackingModalApp(null);
+    } catch (err) {
+      console.warn('Failed to delete application:', err);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -429,22 +446,42 @@ export function CareerOverviewSection({ onSwitchTab, onOpenCreateResume }: Caree
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Recent Applications Feed (2 cols) */}
         <div className="lg:col-span-2 p-5 sm:p-6 rounded-3xl bg-surface border border-border space-y-4 shadow-xs">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
             <div>
               <h3 className="text-base font-extrabold text-ink tracking-tight flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" /> Recent Applications Activity
               </h3>
-              <p className="text-xs text-ink-soft mt-0.5">Latest submitted applications and status updates.</p>
+              <p className="text-xs text-ink-soft mt-0.5">Latest submitted applications, real-time stage milestones & updates.</p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onSwitchTab?.('jobs')}
-              className="text-xs font-bold text-primary hover:text-primary-glow flex items-center gap-1 transition cursor-pointer"
-            >
-              <span>View All on Board</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
+            {/* Quick Navigation to Kanban & Calendar */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => onSwitchTab?.('kanban')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-primary/10 hover:text-primary text-ink-soft font-bold text-xs border border-border transition cursor-pointer"
+                title="Switch to Kanban Board view"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Kanban Board</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSwitchTab?.('calendar')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-primary/10 hover:text-primary text-ink-soft font-bold text-xs border border-border transition cursor-pointer"
+                title="Switch to Calendar view"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Calendar</span>
+              </button>
+              <Link
+                href="/applications"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary hover:text-white text-primary font-bold text-xs border border-primary/20 transition cursor-pointer"
+              >
+                <span>View All</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
 
           {applications.length === 0 ? (
@@ -465,64 +502,145 @@ export function CareerOverviewSection({ onSwitchTab, onOpenCreateResume }: Caree
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-border/60">
+            <div className="space-y-3">
               {applications.slice(0, 6).map((app) => {
-                const statusMeta = STATUS_CONFIG[app.status] || STATUS_CONFIG.submitted;
-                const StatusIcon = statusMeta.icon;
+                const candidateStatus = resolveCandidateStatus(app);
                 const formattedDate = new Date(app.appliedAt || app.createdAt).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
+                  year: 'numeric',
                 });
 
                 return (
                   <div
                     key={app._id}
-                    onClick={() => handleOpenApplicationDetails(app)}
-                    className="py-3 flex items-center justify-between gap-3 hover:bg-surface-alt/40 px-2 rounded-xl transition cursor-pointer group"
+                    className="p-4 sm:p-5 rounded-2xl bg-surface border border-border hover:border-primary-glow/30 transition-all shadow-xs space-y-3"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-surface-alt border border-border flex items-center justify-center text-ink font-bold text-xs shrink-0 group-hover:border-primary/40 transition">
-                        {app.job?.company?.name?.charAt(0) || 'C'}
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex items-start gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-surface-alt border border-border flex items-center justify-center text-ink font-bold text-sm shrink-0">
+                          {app.job?.company?.name?.charAt(0) || 'C'}
+                        </div>
+
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4
+                              onClick={() => handleOpenApplicationDetails(app)}
+                              className="text-sm sm:text-base font-bold text-ink hover:text-primary transition truncate cursor-pointer"
+                            >
+                              {app.job?.title || 'Job Position'}
+                            </h4>
+                            {app.source === 'ai_apply' ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                AI Auto-Apply
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-surface-alt text-ink-soft border border-border">
+                                Manual
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft font-medium">
+                            <span className="flex items-center gap-1 text-ink font-semibold">
+                              <Building2 className="w-3.5 h-3.5 text-ink-soft" />
+                              {app.job?.company?.name || 'Company'}
+                            </span>
+                            {app.job?.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5 text-ink-soft" />
+                                {app.job.location.city
+                                  ? `${app.job.location.city}, ${app.job.location.country}`
+                                  : app.job.location.country || 'Remote Eligible'}
+                              </span>
+                            )}
+                            {app.job?.salary?.max ? (
+                              <span className="flex items-center gap-1 text-ink font-semibold">
+                                <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                                {app.job.salary.currency || 'INR'}{' '}
+                                {app.job.salary.min ? `${app.job.salary.min.toLocaleString()} - ` : ''}
+                                {app.job.salary.max.toLocaleString()}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-xs sm:text-sm font-bold text-ink group-hover:text-primary transition truncate">
-                            {app.job?.title || 'Job Position'}
-                          </h4>
-                          {app.source === 'ai_apply' ? (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/20">
-                              🤖 AI
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-medium px-1.5 py-0.2 rounded-md bg-surface-alt text-ink-soft border border-border">
-                              Direct
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-ink-soft font-medium">
-                          <span className="text-ink font-semibold">{app.job?.company?.name || 'Company'}</span>
-                          <span>•</span>
-                          <span>{app.job?.location?.city || 'Remote'}</span>
-                          <span>•</span>
-                          <span>{formattedDate}</span>
-                        </div>
+                      {/* Status Badge & Match Score */}
+                      <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                        {app.matchScore > 0 && (
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            {app.matchScore}% Match
+                          </span>
+                        )}
+
+                        <span
+                          className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 shadow-2xs ${candidateStatus.badgeClass}`}
+                        >
+                          <span>{candidateStatus.label}</span>
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {app.matchScore > 0 && (
-                        <span className="hidden sm:inline-flex text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          {app.matchScore}%
+                    {/* Footer details & Action Buttons */}
+                    <div className="pt-2 border-t border-border/70 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-soft">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          Applied on {formattedDate}
                         </span>
-                      )}
+                        {app.resume && (
+                          <span className="flex items-center gap-1 text-ink font-medium">
+                            <FileText className="w-3.5 h-3.5 text-primary" />
+                            {app.resume.title || 'Attached Resume'}
+                          </span>
+                        )}
+                        {app.stageDeadline && (app.stageStatus === 'invited' || app.stageStatus === 'started') && (
+                          <span className="flex items-center gap-1 text-amber-400 font-semibold">
+                            <Clock className="w-3.5 h-3.5" />
+                            Deadline: {new Date(app.stageDeadline).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
 
-                      <span
-                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${statusMeta.bg} ${statusMeta.color} ${statusMeta.border}`}
-                      >
-                        <StatusIcon className="w-3 h-3" />
-                        <span>{statusMeta.label}</span>
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {candidateStatus.actionRequired && (
+                          <button
+                            type="button"
+                            onClick={() => setTrackingModalApp(app)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shadow-xs transition cursor-pointer animate-pulse"
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{candidateStatus.actionLabel || 'Action Required'}</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setTrackingModalApp(app)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary hover:text-white text-primary font-bold text-xs border border-primary/20 transition cursor-pointer"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Track Application</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenApplicationDetails(app)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-surface-alt/80 text-ink font-bold text-xs border border-border transition cursor-pointer"
+                        >
+                          <span>Details</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(app._id)}
+                          className="p-1.5 rounded-xl text-ink-soft hover:text-destructive hover:bg-destructive/10 transition cursor-pointer"
+                          title="Withdraw application record"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -646,6 +764,14 @@ export function CareerOverviewSection({ onSwitchTab, onOpenCreateResume }: Caree
         job={selectedJobForModal}
         onClose={() => setSelectedJobForModal(null)}
       />
+
+      {/* Dynamic Application Tracking Modal */}
+      {trackingModalApp && (
+        <ApplicationTrackingModal
+          application={trackingModalApp}
+          onClose={() => setTrackingModalApp(null)}
+        />
+      )}
     </div>
   );
 }

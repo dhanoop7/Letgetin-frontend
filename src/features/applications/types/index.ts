@@ -57,6 +57,73 @@ export interface ApplicationItem {
   notes: string;
   appliedAt: string;
   createdAt: string;
+  // Authoritative Hiring Engine & Dynamic Funnel fields
+  resumeScreeningStatus?: 'pending' | 'ai_reviewing' | 'ai_reviewed';
+  resumeDecision?: 'pending' | 'shortlisted' | 'rejected' | 'needs_review';
+  poolType?: 'primary' | 'reserve' | 'disqualified' | null;
+  currentStageIndex?: number;
+  currentStageId?: string;
+  stageStatus?: 'invited' | 'started' | 'completed' | 'passed' | 'failed' | 'no_show' | null;
+  stageDeadline?: string | null;
+  invitedAt?: string | null;
+  stageStartedAt?: string | null;
+  stageCompletedAt?: string | null;
+  finalShortlistDecision?: 'pending' | 'shortlisted' | 'offered' | 'hired' | 'rejected' | 'on_hold' | null;
+  offeredAt?: string | null;
+  hiredAt?: string | null;
+}
+
+export interface CandidateFunnelStage {
+  stageId: string;
+  stageName: string;
+  stageType: 'resume_match' | 'assessment' | 'ai_interview' | 'manual_review' | 'human_interview' | string;
+  order: number;
+  deadlineHours?: number;
+}
+
+export interface CandidateStageHistoryItem {
+  stageId: string;
+  stageName: string;
+  stageIndex: number;
+  status: 'invited' | 'started' | 'completed' | 'passed' | 'failed' | 'no_show';
+  enteredAt: string;
+  completedAt?: string;
+  promotedFromReserve?: boolean;
+}
+
+export interface CandidateTrackingResponse {
+  application: ApplicationItem;
+  funnelStages: CandidateFunnelStage[];
+  stageHistory: CandidateStageHistoryItem[];
+}
+
+export type CandidateDisplayStateKey =
+  | 'application_submitted'
+  | 'application_under_review'
+  | 'not_selected_resume'
+  | 'selected_for_hiring_process'
+  | 'on_standby'
+  | 'action_required'
+  | 'in_progress'
+  | 'stage_completed'
+  | 'not_selected_stage'
+  | 'missed_stage'
+  | 'final_review'
+  | 'offer_received'
+  | 'offer_accepted'
+  | 'hired'
+  | 'withdrawn';
+
+export interface CandidateDisplayState {
+  key: CandidateDisplayStateKey;
+  label: string;
+  badgeVariant: 'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'destructive' | 'info';
+  badgeClass: string;
+  description: string;
+  stageName?: string;
+  actionRequired?: boolean;
+  actionLabel?: string;
+  actionUrl?: string;
 }
 
 export interface ApplicationStats {

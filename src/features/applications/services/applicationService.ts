@@ -1,5 +1,5 @@
 import { apiClient } from '@/shared/services/apiClient';
-import { ApplicationsResponse, ApplicationItem, ApplicationStatus } from '../types';
+import { ApplicationsResponse, ApplicationItem, ApplicationStatus, CandidateTrackingResponse } from '../types';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -19,6 +19,13 @@ export const applicationService = {
     const res = await apiClient.get<never, ApiResponse<ApplicationsResponse>>('/applications', {
       params,
     });
+    return res.data;
+  },
+
+  async getApplicationTracking(applicationId: string): Promise<CandidateTrackingResponse> {
+    const res = await apiClient.get<never, ApiResponse<CandidateTrackingResponse>>(
+      `/applications/${applicationId}/tracking`
+    );
     return res.data;
   },
 
@@ -54,3 +61,4 @@ export const applicationService = {
     return res.data;
   },
 };
+

@@ -8,6 +8,9 @@ import {
   FailCandidatePayload,
   RefillStagePayload,
   HiringEngineCandidate,
+  IFinalShortlistResponse,
+  RecordFinalDecisionPayload,
+  FinalDecision,
 } from '../types/hiringEngine.types';
 
 export interface ApiResponse<T> {
@@ -156,6 +159,45 @@ export const hiringEngineService = {
       never,
       ApiResponse<{ config: IHiringFunnelConfig; initialMetrics: IFunnelMetricsReport }>
     >(`/recruiter/jobs/${jobId}/hiring-engine/config`, payload);
+    return res.data;
+  },
+
+  /**
+   * GET /api/recruiter/jobs/:jobId/hiring-engine/final-shortlist
+   * Retrieves all verified finalists who completed the final configured stage, with stage scores and decision state.
+   */
+  async getFinalShortlist(jobId: string): Promise<IFinalShortlistResponse> {
+    const res = await apiClient.get<never, ApiResponse<IFinalShortlistResponse>>(
+      `/recruiter/jobs/${jobId}/hiring-engine/final-shortlist`
+    );
+    return res.data;
+  },
+
+  /**
+   * POST /api/recruiter/jobs/:jobId/hiring-engine/final-shortlist/:applicationId/decision
+   * Records a recruiter decision on a finalist: 'offered' | 'on_hold' | 'rejected'.
+   */
+  async recordFinalDecision(
+    jobId: string,
+    applicationId: string,
+    payload: RecordFinalDecisionPayload
+  ): Promise<{
+    application: any;
+    decision: FinalDecision;
+    status: string;
+    offeredAt?: string;
+    hiredAt?: string;
+  }> {
+    const res = await apiClient.post<
+      never,
+      ApiResponse<{
+        application: any;
+        decision: FinalDecision;
+        status: string;
+        offeredAt?: string;
+        hiredAt?: string;
+      }>
+    >(`/recruiter/jobs/${jobId}/hiring-engine/final-shortlist/${applicationId}/decision`, payload);
     return res.data;
   },
 };

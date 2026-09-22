@@ -46,6 +46,7 @@ import {
   TrendingUp,
   Award,
   Video,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -156,6 +157,13 @@ export function DashboardSidebar({
           href: "/explore",
           icon: Compass,
           description: "Explore matched job opportunities",
+        },
+        {
+          name: "My Applications",
+          shortName: "Applications",
+          href: "/applications",
+          icon: FileText,
+          description: "Track applied jobs, dynamic stages & offers",
         },
         {
           name: "My Jobs",

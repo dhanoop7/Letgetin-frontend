@@ -127,8 +127,10 @@ const HIRING_ITEMS: NavItem[] = [
     icon: GitBranch,
     description: "Hiring journey, stage kanban & candidates",
     subItems: [
+      { name: "Resume Shortlisting", shortName: "Shortlisting", href: "/recruiter/hiring-pipeline/resume-screening" },
       { name: "Hiring Timeline", shortName: "Timeline", href: "/recruiter/hiring-pipeline/timeline" },
-      { name: "Kanban Board", shortName: "Kanban", href: "/recruiter/hiring-pipeline/kanban" },
+      { name: "Kanban", shortName: "Kanban", href: "/recruiter/hiring-pipeline/kanban" },
+      { name: "Final Shortlist", shortName: "Finalists", href: "/recruiter/hiring-pipeline/final-shortlist" },
       { name: "Candidate Listing", shortName: "Candidates", href: "/recruiter/hiring-pipeline/candidates" },
     ],
   },

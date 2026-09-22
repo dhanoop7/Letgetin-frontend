@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { applicationService } from '../services/applicationService';
 import { ApplicationItem, ApplicationStats, ApplicationStatus } from '../types';
+import { resolveCandidateStatus } from '../utils/candidateStatusResolver';
+import { ApplicationTrackingModal } from './ApplicationTrackingModal';
 
 const STATUS_CONFIG: Record<
   ApplicationStatus,
@@ -99,6 +101,7 @@ export function ApplicationsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedApp, setSelectedApp] = useState<ApplicationItem | null>(null);
+  const [trackingModalApp, setTrackingModalApp] = useState<ApplicationItem | null>(null);
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
@@ -327,8 +330,7 @@ export function ApplicationsPage() {
       ) : (
         <div className="space-y-3">
           {applications.map((app) => {
-            const statusMeta = STATUS_CONFIG[app.status] || STATUS_CONFIG.submitted;
-            const StatusIcon = statusMeta.icon;
+            const candidateStatus = resolveCandidateStatus(app);
             const formattedDate = new Date(app.appliedAt || app.createdAt).toLocaleDateString(
               undefined,
               {
@@ -400,12 +402,11 @@ export function ApplicationsPage() {
                       </span>
                     )}
 
-                    {/* Status Badge (Read-Only) */}
+                    {/* Dynamic Candidate Status Badge */}
                     <span
-                      className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 shadow-2xs ${statusMeta.bg} ${statusMeta.color} ${statusMeta.border}`}
+                      className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 shadow-2xs ${candidateStatus.badgeClass}`}
                     >
-                      <StatusIcon className="w-3.5 h-3.5" />
-                      <span>{statusMeta.label}</span>
+                      <span>{candidateStatus.label}</span>
                     </span>
                   </div>
                 </div>
@@ -423,25 +424,39 @@ export function ApplicationsPage() {
                         {app.resume.title || 'Attached Resume'}
                       </span>
                     )}
+                    {app.stageDeadline && (app.stageStatus === 'invited' || app.stageStatus === 'started') && (
+                      <span className="flex items-center gap-1 text-amber-400 font-semibold">
+                        <Clock className="w-3.5 h-3.5" />
+                        Deadline: {new Date(app.stageDeadline).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {app.status === 'interviewing' && (
-                      <Link
-                        href={`/interviews/ai-practice?role=${encodeURIComponent(app.job?.title || '')}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-500/20 transition cursor-pointer"
-                        title="Prepare for this role with AI interview practice"
+                    {candidateStatus.actionRequired && (
+                      <button
+                        type="button"
+                        onClick={() => setTrackingModalApp(app)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shadow-xs transition cursor-pointer animate-pulse"
                       >
-                        <Sparkles className="w-3 h-3" />
-                        <span>Prepare with AI</span>
-                      </Link>
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{candidateStatus.actionLabel || 'Action Required'}</span>
+                      </button>
                     )}
                     <button
                       type="button"
-                      onClick={() => setSelectedApp(app)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-primary/10 hover:text-primary text-ink font-bold text-xs border border-border hover:border-primary/20 transition cursor-pointer"
+                      onClick={() => setTrackingModalApp(app)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary hover:text-white text-primary font-bold text-xs border border-primary/20 transition cursor-pointer"
                     >
-                      <span>View Details</span>
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Track Application</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedApp(app)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-surface-alt/80 text-ink font-bold text-xs border border-border transition cursor-pointer"
+                    >
+                      <span>Details</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                     <button
@@ -527,54 +542,38 @@ export function ApplicationsPage() {
               </button>
             </div>
 
-            {/* Visual Hiring Stage Progress Bar */}
-            <div className="p-4 rounded-2xl bg-surface-alt/50 border border-border/80 space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] font-bold text-ink-soft uppercase tracking-wider">
-                <span>Hiring Pipeline Stage</span>
-                <span className="text-primary font-black capitalize">
-                  {STATUS_CONFIG[selectedApp.status]?.label || selectedApp.status}
-                </span>
-              </div>
-              <div className="grid grid-cols-5 gap-1.5 pt-1">
-                {[
-                  { id: 'submitted', label: 'Submitted' },
-                  { id: 'reviewing', label: 'Under Review' },
-                  { id: 'shortlisted', label: 'Shortlisted' },
-                  { id: 'interviewing', label: 'Interview' },
-                  { id: 'offered', label: 'Offer' },
-                ].map((step, idx) => {
-                  const stages = ['submitted', 'reviewing', 'shortlisted', 'interviewing', 'offered'];
-                  const currentIdx = stages.indexOf(selectedApp.status);
-                  const isCompleted = currentIdx >= idx;
-                  const isCurrent = selectedApp.status === step.id;
-
-                  return (
-                    <div key={step.id} className="space-y-1.5">
-                      <div
-                        className={`h-1.5 rounded-full transition-all ${
-                          isCurrent
-                            ? 'bg-primary shadow-xs'
-                            : isCompleted
-                            ? 'bg-emerald-500'
-                            : 'bg-border'
-                        }`}
-                      />
-                      <span
-                        className={`text-[10px] block text-center truncate ${
-                          isCurrent
-                            ? 'font-bold text-primary'
-                            : isCompleted
-                            ? 'font-semibold text-emerald-600'
-                            : 'text-ink-soft'
-                        }`}
-                      >
-                        {step.label}
-                      </span>
+            {/* Dynamic Status & Interactive Tracker CTA */}
+            {(() => {
+              const selStatus = resolveCandidateStatus(selectedApp);
+              return (
+                <div className="p-4 rounded-2xl bg-surface-alt/60 border border-border space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">
+                        Current Application Status
+                      </div>
+                      <div className="text-sm font-bold text-ink flex items-center gap-2 mt-0.5">
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${selStatus.badgeClass}`}>
+                          {selStatus.label}
+                        </span>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setTrackingModalApp(selectedApp)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-xs transition cursor-pointer self-start sm:self-auto"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>View Live Funnel Timeline</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-ink-soft leading-relaxed">
+                    {selStatus.description}
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Dynamic Status Follow-Up Action Banners */}
             {selectedApp.status === 'interviewing' && (
@@ -872,6 +871,14 @@ export function ApplicationsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Dynamic Application Tracking Modal */}
+      {trackingModalApp && (
+        <ApplicationTrackingModal
+          application={trackingModalApp}
+          onClose={() => setTrackingModalApp(null)}
+        />
       )}
     </div>
   );

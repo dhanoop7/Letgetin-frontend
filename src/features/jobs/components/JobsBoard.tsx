@@ -42,14 +42,16 @@ import { useRouter } from "next/navigation";
 
 interface JobsBoardProps {
   onSwitchTab?: (
-    tab: "overview" | "jobs" | "resume" | "coverLetter" | "videoProfile",
+    tab: "overview" | "kanban" | "calendar" | "jobs" | "resume" | "coverLetter" | "videoProfile",
   ) => void;
   initialStageFilter?: string;
+  initialViewMode?: "kanban" | "list";
 }
 
 export function JobsBoard({
   onSwitchTab,
   initialStageFilter = "all",
+  initialViewMode = "kanban",
 }: JobsBoardProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,13 @@ export function JobsBoard({
   const [activeStageTab, setActiveStageTab] = useState<string>(
     initialStageFilter || "all",
   );
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">(initialViewMode || "kanban");
+
+  useEffect(() => {
+    if (initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode]);
 
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState("");

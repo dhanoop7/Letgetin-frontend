@@ -3,9 +3,15 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { GitCommit, KanbanSquare, Users } from "lucide-react";
+import { GitCommit, KanbanSquare, FileCheck2, Award } from "lucide-react";
 
 export const HIRING_PIPELINE_TABS = [
+  {
+    name: "Resume Shortlisting",
+    href: "/recruiter/hiring-pipeline/resume-screening",
+    icon: FileCheck2,
+    badge: "Qualification",
+  },
   {
     name: "Hiring Timeline",
     href: "/recruiter/hiring-pipeline/timeline",
@@ -13,16 +19,16 @@ export const HIRING_PIPELINE_TABS = [
     badge: "Funnel",
   },
   {
-    name: "Kanban Board",
+    name: "Kanban",
     href: "/recruiter/hiring-pipeline/kanban",
     icon: KanbanSquare,
-    badge: "Live Stages",
+    badge: "Live",
   },
   {
-    name: "Candidate Listing",
-    href: "/recruiter/hiring-pipeline/candidates",
-    icon: Users,
-    badge: "Directory",
+    name: "Final Shortlist",
+    href: "/recruiter/hiring-pipeline/final-shortlist",
+    icon: Award,
+    badge: "Decisions",
   },
 ];
 
@@ -43,8 +49,14 @@ export function HiringPipelineNavTabs({ jobId }: HiringPipelineNavTabsProps) {
 
         const isActive =
           pathname === tab.href ||
+          (tab.href === "/recruiter/hiring-pipeline/resume-screening" &&
+            pathname?.startsWith("/recruiter/hiring-pipeline/resume-screening")) ||
           (tab.href === "/recruiter/hiring-pipeline/timeline" &&
-            pathname?.startsWith("/recruiter/hiring-pipeline/timeline"));
+            pathname?.startsWith("/recruiter/hiring-pipeline/timeline")) ||
+          (tab.href === "/recruiter/hiring-pipeline/kanban" &&
+            pathname?.startsWith("/recruiter/hiring-pipeline/kanban")) ||
+          (tab.href === "/recruiter/hiring-pipeline/final-shortlist" &&
+            pathname?.startsWith("/recruiter/hiring-pipeline/final-shortlist"));
 
         return (
           <Link

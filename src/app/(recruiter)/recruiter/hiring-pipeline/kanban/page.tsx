@@ -406,7 +406,7 @@ export default function HiringKanbanPage() {
                       </h3>
                     </div>
                     <span className="text-xs font-extrabold text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-                      {pool.primary.length}/{stage.targetCount}
+                      {stage.activeCount ?? pool.primary.length}/{stage.targetCount}
                     </span>
                   </div>
 
@@ -426,7 +426,7 @@ export default function HiringKanbanPage() {
                           hasDeficit ? "bg-amber-500" : "bg-emerald-500"
                         }`}
                         style={{
-                          width: `${Math.min(100, Math.round((pool.primary.length / stage.targetCount) * 100))}%`,
+                          width: `${Math.min(100, Math.round(((stage.activeCount ?? pool.primary.length) / stage.targetCount) * 100))}%`,
                         }}
                       />
                     </div>
@@ -517,6 +517,50 @@ export default function HiringKanbanPage() {
               </div>
             );
           })}
+
+          {/* Final Shortlist Authoritative Destination Column */}
+          <div className="w-80 shrink-0 bg-gradient-to-b from-purple-500/10 via-primary/5 to-surface-alt/30 border border-purple-500/30 rounded-2xl flex flex-col max-h-[750px] shadow-xs">
+            <div className="p-4 border-b border-purple-500/20 bg-surface/90 rounded-t-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <Award className="w-3.5 h-3.5" />
+                  </div>
+                  <h3 className="text-xs font-extrabold text-ink">
+                    Final Shortlist
+                  </h3>
+                </div>
+                <span className="text-xs font-extrabold text-purple-600 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20">
+                  {metrics.currentShortlistedCount}/{metrics.finalShortlistTarget}
+                </span>
+              </div>
+              <p className="text-[11px] text-ink-soft">
+                Candidates completing the final stage enter recruiter review & offer extension.
+              </p>
+            </div>
+
+            <div className="p-6 flex-1 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center border border-purple-500/20 shadow-xs">
+                <Award className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-extrabold text-ink">
+                  {metrics.currentShortlistedCount} Finalist{metrics.currentShortlistedCount === 1 ? "" : "s"} Ready
+                </h4>
+                <p className="text-xs text-ink-soft max-w-[200px] mx-auto">
+                  Review verified candidate profiles, extend offers, and record decisions.
+                </p>
+              </div>
+
+              <Link
+                href={`/recruiter/hiring-pipeline/final-shortlist?jobId=${selectedJobId}`}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-xs hover:bg-primary/90 transition"
+              >
+                <span>View Finalists</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 
@@ -583,7 +627,7 @@ function CandidateCard({
   const isFailed = candidate.stageStatus === "failed";
   const isNoShow = candidate.stageStatus === "no_show";
   const isPassed = candidate.stageStatus === "passed";
-  const isShortlisted = candidate.status === "shortlisted";
+  const isFinalShortlisted = candidate.status === "shortlisted" || candidate.stageStatus === "passed";
 
   return (
     <div
@@ -604,7 +648,7 @@ function CandidateCard({
                 : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
             }`}
           >
-            {name[0]?.toUpperCase() || "C"}
+            {(name?.[0] || "C").toUpperCase()}
           </div>
           <div className="truncate">
             <h4 className="text-xs font-bold text-ink truncate group-hover:text-primary transition-colors">
@@ -687,7 +731,7 @@ function CandidateCard({
             >
               <UserX className="w-3.5 h-3.5" />
             </button>
-            {!isShortlisted && (
+            {!isFinalShortlisted ? (
               <button
                 type="button"
                 onClick={onAdvance}
@@ -697,6 +741,10 @@ function CandidateCard({
                 <span>Advance</span>
                 <ArrowRight className="w-2.5 h-2.5" />
               </button>
+            ) : (
+              <span className="text-[9px] font-extrabold text-purple-600 bg-purple-500/10 px-1.5 py-0.5 rounded-md border border-purple-500/20">
+                Final Shortlisted
+              </span>
             )}
           </div>
         )}

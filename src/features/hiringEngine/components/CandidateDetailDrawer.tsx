@@ -76,7 +76,7 @@ export function CandidateDetailDrawer({
     candidate.stageStatus === "no_show" ||
     candidate.poolType === "disqualified";
 
-  const isShortlisted = candidate.status === "shortlisted";
+  const isFinalShortlisted = candidate.status === "shortlisted" || candidate.stageStatus === "passed";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
@@ -85,22 +85,28 @@ export function CandidateDetailDrawer({
         <div className="p-6 border-b border-border/80 flex items-center justify-between bg-surface-alt/40">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-extrabold text-lg border border-primary/20 shadow-xs">
-              {candidateName[0]?.toUpperCase() || "C"}
+              {(candidateName?.[0] || "C").toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-extrabold text-ink">{candidateName}</h2>
-                <span
-                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                    candidate.poolType === "primary"
-                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                      : candidate.poolType === "reserve"
-                      ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                      : "bg-rose-500/10 text-rose-600 border-rose-500/20"
-                  }`}
-                >
-                  {candidate.poolType.toUpperCase()} POOL
-                </span>
+                {candidate.poolType ? (
+                  <span
+                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                      candidate.poolType === "primary"
+                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                        : candidate.poolType === "reserve"
+                        ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                        : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                    }`}
+                  >
+                    {String(candidate.poolType).toUpperCase()} POOL
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-surface-alt text-ink-soft border-border">
+                    CANDIDATE
+                  </span>
+                )}
               </div>
               <p className="text-xs text-ink-soft mt-0.5">{candidateEmail}</p>
             </div>
@@ -325,9 +331,9 @@ export function CandidateDetailDrawer({
         {/* Action Footer */}
         <div className="p-4 border-t border-border bg-surface flex items-center justify-between gap-3">
           <div className="text-xs text-ink-soft">
-            {isShortlisted ? (
-              <span className="font-bold text-emerald-600 flex items-center gap-1">
-                <Award className="w-4 h-4" /> Candidate is Shortlisted!
+            {isFinalShortlisted ? (
+              <span className="font-bold text-purple-600 flex items-center gap-1">
+                <Award className="w-4 h-4" /> Candidate is Final Shortlisted!
               </span>
             ) : isDisqualified ? (
               <span className="text-rose-600 font-semibold">Candidate Disqualified</span>
@@ -348,7 +354,7 @@ export function CandidateDetailDrawer({
               </button>
             )}
 
-            {!isDisqualified && !isShortlisted && onAdvanceClick && (
+            {!isDisqualified && !isFinalShortlisted && onAdvanceClick && (
               <button
                 type="button"
                 onClick={() => onAdvanceClick(candidate)}

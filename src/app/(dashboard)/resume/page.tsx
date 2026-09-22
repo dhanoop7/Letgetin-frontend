@@ -23,10 +23,15 @@ import {
   LayoutDashboard,
   Mail,
   Video,
+  LayoutGrid,
+  Calendar,
 } from "lucide-react";
+import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 
 type MyJobsSection =
   | "overview"
+  | "kanban"
+  | "calendar"
   | "jobs"
   | "resume"
   | "coverLetter"
@@ -41,7 +46,9 @@ const MY_JOBS_TABS: {
   icon: typeof FileText;
 }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "jobs", label: "Jobs", icon: Search },
+  { id: "kanban", label: "Kanban Board", icon: LayoutGrid },
+  { id: "calendar", label: "Calendar", icon: Calendar },
+  { id: "jobs", label: "Explore Jobs", icon: Search },
   { id: "resume", label: "Resume", icon: FileText },
   { id: "coverLetter", label: "Cover Letter", icon: Mail },
   { id: "videoProfile", label: "Video Profile", icon: Video },
@@ -55,7 +62,7 @@ function DashboardPageContent() {
   const [activeSection, setActiveSection] = useState<MyJobsSection>(() => {
     if (
       tabFromUrl &&
-      ["overview", "jobs", "resume", "coverLetter", "videoProfile"].includes(
+      ["overview", "kanban", "calendar", "jobs", "resume", "coverLetter", "videoProfile"].includes(
         tabFromUrl,
       )
     ) {
@@ -87,18 +94,7 @@ function DashboardPageContent() {
   useEffect(() => {
     if (
       tabFromUrl &&
-      ["overview", "jobs", "resume", "coverLetter", "videoProfile"].includes(
-        tabFromUrl,
-      )
-    ) {
-      setActiveSection(tabFromUrl);
-    }
-  }, [tabFromUrl]);
-
-  useEffect(() => {
-    if (
-      tabFromUrl &&
-      ["overview", "jobs", "resume", "coverLetter", "videoProfile"].includes(
+      ["overview", "kanban", "calendar", "jobs", "resume", "coverLetter", "videoProfile"].includes(
         tabFromUrl,
       )
     ) {
@@ -217,11 +213,33 @@ function DashboardPageContent() {
           />
         )}
 
-        {/* 2. Jobs Board (Kanban & Job Activity) */}
+        {/* 2. Kanban Board */}
+        {activeSection === "kanban" && (
+          <JobsBoard
+            onSwitchTab={handleSwitchTab}
+            initialStageFilter={selectedStage}
+            initialViewMode="kanban"
+          />
+        )}
+
+        {/* 3. Calendar Workspace */}
+        {activeSection === "calendar" && (
+          <div className="space-y-4">
+            <CalendarWorkspace
+              title="My Jobs & Applications Schedule"
+              subtitle="Keep track of your interview timings, assessment deadlines, and job application timelines in one place."
+              badgeLabel="Candidate Schedule"
+              defaultView="week"
+            />
+          </div>
+        )}
+
+        {/* 4. Jobs Board (Explore & Search Jobs) */}
         {activeSection === "jobs" && (
           <JobsBoard
             onSwitchTab={handleSwitchTab}
             initialStageFilter={selectedStage}
+            initialViewMode="list"
           />
         )}
 

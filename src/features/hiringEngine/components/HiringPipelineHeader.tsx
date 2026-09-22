@@ -169,7 +169,7 @@ export function HiringPipelineHeader({
           <div className="p-3 rounded-xl bg-surface-alt/40 border border-border/60">
             <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5 text-primary" />
-              Shortlist Target
+              Final Shortlist Target
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xl font-extrabold text-ink">
@@ -220,15 +220,15 @@ export function HiringPipelineHeader({
           <div className="p-3 rounded-xl bg-surface-alt/40 border border-border/60">
             <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider flex items-center gap-1.5">
               <Briefcase className="w-3.5 h-3.5 text-purple-600" />
-              Intake Quota
+              Qualified Intake Quota
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xl font-extrabold text-purple-600">
-                {metrics.totalApplicants} / {metrics.totalFunnelIntakeTarget}
+                {metrics.actualQualifiedCount ?? metrics.totalApplicants} / {metrics.totalFunnelIntakeTarget}
               </span>
             </div>
             <p className="text-[10px] text-ink-soft/70 mt-1.5 line-clamp-1">
-              Target applicants to yield {target} hire{target > 1 ? "s" : ""}
+              Authoritative qualified intake to yield {target} hire{target > 1 ? "s" : ""}
             </p>
           </div>
         </div>

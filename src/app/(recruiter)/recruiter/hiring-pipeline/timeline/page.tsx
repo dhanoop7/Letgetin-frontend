@@ -347,18 +347,27 @@ export default function HiringTimelinePage() {
             })}
 
             {/* Final Target Destination Card */}
-            <div className="w-full bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10 border border-primary/30 rounded-2xl p-5 shadow-xs text-center space-y-2">
+            <div className="w-full bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/10 border border-primary/30 rounded-2xl p-6 shadow-xs text-center space-y-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary-glow text-xs font-bold border border-primary/30">
                 <Award className="w-4 h-4" />
-                <span>Final Target Destination: Shortlisted for Hire</span>
+                <span>Final Shortlist Destination</span>
               </div>
               <h4 className="text-xl font-extrabold text-ink">
                 {metrics.currentShortlistedCount} of {metrics.finalShortlistTarget} Final Shortlist Target Achieved
               </h4>
               <p className="text-xs text-ink-soft max-w-lg mx-auto">
-                Candidates who successfully pass all configured screening stages reach the final shortlist in the
-                applicant tracking system.
+                Candidates who successfully pass all configured screening stages reach the final shortlist for recruiter review, offer extension, and onboarding.
               </p>
+              <div className="pt-2">
+                <Link
+                  href={`/recruiter/hiring-pipeline/final-shortlist?jobId=${selectedJobId}`}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-sm hover:bg-primary/90 transition"
+                >
+                  <Award className="w-4 h-4" />
+                  <span>Open Final Shortlist Dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
