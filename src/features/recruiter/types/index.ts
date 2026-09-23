@@ -139,8 +139,32 @@ export interface RecruiterJob {
   applicationCollection?: ApplicationCollectionInfo;
   hiringEngineEnabled?: boolean;
   hiringEngineConfigId?: string;
+  structuredRequirements?: JobRequirements;
   createdAt: string;
   updatedAt: string;
+}
+
+export type EducationLevel =
+  | 'none'
+  | 'high_school'
+  | 'associate'
+  | 'diploma'
+  | 'bachelor'
+  | 'master'
+  | 'doctorate'
+  | 'other';
+
+export interface JobEducationRequirement {
+  minimumLevel?: EducationLevel;
+  fields?: string[];
+}
+
+export interface JobRequirements {
+  requiredSkills: string[];
+  preferredSkills: string[];
+  minimumExperienceYears?: number;
+  maximumExperienceYears?: number;
+  education?: JobEducationRequirement;
 }
 
 export interface GeneratedJobContent {
@@ -157,6 +181,11 @@ export interface CreateJobInput {
   salaryText?: string;
   skills?: string[];
   description?: string;
+  responsibilities?: string[];
+  requirements?: string[];
+  minimumExperience?: number;
+  maximumExperience?: number;
+  structuredRequirements?: JobRequirements;
   eligibilityMinPercent?: number;
   deadline?: string;
   saveAsDraft?: boolean;

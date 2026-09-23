@@ -2,21 +2,34 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, RefreshCw, Sparkles, Zap } from "lucide-react";
+import { Check, Loader2, RefreshCw, Sparkles, Zap, X, FileText, GraduationCap, Briefcase } from "lucide-react";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
 import { BuyCreditsModal } from "@/features/recruiter/components/BuyCreditsModal";
 import { AIWritingAssistant } from "@/features/aiWriting/components/AIWritingAssistant";
 import { AISkillSuggestButton } from "@/features/aiWriting/components/AISkillSuggestButton";
 import {
   CreditPack,
+  EducationLevel,
   EmploymentType,
   GeneratedJobContent,
+  JobRequirements,
   MatchVolumeOption,
   PipelineOptions,
   PipelineSection,
   PipelineSubOptionsCatalog,
   WorkplaceType,
 } from "@/features/recruiter/types";
+
+const EDUCATION_LEVEL_OPTIONS: { value: EducationLevel; label: string }[] = [
+  { value: "none", label: "No specific requirement" },
+  { value: "high_school", label: "High School" },
+  { value: "associate", label: "Associate Degree" },
+  { value: "diploma", label: "Diploma" },
+  { value: "bachelor", label: "Bachelor's Degree" },
+  { value: "master", label: "Master's Degree" },
+  { value: "doctorate", label: "Doctorate / Ph.D." },
+  { value: "other", label: "Other / Equivalent" },
+];
 
 const EMPLOYMENT_TYPES: { value: EmploymentType; label: string }[] = [
   { value: "full-time", label: "Full-time" },
@@ -46,9 +59,51 @@ export default function CreateJobPage() {
   const [employmentType, setEmploymentType] = useState<EmploymentType>("full-time");
   const [workplaceType, setWorkplaceType] = useState<WorkplaceType>("remote");
   const [salaryText, setSalaryText] = useState("");
-  const [skillsText, setSkillsText] = useState("");
   const [description, setDescription] = useState("");
+  const [responsibilitiesText, setResponsibilitiesText] = useState("");
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  // Structured Job Requirements State
+  const [requiredSkills, setRequiredSkills] = useState<string[]>([]);
+  const [preferredSkills, setPreferredSkills] = useState<string[]>([]);
+  const [newRequiredSkill, setNewRequiredSkill] = useState("");
+  const [newPreferredSkill, setNewPreferredSkill] = useState("");
+  const [minimumExperience, setMinimumExperience] = useState("");
+  const [maximumExperience, setMaximumExperience] = useState("");
+  const [educationLevel, setEducationLevel] = useState<EducationLevel>("none");
+  const [educationFieldsText, setEducationFieldsText] = useState("");
+
+  const addRequiredSkills = (raw: string) => {
+    const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+    setRequiredSkills((prev) => {
+      const existing = new Set(prev.map((s) => s.toLowerCase()));
+      const added = parts.filter((s) => !existing.has(s.toLowerCase()));
+      return [...prev, ...added];
+    });
+    // Deterministic rule: Remove any overlapping from preferredSkills
+    const addedLowers = new Set(parts.map((s) => s.toLowerCase()));
+    setPreferredSkills((prev) => prev.filter((s) => !addedLowers.has(s.toLowerCase())));
+  };
+
+  const removeRequiredSkill = (skillToRemove: string) => {
+    setRequiredSkills((prev) => prev.filter((s) => s.toLowerCase() !== skillToRemove.toLowerCase()));
+  };
+
+  const addPreferredSkills = (raw: string) => {
+    const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+    const requiredLowers = new Set(requiredSkills.map((s) => s.toLowerCase()));
+    setPreferredSkills((prev) => {
+      const existing = new Set(prev.map((s) => s.toLowerCase()));
+      const added = parts.filter((s) => !existing.has(s.toLowerCase()) && !requiredLowers.has(s.toLowerCase()));
+      return [...prev, ...added];
+    });
+  };
+
+  const removePreferredSkill = (skillToRemove: string) => {
+    setPreferredSkills((prev) => prev.filter((s) => s.toLowerCase() !== skillToRemove.toLowerCase()));
+  };
 
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -110,8 +165,8 @@ export default function CreateJobPage() {
 
   const applyGeneratedContent = (content: GeneratedJobContent) => {
     setDescription(content.description);
-    if (content.skills.length > 0) {
-      setSkillsText(content.skills.join(", "));
+    if (content.skills && content.skills.length > 0) {
+      addRequiredSkills(content.skills.join(", "));
     }
     setHasAiGeneratedContent(true);
     setPendingGeneratedContent(null);
@@ -134,7 +189,7 @@ export default function CreateJobPage() {
         return;
       }
 
-      const hasExistingContent = description.trim().length > 0 || skillsText.trim().length > 0;
+      const hasExistingContent = description.trim().length > 0 || requiredSkills.length > 0 || preferredSkills.length > 0;
       if (hasExistingContent) {
         // Never silently overwrite manually entered (or previously generated-and-edited) content.
         setPendingGeneratedContent(content);
@@ -221,10 +276,49 @@ export default function CreateJobPage() {
     setLocalError(null);
     if (!validateCommonFields()) return;
 
+    const minExpNum = minimumExperience.trim() !== "" ? Number(minimumExperience) : undefined;
+    const maxExpNum = maximumExperience.trim() !== "" ? Number(maximumExperience) : undefined;
+
+    if (minExpNum !== undefined && (isNaN(minExpNum) || minExpNum < 0)) {
+      setLocalError("Minimum experience must be a non-negative number.");
+      return;
+    }
+    if (maxExpNum !== undefined && (isNaN(maxExpNum) || maxExpNum < 0)) {
+      setLocalError("Maximum experience must be a non-negative number.");
+      return;
+    }
+    if (minExpNum !== undefined && maxExpNum !== undefined && maxExpNum < minExpNum) {
+      setLocalError("Maximum experience cannot be less than minimum experience.");
+      return;
+    }
+
     if (hasInsufficientCredits) {
       setLocalError("Insufficient credits. Please buy more credits.");
       return;
     }
+
+    const eduFieldsList = educationFieldsText
+      .split(",")
+      .map((f) => f.trim())
+      .filter(Boolean);
+
+    const structuredRequirements: JobRequirements = {
+      requiredSkills,
+      preferredSkills,
+      minimumExperienceYears: minExpNum,
+      maximumExperienceYears: maxExpNum,
+      education: {
+        minimumLevel: educationLevel,
+        fields: eduFieldsList,
+      },
+    };
+
+    const allSkills = Array.from(new Set([...requiredSkills, ...preferredSkills]));
+
+    const responsibilitiesList = responsibilitiesText
+      .split("\n")
+      .map((r) => r.replace(/^[-•*]\s*/, "").trim())
+      .filter(Boolean);
 
     setIsSubmitting(true);
     try {
@@ -234,8 +328,12 @@ export default function CreateJobPage() {
         employmentType,
         workplaceType,
         salaryText: salaryText.trim(),
-        skills: skillsText.split(",").map((s) => s.trim()).filter(Boolean),
+        skills: allSkills,
         description: description.trim(),
+        responsibilities: responsibilitiesList,
+        minimumExperience: minExpNum,
+        maximumExperience: maxExpNum,
+        structuredRequirements,
         pipelineOptions: buildPipelineOptions(),
         finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 10,
         idealIntake: idealIntake > 0 ? idealIntake : 15,
@@ -258,6 +356,45 @@ export default function CreateJobPage() {
     setLocalError(null);
     if (!validateCommonFields()) return;
 
+    const minExpNum = minimumExperience.trim() !== "" ? Number(minimumExperience) : undefined;
+    const maxExpNum = maximumExperience.trim() !== "" ? Number(maximumExperience) : undefined;
+
+    if (minExpNum !== undefined && (isNaN(minExpNum) || minExpNum < 0)) {
+      setLocalError("Minimum experience must be a non-negative number.");
+      return;
+    }
+    if (maxExpNum !== undefined && (isNaN(maxExpNum) || maxExpNum < 0)) {
+      setLocalError("Maximum experience must be a non-negative number.");
+      return;
+    }
+    if (minExpNum !== undefined && maxExpNum !== undefined && maxExpNum < minExpNum) {
+      setLocalError("Maximum experience cannot be less than minimum experience.");
+      return;
+    }
+
+    const eduFieldsList = educationFieldsText
+      .split(",")
+      .map((f) => f.trim())
+      .filter(Boolean);
+
+    const structuredRequirements: JobRequirements = {
+      requiredSkills,
+      preferredSkills,
+      minimumExperienceYears: minExpNum,
+      maximumExperienceYears: maxExpNum,
+      education: {
+        minimumLevel: educationLevel,
+        fields: eduFieldsList,
+      },
+    };
+
+    const allSkills = Array.from(new Set([...requiredSkills, ...preferredSkills]));
+
+    const responsibilitiesList = responsibilitiesText
+      .split("\n")
+      .map((r) => r.replace(/^[-•*]\s*/, "").trim())
+      .filter(Boolean);
+
     setIsSavingDraft(true);
     try {
       const job = await recruiterService.createJob({
@@ -266,8 +403,12 @@ export default function CreateJobPage() {
         employmentType,
         workplaceType,
         salaryText: salaryText.trim(),
-        skills: skillsText.split(",").map((s) => s.trim()).filter(Boolean),
+        skills: allSkills,
         description: description.trim(),
+        responsibilities: responsibilitiesList,
+        minimumExperience: minExpNum,
+        maximumExperience: maxExpNum,
+        structuredRequirements,
         saveAsDraft: true,
         pipelineOptions: buildPipelineOptions(),
         finalShortlistTarget: finalShortlistTarget > 0 ? finalShortlistTarget : 10,
@@ -316,13 +457,19 @@ export default function CreateJobPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
         {/* Left column: job form + pipeline selection */}
         <div className="space-y-6">
+          {/* 1. Job Information */}
           <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Briefcase className="w-4 h-4 text-primary-glow" />
+              <h2 className="text-sm font-bold text-ink uppercase tracking-wider">Job Information</h2>
+            </div>
+
             <Field label="Job title">
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Senior Frontend Engineer"
+                placeholder="e.g. Senior Accountant, Nurse Practitioner, Software Engineer"
                 className="input-base"
                 required
               />
@@ -388,7 +535,7 @@ export default function CreateJobPage() {
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Bengaluru, India"
+                  placeholder="e.g. Mumbai, India or London, UK"
                   className="input-base"
                 />
               </Field>
@@ -397,7 +544,7 @@ export default function CreateJobPage() {
                   type="text"
                   value={salaryText}
                   onChange={(e) => setSalaryText(e.target.value)}
-                  placeholder="e.g. ₹18L – ₹25L / year"
+                  placeholder="e.g. ₹15L – ₹22L / year or Competitive"
                   className="input-base"
                 />
               </Field>
@@ -431,25 +578,13 @@ export default function CreateJobPage() {
                 </select>
               </Field>
             </div>
+          </div>
 
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className="text-sm font-medium text-ink">Required skills (comma separated)</span>
-                <AISkillSuggestButton
-                  existingSkills={skillsText.split(",").map((s) => s.trim()).filter(Boolean)}
-                  metadata={{ jobTitle: title }}
-                  onAddSkill={(skill) =>
-                    setSkillsText((prev) => (prev.trim() ? `${prev.trim()}, ${skill}` : skill))
-                  }
-                />
-              </div>
-              <input
-                type="text"
-                value={skillsText}
-                onChange={(e) => setSkillsText(e.target.value)}
-                placeholder="e.g. React, TypeScript, Node.js"
-                className="input-base"
-              />
+          {/* 2. Job Description & Responsibilities */}
+          <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <FileText className="w-4 h-4 text-primary-glow" />
+              <h2 className="text-sm font-bold text-ink uppercase tracking-wider">Job Description</h2>
             </div>
 
             <label className="block">
@@ -465,7 +600,7 @@ export default function CreateJobPage() {
                 ref={descriptionRef}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Role responsibilities, requirements, and what makes this opportunity great"
+                placeholder="Overview of the role, department, mission, and working environment"
                 className="input-base min-h-[120px] resize-y"
               />
               {description.trim().length > 0 && (
@@ -481,6 +616,211 @@ export default function CreateJobPage() {
                 </div>
               )}
             </label>
+
+            <label className="block">
+              <span className="block text-sm font-medium text-ink mb-1.5">Responsibilities</span>
+              <textarea
+                value={responsibilitiesText}
+                onChange={(e) => setResponsibilitiesText(e.target.value)}
+                placeholder="Key daily responsibilities and deliverables (one per line)"
+                className="input-base min-h-[100px] resize-y"
+              />
+              <p className="text-[11px] text-ink-soft mt-1">Separate distinct duties on new lines or with bullet points.</p>
+            </label>
+          </div>
+
+          {/* 3. Job Requirements */}
+          <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6 space-y-5">
+            <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-primary-glow" />
+                <h2 className="text-sm font-bold text-ink uppercase tracking-wider">Job Requirements</h2>
+              </div>
+              <span className="text-[11px] text-ink-soft font-normal">Industry-neutral & flexible</span>
+            </div>
+
+            {/* Required Skills */}
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label className="text-sm font-medium text-ink">Required Skills & Competencies</label>
+                <AISkillSuggestButton
+                  existingSkills={requiredSkills}
+                  metadata={{ jobTitle: title }}
+                  onAddSkill={(skill) => addRequiredSkills(skill)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newRequiredSkill}
+                  onChange={(e) => setNewRequiredSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      addRequiredSkills(newRequiredSkill);
+                      setNewRequiredSkill("");
+                    }
+                  }}
+                  placeholder="e.g. Financial Reporting, Patient Care, React, or Sales (press Enter)"
+                  className="input-base text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    addRequiredSkills(newRequiredSkill);
+                    setNewRequiredSkill("");
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition shrink-0"
+                >
+                  Add
+                </button>
+              </div>
+
+              {requiredSkills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  {requiredSkills.map((sk) => (
+                    <span
+                      key={sk}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary/10 text-primary-glow border border-primary/20"
+                    >
+                      {sk}
+                      <button
+                        type="button"
+                        onClick={() => removeRequiredSkill(sk)}
+                        className="text-ink-soft hover:text-ink transition"
+                        title="Remove skill"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-ink-soft mt-1">
+                Essential qualifications candidates must possess.
+              </p>
+            </div>
+
+            {/* Preferred Skills */}
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">Preferred / Nice-to-Have Skills</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newPreferredSkill}
+                  onChange={(e) => setNewPreferredSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      addPreferredSkills(newPreferredSkill);
+                      setNewPreferredSkill("");
+                    }
+                  }}
+                  placeholder="e.g. Bilingual, CRM, ICU Experience, or Docker (press Enter)"
+                  className="input-base text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    addPreferredSkills(newPreferredSkill);
+                    setNewPreferredSkill("");
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-surface-alt hover:bg-surface-alt/80 border border-border text-ink transition shrink-0"
+                >
+                  Add
+                </button>
+              </div>
+
+              {preferredSkills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  {preferredSkills.map((sk) => (
+                    <span
+                      key={sk}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-alt text-ink border border-border"
+                    >
+                      {sk}
+                      <button
+                        type="button"
+                        onClick={() => removePreferredSkill(sk)}
+                        className="text-ink-soft hover:text-ink transition"
+                        title="Remove skill"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-ink-soft mt-1">
+                Helpful competencies that provide an advantage but are not mandatory.
+              </p>
+            </div>
+
+            {/* Experience Range */}
+            <div>
+              <span className="block text-sm font-medium text-ink mb-1.5">Experience Range (Years)</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-ink-soft block mb-1">Minimum (years)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={minimumExperience}
+                    onChange={(e) => setMinimumExperience(e.target.value)}
+                    placeholder="e.g. 0 for fresher, 2 for mid"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-ink-soft block mb-1">Maximum (years)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={maximumExperience}
+                    onChange={(e) => setMaximumExperience(e.target.value)}
+                    placeholder="e.g. 5 (leave blank for any max)"
+                    className="input-base"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-ink-soft mt-1">
+                Optional. Leave blank if there is no strict experience requirement. Supports 0 for fresher / entry-level roles.
+              </p>
+            </div>
+
+            {/* Education Requirements */}
+            <div className="space-y-3">
+              <span className="block text-sm font-medium text-ink mb-0.5">Education Requirements</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Minimum Education Level">
+                  <select
+                    value={educationLevel}
+                    onChange={(e) => setEducationLevel(e.target.value as EducationLevel)}
+                    className="input-base"
+                  >
+                    {EDUCATION_LEVEL_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Accepted Fields of Study (Optional)">
+                  <input
+                    type="text"
+                    value={educationFieldsText}
+                    onChange={(e) => setEducationFieldsText(e.target.value)}
+                    placeholder="e.g. Accounting, Finance or Nursing"
+                    className="input-base"
+                  />
+                </Field>
+              </div>
+              <p className="text-[11px] text-ink-soft">
+                Industry-neutral. Leave fields empty to accept candidates from all academic backgrounds.
+              </p>
+            </div>
           </div>
 
           <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6">
