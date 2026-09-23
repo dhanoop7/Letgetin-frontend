@@ -47,6 +47,8 @@ interface AiApplyStoreState {
   // Matched Jobs & Batch Apply state
   matchedJobs: MatchedJobItem[];
   isFetchingMatchedJobs: boolean;
+  hasFetchedMatchedJobs: boolean;
+  availableJobs: number | null;
   matchedJobsTotal: number;
   selectedJobIds: string[];
   appliedJobIds: string[];
@@ -110,6 +112,8 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
   // Matched Jobs State
   matchedJobs: [],
   isFetchingMatchedJobs: false,
+  hasFetchedMatchedJobs: false,
+  availableJobs: null,
   matchedJobsTotal: 0,
   selectedJobIds: [],
   appliedJobIds: [],
@@ -233,6 +237,7 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
     })),
 
   fetchMatchedJobs: async () => {
+    if (get().isFetchingMatchedJobs) return;
     set({ isFetchingMatchedJobs: true, error: null });
     const { batchMinScore, batchSearchQuery } = get();
 
@@ -243,21 +248,25 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
         limit: 50,
       });
 
-      const selectableIds = result.jobs
-        .filter((j) => !j.isAlreadyApplied)
+      const jobs = Array.isArray(result?.jobs) ? result.jobs : [];
+      const selectableIds = jobs
+        .filter((j) => !j?.isAlreadyApplied)
         .map((j) => String(j._id));
 
       set({
-        matchedJobs: result.jobs,
-        matchedJobsTotal: result.total,
-        candidateProfileMeta: result.candidateProfile,
-        appliedJobIds: result.appliedJobIds,
+        matchedJobs: jobs,
+        matchedJobsTotal: result?.total ?? jobs.length,
+        availableJobs: typeof result?.availableJobs === 'number' ? result.availableJobs : null,
+        candidateProfileMeta: result?.candidateProfile || null,
+        appliedJobIds: Array.isArray(result?.appliedJobIds) ? result.appliedJobIds : [],
         selectedJobIds: selectableIds, // default select all unapplied matches
         isFetchingMatchedJobs: false,
+        hasFetchedMatchedJobs: true,
       });
     } catch (err: any) {
       set({
         isFetchingMatchedJobs: false,
+        hasFetchedMatchedJobs: true,
         error: err?.message || 'Failed to fetch matched jobs from database.',
       });
     }
@@ -437,6 +446,10 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
       activeBatchSession: null,
       isPollingBatch: false,
       error: null,
+      matchedJobs: [],
+      matchedJobsTotal: 0,
+      availableJobs: null,
+      hasFetchedMatchedJobs: false,
     });
   },
 }));
