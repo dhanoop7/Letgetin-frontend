@@ -33,6 +33,7 @@ import { DriveFilePreviewModal } from "@/features/drive/components/DriveFilePrev
 import { DriveFileCard } from "@/features/drive/components/DriveFileCard";
 import { DriveFileTable } from "@/features/drive/components/DriveFileTable";
 import { DriveFileEditModal } from "@/features/drive/components/DriveFileEditModal";
+import { DriveFileDeleteModal } from "@/features/drive/components/DriveFileDeleteModal";
 import { AIChat } from "@/features/aiAssistant/components/AIChat";
 
 export default function DrivePage() {
@@ -54,7 +55,8 @@ export default function DrivePage() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<DriveFile | null>(null);
   const [editFile, setEditFile] = useState<DriveFile | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTargetFile, setDeleteTargetFile] = useState<DriveFile | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   const showToast = (message: string) => {
     setSuccessToast(message);
@@ -102,11 +104,17 @@ export default function DrivePage() {
     }
   };
 
-  const handleDeleteFile = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this file from your drive? This action cannot be undone.")) {
-      return;
+  const handleRequestDelete = (id: string) => {
+    const target = files.find((f) => f._id === id);
+    if (target) {
+      setDeleteTargetFile(target);
     }
-    setDeletingId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetFile) return;
+    const id = deleteTargetFile._id;
+    setIsDeletingFile(true);
     try {
       const res = await DriveService.deleteFile(id);
       setFiles((prev) => prev.filter((f) => f._id !== id));
@@ -115,10 +123,11 @@ export default function DrivePage() {
         setPreviewFile(null);
       }
       showToast("File deleted and storage space reclaimed!");
+      setDeleteTargetFile(null);
     } catch (err: any) {
       alert(err?.message || "Failed to delete file");
     } finally {
-      setDeletingId(null);
+      setIsDeletingFile(false);
     }
   };
 
@@ -295,7 +304,7 @@ export default function DrivePage() {
                   key={file._id}
                   file={file}
                   onPreview={(f) => setPreviewFile(f)}
-                  onDelete={handleDeleteFile}
+                  onDelete={handleRequestDelete}
                   onToggleStar={handleToggleStar}
                   onEdit={(f) => setEditFile(f)}
                 />
@@ -305,7 +314,7 @@ export default function DrivePage() {
             <DriveFileTable
               files={files}
               onPreview={(f) => setPreviewFile(f)}
-              onDelete={handleDeleteFile}
+              onDelete={handleRequestDelete}
               onToggleStar={handleToggleStar}
               onEdit={(f) => setEditFile(f)}
             />
@@ -340,6 +349,15 @@ export default function DrivePage() {
           setFiles((prev) => prev.map((f) => (f._id === updated._id ? updated : f)));
           showToast("File details updated");
         }}
+      />
+
+      {/* File Delete Confirmation Modal */}
+      <DriveFileDeleteModal
+        file={deleteTargetFile}
+        isOpen={!!deleteTargetFile}
+        isLoading={isDeletingFile}
+        onClose={() => setDeleteTargetFile(null)}
+        onConfirm={handleConfirmDelete}
       />
 
       {/* Contextual AI Assistant */}

@@ -130,6 +130,7 @@ export interface MatchedJobsResponse {
     embeddingStatus: string;
   };
   appliedJobIds: string[];
+  availableJobs?: number;
 }
 
 export interface AppliedJobDetail {

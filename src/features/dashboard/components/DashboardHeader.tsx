@@ -13,7 +13,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onCreateNew })
   return (
     <header className="glass border-b border-white/20 text-ink px-6 py-4 flex items-center justify-between sticky top-0 z-30">
       <div className="flex items-center gap-3">
-        <Logo />
+        <Logo href={user?.role === 'recruiter' ? '/recruiter/dashboard' : '/resume'} />
         <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-primary-glow bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
           <Sparkles className="w-3 h-3 text-primary-glow" /> Pro Account
         </span>

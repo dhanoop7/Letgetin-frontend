@@ -46,6 +46,8 @@ export function Step7MatchedJobsReview() {
   const batchActionLoading = useAiApplyStore((s) => s.batchActionLoading);
   const activeBatchSession = useAiApplyStore((s) => s.activeBatchSession);
   const fetchMatchedJobs = useAiApplyStore((s) => s.fetchMatchedJobs);
+  const hasFetched = useAiApplyStore((s) => s.hasFetchedMatchedJobs);
+  const availableJobs = useAiApplyStore((s) => s.availableJobs);
   const candidateProfileMeta = useAiApplyStore((s) => s.candidateProfileMeta);
   const preferences = useAiApplyStore((s) => s.preferences);
 
@@ -53,10 +55,10 @@ export function Step7MatchedJobsReview() {
   const [workplaceFilter, setWorkplaceFilter] = useState<'all' | 'remote' | 'hybrid' | 'onsite'>('all');
 
   useEffect(() => {
-    if (matchedJobs.length === 0 && !isFetching) {
+    if (!hasFetched && !isFetching) {
       fetchMatchedJobs();
     }
-  }, [matchedJobs.length, isFetching, fetchMatchedJobs]);
+  }, [hasFetched, isFetching, fetchMatchedJobs]);
 
   // If a batch session is active, show the Live Batch Monitor HUD
   if (activeBatchSession) {
@@ -64,7 +66,9 @@ export function Step7MatchedJobsReview() {
   }
 
   // Filter jobs by search and workplace locally for snappy feel
-  const filteredJobs = matchedJobs.filter((job) => {
+  const safeMatchedJobs = Array.isArray(matchedJobs) ? matchedJobs : [];
+  const filteredJobs = safeMatchedJobs.filter((job) => {
+    if (!job) return false;
     if (workplaceFilter !== 'all' && job.workplaceType !== workplaceFilter) {
       return false;
     }
@@ -252,6 +256,16 @@ export function Step7MatchedJobsReview() {
                 Finding the best opportunities tailored to your career profile.
               </p>
             </div>
+          </div>
+        ) : availableJobs === 0 ? (
+          <div className="py-12 text-center space-y-2 bg-surface border border-border rounded-2xl p-6">
+            <AlertCircle className="w-8 h-8 text-ink-soft mx-auto" />
+            <p className="text-sm font-bold text-ink">No jobs are currently available.</p>
+          </div>
+        ) : safeMatchedJobs.length === 0 ? (
+          <div className="py-12 text-center space-y-2 bg-surface border border-border rounded-2xl p-6">
+            <AlertCircle className="w-8 h-8 text-ink-soft mx-auto" />
+            <p className="text-sm font-bold text-ink">Currently, there are no matching jobs for you.</p>
           </div>
         ) : filteredJobs.length === 0 ? (
           <div className="py-12 text-center space-y-2 bg-surface border border-border rounded-2xl p-6">
