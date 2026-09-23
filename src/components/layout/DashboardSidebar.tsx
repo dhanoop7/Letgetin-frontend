@@ -355,7 +355,7 @@ export function DashboardSidebar({
         {isCollapsed ? (
           <>
             <Link
-              href="/"
+              href={user?.role === "recruiter" ? "/recruiter/dashboard" : "/resume"}
               className="w-10 h-10 rounded-2xl bg-gradient-brand flex items-center justify-center text-primary-foreground font-extrabold text-base shadow-glow hover:scale-105 transition shrink-0"
               title="LetGetIn AI"
             >
@@ -373,7 +373,7 @@ export function DashboardSidebar({
         ) : (
           <>
             <div className="flex items-center gap-2.5 min-w-0">
-              <Logo href="/" />
+              <Logo href={user?.role === "recruiter" ? "/recruiter/dashboard" : "/resume"} />
             </div>
 
             <div className="flex items-center gap-1">
