@@ -127,6 +127,8 @@ export interface IResume {
   isPublic?: boolean;
   starred?: boolean;
   isActive?: boolean;
+  isVerified?: boolean;
+  verifiedAt?: string;
   shareToken?: string;
   createdAt?: string;
   updatedAt?: string;

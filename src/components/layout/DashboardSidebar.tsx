@@ -173,6 +173,13 @@ export function DashboardSidebar({
           description: "Jobs, resumes, cover letters & video profile",
         },
         {
+          name: "Verified Resume",
+          shortName: "Verified",
+          href: "/verified-resume",
+          icon: ShieldCheck,
+          description: "Preview verified resumes & verify your unverified resumes",
+        },
+        {
           name: "Resume Translator",
           shortName: "Translator",
           href: "/interviews/translator",

@@ -20,6 +20,8 @@ export class MongoStorage implements IStorageProvider {
             templateId: resume.templateId,
             content: resume.content,
             settings: resume.settings,
+            isVerified: resume.isVerified,
+            verifiedAt: resume.verifiedAt,
           }
         );
         return response?.data?.resume || resume;
@@ -30,6 +32,8 @@ export class MongoStorage implements IStorageProvider {
           templateId: resume.templateId,
           content: resume.content,
           settings: resume.settings,
+          isVerified: resume.isVerified,
+          verifiedAt: resume.verifiedAt,
         });
         return response?.data?.resume || resume;
       }
