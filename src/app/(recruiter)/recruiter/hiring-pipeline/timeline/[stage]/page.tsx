@@ -15,8 +15,8 @@ export default function LegacyStagePrototypeRedirect() {
   useEffect(() => {
     const jobId = searchParams.get("jobId");
     const targetUrl = jobId
-      ? `/recruiter/hiring-pipeline/kanban?jobId=${jobId}`
-      : `/recruiter/hiring-pipeline/kanban`;
+      ? `/recruiter/jobs?tab=kanban&jobId=${jobId}`
+      : `/recruiter/jobs?tab=kanban`;
     router.replace(targetUrl);
   }, [router, searchParams]);
 

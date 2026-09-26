@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { HiringPipelineNavTabs } from "@/components/recruiter/HiringPipelineNavTabs";
+import { JobsSidebar } from "@/features/recruiter/components/JobsSidebar";
 import { hiringEngineService } from "@/features/hiringEngine/services/hiringEngineService";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
 import {
@@ -219,9 +220,19 @@ export default function FinalShortlistPage() {
   const targetPercent = Math.min(100, Math.round((currentCount / target) * 100));
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Hiring Pipeline Universal Navigation */}
-      <HiringPipelineNavTabs jobId={selectedJobId} />
+    <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row bg-background">
+      {/* Unified Left Sidebar for all Jobs & Sub-menus */}
+      <JobsSidebar
+        jobs={jobs}
+        selectedJobId={selectedJobId}
+        loadingJobs={loadingJobs}
+        onSelectJob={handleSelectJob}
+      />
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Hiring Pipeline Universal Navigation */}
+        <HiringPipelineNavTabs jobId={selectedJobId} />
 
       {/* Top Header & Job Switcher */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-border/80">
@@ -768,6 +779,7 @@ export default function FinalShortlistPage() {
           onDecisionClick={(dec) => handleOpenDecisionModal(selectedCandidate, dec)}
         />
       )}
+      </div>
     </div>
   );
 }

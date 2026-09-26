@@ -4,6 +4,15 @@ export type ResumeScreeningStatus = 'pending' | 'ai_reviewing' | 'ai_reviewed';
 
 export type EvaluationRecommendation = 'strong_match' | 'potential_match' | 'not_recommended';
 
+export interface IMatchScoreBreakdown {
+  requiredSkillsScore: number;
+  preferredSkillsScore: number;
+  experienceScore: number;
+  educationScore: number;
+  semanticScore: number;
+  roleRelevanceScore: number;
+}
+
 export interface IResumeEvaluation {
   overallScore: number;
   skillsMatchScore: number;
@@ -15,6 +24,10 @@ export interface IResumeEvaluation {
   recommendation: EvaluationRecommendation;
   evaluatedAt: string | Date;
   isAiEvaluated: boolean;
+  breakdown?: IMatchScoreBreakdown;
+  matchedPreferredSkills?: string[];
+  missingRequiredSkills?: string[];
+  explanations?: string[];
 }
 
 export interface CandidateUserSummary {

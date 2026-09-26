@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Logo } from "@/components/landing/Logo";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
@@ -118,20 +118,13 @@ const HIRING_ITEMS: NavItem[] = [
     shortName: "Jobs",
     href: "/recruiter/jobs",
     icon: KanbanSquare,
-    description: "Manage active and draft listings",
-  },
-  {
-    name: "Hiring Pipeline",
-    shortName: "Pipeline",
-    href: "/recruiter/hiring-pipeline/timeline",
-    icon: GitBranch,
-    description: "Hiring journey, stage kanban & candidates",
+    description: "Manage active jobs & dynamic hiring pipeline",
     subItems: [
+      { name: "Hiring Timeline", shortName: "Timeline", href: "/recruiter/jobs?tab=timeline" },
+      { name: "Kanban Board", shortName: "Kanban", href: "/recruiter/jobs?tab=kanban" },
       { name: "Resume Shortlisting", shortName: "Shortlisting", href: "/recruiter/hiring-pipeline/resume-screening" },
-      { name: "Hiring Timeline", shortName: "Timeline", href: "/recruiter/hiring-pipeline/timeline" },
-      { name: "Kanban", shortName: "Kanban", href: "/recruiter/hiring-pipeline/kanban" },
       { name: "Final Shortlist", shortName: "Finalists", href: "/recruiter/hiring-pipeline/final-shortlist" },
-      { name: "Candidate Listing", shortName: "Candidates", href: "/recruiter/hiring-pipeline/candidates" },
+      { name: "Candidate Listing", shortName: "Candidates", href: "/recruiter/jobs?tab=candidates" },
     ],
   },
   {
@@ -732,9 +725,22 @@ export function RecruiterShell({
   onClose,
 }: RecruiterShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { orgProfile, loadOrgProfile } = useRecruiterStore();
+
+  const checkSubActive = (subHref: string) => {
+    if (subHref.includes("?")) {
+      const [subPath, subQuery] = subHref.split("?");
+      const params = new URLSearchParams(subQuery);
+      const tabParam = params.get("tab");
+      if (tabParam && pathname === subPath) {
+        return (searchParams.get("tab") || "timeline") === tabParam;
+      }
+    }
+    return subHref === pathname || activeHref === subHref;
+  };
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -862,9 +868,14 @@ export function RecruiterShell({
             const Icon = item.icon;
             const hasSub = !!item.subItems?.length;
             const isChildActive = !!item.subItems?.some(
-              (s) => s.href === activeHref || pathname === s.href
+              (s) => checkSubActive(s.href)
             );
-            const isActive = item.href === activeHref || isChildActive;
+            const isJobOrPipelineMatch =
+              item.href === "/recruiter/jobs" &&
+              (pathname === "/recruiter/jobs" ||
+                pathname.startsWith("/recruiter/jobs") ||
+                pathname.startsWith("/recruiter/hiring-pipeline"));
+            const isActive = item.href === activeHref || isChildActive || isJobOrPipelineMatch;
 
             return (
               <div
@@ -924,8 +935,7 @@ export function RecruiterShell({
                   {hasSub && (
                     <div className="mt-2 pt-2 border-t border-slate-700/80 space-y-1">
                       {item.subItems!.map((sub) => {
-                        const isSubActive =
-                          sub.href === pathname || activeHref === sub.href;
+                        const isSubActive = checkSubActive(sub.href);
                         return (
                           <Link
                             key={sub.href}
@@ -969,10 +979,15 @@ export function RecruiterShell({
             const Icon = item.icon;
             const hasSub = !!item.subItems?.length;
             const isChildActive = !!item.subItems?.some(
-              (s) => s.href === activeHref || pathname === s.href
+              (s) => checkSubActive(s.href)
             );
             const isActive = item.href === activeHref;
-            const isHighlighted = isActive || isChildActive;
+            const isJobOrPipelineMatch =
+              item.href === "/recruiter/jobs" &&
+              (pathname === "/recruiter/jobs" ||
+                pathname.startsWith("/recruiter/jobs") ||
+                pathname.startsWith("/recruiter/hiring-pipeline"));
+            const isHighlighted = isActive || isChildActive || isJobOrPipelineMatch;
             const isOpen =
               openSubmenus[item.href] !== undefined
                 ? openSubmenus[item.href]
@@ -1044,8 +1059,7 @@ export function RecruiterShell({
                 {hasSub && isOpen && (
                   <div className="ml-4 pl-3.5 border-l-2 border-primary/20 space-y-1 py-1">
                     {item.subItems!.map((sub) => {
-                      const isSubActive =
-                        sub.href === pathname || activeHref === sub.href;
+                      const isSubActive = checkSubActive(sub.href);
 
                       return (
                         <Link
