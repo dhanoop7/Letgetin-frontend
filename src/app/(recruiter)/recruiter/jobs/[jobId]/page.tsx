@@ -27,6 +27,7 @@ import { recruiterService } from "@/features/recruiter/services/recruiterService
 import { Applicant, RecruiterJob, CollectionStatusReport } from "@/features/recruiter/types";
 import { ApplicantResumeModal } from "@/features/recruiter/components/ApplicantResumeModal";
 import { CandidateProfileModal } from "@/features/recruiter/components/CandidateProfileModal";
+import { JobsSidebar } from "@/features/recruiter/components/JobsSidebar";
 
 const STATUS_OPTIONS = ["submitted", "reviewing", "shortlisted", "interviewing", "offered", "rejected"];
 
@@ -154,7 +155,13 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div className="p-6 sm:p-10 max-w-5xl mx-auto">
+    <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row bg-background">
+      <JobsSidebar
+        selectedJobId={jobId}
+        onSelectJob={(id) => router.push(`/recruiter/jobs/${id}`)}
+      />
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="max-w-5xl mx-auto">
       {/* Breadcrumbs & Quick Pipeline Links */}
       <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
@@ -171,7 +178,7 @@ export default function JobDetailPage() {
         {/* Action Bridges into the rest of the Recruiter Suite */}
         <div className="flex items-center gap-2 flex-wrap">
           <Link
-            href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
+            href={`/recruiter/jobs?tab=timeline&jobId=${jobId}`}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-glow bg-primary/10 border border-primary/20 hover:bg-primary/20 px-3 py-1.5 rounded-xl transition"
           >
             <Sparkles className="w-3.5 h-3.5 text-primary" />
@@ -229,7 +236,54 @@ export default function JobDetailPage() {
             Source Matching CVs
           </Link>
         </div>
-        {job.skills && job.skills.length > 0 && (
+        {job.structuredRequirements?.requiredSkills && job.structuredRequirements.requiredSkills.length > 0 ? (
+          <div className="mt-4 space-y-2.5">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft block mb-1.5">
+                Required Skills
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {job.structuredRequirements.requiredSkills.map((sk: any, i: number) => {
+                  const name = typeof sk === "string" ? sk : sk.name;
+                  const prof = typeof sk === "string" ? null : sk.proficiency;
+                  return (
+                    <span
+                      key={name || i}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-glow bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg"
+                    >
+                      <span>{name}</span>
+                      {prof && (
+                        <span className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface/80 text-ink-soft border border-border">
+                          {prof}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            {job.structuredRequirements.preferredSkills && job.structuredRequirements.preferredSkills.length > 0 && (
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft block mb-1.5">
+                  Preferred Skills
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {job.structuredRequirements.preferredSkills.map((sk: any, i: number) => {
+                    const name = typeof sk === "string" ? sk : sk.name;
+                    return (
+                      <span
+                        key={name || i}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-ink bg-surface-alt border border-border px-2.5 py-1 rounded-lg"
+                      >
+                        <span>{name}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : job.skills && job.skills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5 mt-4">
             {job.skills.map((s) => (
               <span
@@ -239,6 +293,34 @@ export default function JobDetailPage() {
                 {s}
               </span>
             ))}
+          </div>
+        ) : null}
+
+        {job.assessment?.enabled && job.assessment.rounds && job.assessment.rounds.length > 0 && (
+          <div className="mt-4 pt-3.5 border-t border-border/70">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft block mb-1.5">
+              Assessment Pipeline ({job.assessment.rounds.length} {job.assessment.rounds.length === 1 ? 'Round' : 'Rounds'})
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {job.assessment.rounds.map((round, idx) => (
+                <React.Fragment key={round.id || round.type}>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-primary/10 border border-primary/20 text-primary-glow px-2.5 py-1 rounded-lg">
+                    <span className="text-[10px] font-bold opacity-75">{idx + 1}.</span>
+                    <span>
+                      {round.name}
+                      {round.type === "general" && Array.isArray((round.config as any)?.questionTypes) && (
+                        <span className="text-[10px] font-normal opacity-80 ml-1">
+                          ({((round.config as any).questionTypes as string[]).map((t) => t.replace("_", " ")).join(", ")})
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  {idx < (job.assessment?.rounds?.length ?? 0) - 1 && (
+                    <span className="text-xs text-ink-soft/60 font-medium">→</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -461,13 +543,13 @@ export default function JobDetailPage() {
                 </span>
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/recruiter/hiring-pipeline/kanban?jobId=${jobId}`}
+                    href={`/recruiter/jobs?tab=kanban&jobId=${jobId}`}
                     className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-surface border border-border text-ink hover:bg-surface-alt transition shadow-xs flex items-center gap-1.5"
                   >
                     <span>Kanban Board</span>
                   </Link>
                   <Link
-                    href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
+                    href={`/recruiter/jobs?tab=timeline&jobId=${jobId}`}
                     className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-brand text-primary-foreground hover:shadow-glow transition shadow-xs flex items-center gap-1.5"
                   >
                     <span>Funnel Timeline</span>
@@ -663,6 +745,8 @@ export default function JobDetailPage() {
         onStatusChange={handleStatusChange}
         isUpdatingStatus={updatingId === selectedApplicantForResume?._id}
       />
+        </div>
+      </div>
     </div>
   );
 }

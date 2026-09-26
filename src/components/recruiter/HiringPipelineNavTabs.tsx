@@ -3,32 +3,43 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { GitCommit, KanbanSquare, FileCheck2, Award } from "lucide-react";
+import { GitCommit, KanbanSquare, FileCheck2, Award, ListChecks } from "lucide-react";
 
 export const HIRING_PIPELINE_TABS = [
   {
-    name: "Resume Shortlisting",
-    href: "/recruiter/hiring-pipeline/resume-screening",
-    icon: FileCheck2,
-    badge: "Qualification",
-  },
-  {
     name: "Hiring Timeline",
-    href: "/recruiter/hiring-pipeline/timeline",
+    href: "/recruiter/jobs?tab=timeline",
+    tabKey: "timeline",
     icon: GitCommit,
     badge: "Funnel",
   },
   {
     name: "Kanban",
-    href: "/recruiter/hiring-pipeline/kanban",
+    href: "/recruiter/jobs?tab=kanban",
+    tabKey: "kanban",
     icon: KanbanSquare,
     badge: "Live",
   },
   {
+    name: "Resume Shortlisting",
+    href: "/recruiter/hiring-pipeline/resume-screening",
+    tabKey: "resume-screening",
+    icon: FileCheck2,
+    badge: "Qualification",
+  },
+  {
     name: "Final Shortlist",
     href: "/recruiter/hiring-pipeline/final-shortlist",
+    tabKey: "final-shortlist",
     icon: Award,
     badge: "Decisions",
+  },
+  {
+    name: "Candidate Listing",
+    href: "/recruiter/jobs?tab=candidates",
+    tabKey: "candidates",
+    icon: ListChecks,
+    badge: "Directory",
   },
 ];
 
@@ -40,27 +51,34 @@ export function HiringPipelineNavTabs({ jobId }: HiringPipelineNavTabsProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentJobId = jobId || searchParams.get("jobId");
+  const currentTab = searchParams.get("tab") || "timeline";
+  const isJobsBoard = pathname === "/recruiter/jobs";
 
   return (
     <div className="flex items-center gap-1.5 p-1 bg-surface-alt/80 border border-border/80 rounded-2xl w-fit max-w-full overflow-x-auto shadow-xs mb-6">
       {HIRING_PIPELINE_TABS.map((tab) => {
         const Icon = tab.icon;
-        const targetHref = currentJobId ? `${tab.href}?jobId=${currentJobId}` : tab.href;
+        const separator = tab.href.includes("?") ? "&" : "?";
+        const targetHref = currentJobId ? `${tab.href}${separator}jobId=${currentJobId}` : tab.href;
 
-        const isActive =
-          pathname === tab.href ||
-          (tab.href === "/recruiter/hiring-pipeline/resume-screening" &&
-            pathname?.startsWith("/recruiter/hiring-pipeline/resume-screening")) ||
-          (tab.href === "/recruiter/hiring-pipeline/timeline" &&
-            pathname?.startsWith("/recruiter/hiring-pipeline/timeline")) ||
-          (tab.href === "/recruiter/hiring-pipeline/kanban" &&
-            pathname?.startsWith("/recruiter/hiring-pipeline/kanban")) ||
-          (tab.href === "/recruiter/hiring-pipeline/final-shortlist" &&
-            pathname?.startsWith("/recruiter/hiring-pipeline/final-shortlist"));
+        let isActive = false;
+        if (tab.tabKey === "resume-screening") {
+          isActive = pathname?.startsWith("/recruiter/hiring-pipeline/resume-screening");
+        } else if (tab.tabKey === "final-shortlist") {
+          isActive = pathname?.startsWith("/recruiter/hiring-pipeline/final-shortlist");
+        } else if (isJobsBoard) {
+          isActive = currentTab === tab.tabKey;
+        } else if (tab.tabKey === "timeline" && pathname?.includes("/timeline")) {
+          isActive = true;
+        } else if (tab.tabKey === "kanban" && pathname?.includes("/kanban")) {
+          isActive = true;
+        } else if (tab.tabKey === "candidates" && pathname?.includes("/candidates")) {
+          isActive = true;
+        }
 
         return (
           <Link
-            key={tab.href}
+            key={tab.name}
             href={targetHref}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               isActive

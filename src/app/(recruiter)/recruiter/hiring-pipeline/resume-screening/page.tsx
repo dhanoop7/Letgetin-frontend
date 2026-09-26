@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner";
 import { HiringPipelineNavTabs } from "@/components/recruiter/HiringPipelineNavTabs";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
+import { JobsSidebar } from "@/features/recruiter/components/JobsSidebar";
 import { resumeScreeningService } from "@/features/recruiter/services/resumeScreeningService";
 import {
   ResumeDecision,
@@ -233,7 +234,14 @@ export default function ResumeScreeningPage() {
   const currentJob = useMemo(() => jobs.find((j) => j._id === selectedJobId), [jobs, selectedJobId]);
 
   return (
-    <div className="min-h-screen bg-surface-alt/40 p-4 sm:p-6 lg:p-8">
+    <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row bg-background">
+      <JobsSidebar
+        jobs={jobs}
+        selectedJobId={selectedJobId}
+        loadingJobs={loadingJobs}
+        onSelectJob={handleSelectJob}
+      />
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-surface-alt/40">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
@@ -887,26 +895,75 @@ export default function ResumeScreeningPage() {
                       </div>
 
                       {/* Score Metrics Grid */}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="p-3.5 rounded-xl bg-surface border border-border text-center shadow-xs">
-                          <span className="text-[10px] font-bold text-ink-soft uppercase block">Overall Match</span>
-                          <span className="text-2xl font-black text-primary-glow mt-0.5 block">
-                            {candidateDetail.evaluation.overallScore}%
-                          </span>
+                      {candidateDetail.evaluation.breakdown ? (
+                        <div className="space-y-2.5">
+                          <div className="p-3.5 rounded-xl bg-surface border border-border flex items-center justify-between shadow-xs">
+                            <span className="text-xs font-bold text-ink uppercase tracking-wider">Canonical Match</span>
+                            <span className="text-2xl font-black text-primary-glow">
+                              {candidateDetail.evaluation.overallScore}%
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <div className="p-2.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                              <span className="text-[10px] font-bold text-ink-soft uppercase block">Required Skills</span>
+                              <span className="text-base font-bold text-emerald-600 mt-0.5 block">
+                                {candidateDetail.evaluation.breakdown.requiredSkillsScore}%
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                              <span className="text-[10px] font-bold text-ink-soft uppercase block">Preferred Skills</span>
+                              <span className="text-base font-bold text-teal-600 mt-0.5 block">
+                                {candidateDetail.evaluation.breakdown.preferredSkillsScore}%
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                              <span className="text-[10px] font-bold text-ink-soft uppercase block">Experience</span>
+                              <span className="text-base font-bold text-indigo-600 mt-0.5 block">
+                                {candidateDetail.evaluation.breakdown.experienceScore}%
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                              <span className="text-[10px] font-bold text-ink-soft uppercase block">Education</span>
+                              <span className="text-base font-bold text-blue-600 mt-0.5 block">
+                                {candidateDetail.evaluation.breakdown.educationScore}%
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                              <span className="text-[10px] font-bold text-ink-soft uppercase block">Semantic Match</span>
+                              <span className="text-base font-bold text-purple-600 mt-0.5 block">
+                                {candidateDetail.evaluation.breakdown.semanticScore}%
+                              </span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                              <span className="text-[10px] font-bold text-ink-soft uppercase block">Role Relevance</span>
+                              <span className="text-base font-bold text-amber-600 mt-0.5 block">
+                                {candidateDetail.evaluation.breakdown.roleRelevanceScore}%
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="p-3.5 rounded-xl bg-surface border border-border text-center shadow-xs">
-                          <span className="text-[10px] font-bold text-ink-soft uppercase block">Skills Match</span>
-                          <span className="text-2xl font-black text-emerald-600 mt-0.5 block">
-                            {candidateDetail.evaluation.skillsMatchScore}%
-                          </span>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="p-3.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                            <span className="text-[10px] font-bold text-ink-soft uppercase block">Overall Match</span>
+                            <span className="text-2xl font-black text-primary-glow mt-0.5 block">
+                              {candidateDetail.evaluation.overallScore}%
+                            </span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                            <span className="text-[10px] font-bold text-ink-soft uppercase block">Skills Match</span>
+                            <span className="text-2xl font-black text-emerald-600 mt-0.5 block">
+                              {candidateDetail.evaluation.skillsMatchScore}%
+                            </span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-surface border border-border text-center shadow-xs">
+                            <span className="text-[10px] font-bold text-ink-soft uppercase block">Experience Match</span>
+                            <span className="text-2xl font-black text-indigo-600 mt-0.5 block">
+                              {candidateDetail.evaluation.experienceMatchScore}%
+                            </span>
+                          </div>
                         </div>
-                        <div className="p-3.5 rounded-xl bg-surface border border-border text-center shadow-xs">
-                          <span className="text-[10px] font-bold text-ink-soft uppercase block">Experience Match</span>
-                          <span className="text-2xl font-black text-indigo-600 mt-0.5 block">
-                            {candidateDetail.evaluation.experienceMatchScore}%
-                          </span>
-                        </div>
-                      </div>
+                      )}
 
                       {/* Strengths & Weaknesses */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -952,8 +1009,24 @@ export default function ResumeScreeningPage() {
                           </div>
                         </div>
 
+                        {candidateDetail.evaluation.matchedPreferredSkills && candidateDetail.evaluation.matchedPreferredSkills.length > 0 && (
+                          <div className="pt-2">
+                            <span className="text-xs font-bold text-ink block mb-1.5">Matched Preferred Skills</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {candidateDetail.evaluation.matchedPreferredSkills.map((s, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20"
+                                >
+                                  ★ {s}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="pt-2">
-                          <span className="text-xs font-bold text-ink block mb-1.5">Missing Job Skills</span>
+                          <span className="text-xs font-bold text-ink block mb-1.5">Missing Core Skills</span>
                           <div className="flex flex-wrap gap-1.5">
                             {candidateDetail.evaluation.missingSkills.map((s, idx) => (
                               <span
@@ -968,6 +1041,20 @@ export default function ResumeScreeningPage() {
                             )}
                           </div>
                         </div>
+
+                        {candidateDetail.evaluation.explanations && candidateDetail.evaluation.explanations.length > 0 && (
+                          <div className="pt-3 border-t border-border mt-3">
+                            <span className="text-xs font-bold text-ink block mb-1.5">Evaluation Explanations</span>
+                            <ul className="space-y-1 text-xs text-ink-soft">
+                              {candidateDetail.evaluation.explanations.map((exp, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <span className="text-primary-glow font-bold">•</span>
+                                  <span>{exp}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -1072,6 +1159,7 @@ export default function ResumeScreeningPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
