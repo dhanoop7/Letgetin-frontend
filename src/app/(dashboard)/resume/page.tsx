@@ -2,16 +2,13 @@
 
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useAuthStore } from "../../../features/auth/store/useAuthStore";
-import { StorageProviderFactory } from "../../../features/resume/storage/factory";
-import { IResume } from "../../../features/resume/types";
-import { ResumeCard } from "../../../features/dashboard/components/ResumeCard";
-import { CreateResumeModal } from "../../../features/dashboard/components/CreateResumeModal";
-import { CareerOverviewSection } from "../../../features/dashboard/components/CareerOverviewSection";
+import { StorageProviderFactory } from "@/features/resume/storage/factory";
+import { IResume } from "@/features/resume/types";
+import { ResumeCard } from "@/features/dashboard/components/ResumeCard";
+import { CreateResumeModal } from "@/features/dashboard/components/CreateResumeModal";
 import { AIChat } from "@/features/aiAssistant/components/AIChat";
 import { ComingSoon } from "@/components/common/ComingSoon";
 import { VideoProfileSection } from "@/features/videoProfile/components/VideoProfileSection";
-import { JobsBoard } from "@/features/jobs/components/JobsBoard";
 import { SectionTabs } from "@/components/common/SectionTabs";
 import { MyCoverLetters } from "@/features/aiApply/components/MyCoverLetters";
 import { TailorResumeEntry } from "@/features/tailorResume/components/TailorResumeEntry";
@@ -20,57 +17,38 @@ import {
   Search,
   FileText,
   Sparkles,
-  LayoutDashboard,
   Mail,
   Video,
-  LayoutGrid,
-  Calendar,
 } from "lucide-react";
-import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 
-type MyJobsSection =
-  | "overview"
-  | "kanban"
-  | "calendar"
-  | "jobs"
-  | "resume"
-  | "coverLetter"
-  | "videoProfile";
+type ResumeSection = "resume" | "coverLetter" | "videoProfile";
 type ResumeInnerTab = "myResume" | "tailorResume";
 type CoverLetterInnerTab = "myCoverLetter" | "tailorCoverLetter";
 
-// Top navigation for the My Jobs area, matching the in-page tab bar pattern.
-const MY_JOBS_TABS: {
-  id: MyJobsSection;
+// Top navigation tabs for the Resume parent section
+const RESUME_PARENT_TABS: {
+  id: ResumeSection;
   label: string;
   icon: typeof FileText;
 }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "kanban", label: "Kanban Board", icon: LayoutGrid },
-  { id: "calendar", label: "Calendar", icon: Calendar },
-  { id: "jobs", label: "Explore Jobs", icon: Search },
   { id: "resume", label: "Resume", icon: FileText },
   { id: "coverLetter", label: "Cover Letter", icon: Mail },
   { id: "videoProfile", label: "Video Profile", icon: Video },
 ];
 
-function DashboardPageContent() {
+function ResumePageContent() {
   const searchParams = useSearchParams();
-  const tabFromUrl = searchParams.get("tab") as MyJobsSection | null;
+  const tabFromUrl = searchParams.get("tab") as ResumeSection | null;
 
-  const { isAuthenticated } = useAuthStore();
-  const [activeSection, setActiveSection] = useState<MyJobsSection>(() => {
+  const [activeSection, setActiveSection] = useState<ResumeSection>(() => {
     if (
       tabFromUrl &&
-      ["overview", "kanban", "calendar", "jobs", "resume", "coverLetter", "videoProfile"].includes(
-        tabFromUrl,
-      )
+      ["resume", "coverLetter", "videoProfile"].includes(tabFromUrl)
     ) {
       return tabFromUrl;
     }
-    return "overview";
+    return "resume";
   });
-  const [selectedStage, setSelectedStage] = useState<string>("all");
 
   const [resumeInnerTab, setResumeInnerTab] =
     useState<ResumeInnerTab>("myResume");
@@ -80,23 +58,12 @@ function DashboardPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleSwitchTab = (tab: MyJobsSection, stage?: string) => {
-    setActiveSection(tab);
-
-    if (stage) {
-      setSelectedStage(stage);
-    } else {
-      setSelectedStage("all");
-    }
-  };
+  const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     if (
       tabFromUrl &&
-      ["overview", "kanban", "calendar", "jobs", "resume", "coverLetter", "videoProfile"].includes(
-        tabFromUrl,
-      )
+      ["resume", "coverLetter", "videoProfile"].includes(tabFromUrl)
     ) {
       setActiveSection(tabFromUrl);
     }
@@ -117,7 +84,6 @@ function DashboardPageContent() {
         }
       } catch (err: unknown) {
         const errorMsg = (err as { message?: string })?.message || String(err);
-
         console.warn("Failed to fetch resumes:", errorMsg);
 
         if (isMounted) {
@@ -137,18 +103,13 @@ function DashboardPageContent() {
     };
   }, []);
 
-  const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
-
   const handleDelete = async (id: string) => {
     try {
       const provider = StorageProviderFactory.getProvider();
-
       await provider.delete(id);
-
       setResumes((prev) => prev.filter((r) => r.id !== id));
     } catch (err: unknown) {
       const errorMsg = (err as { message?: string })?.message || String(err);
-
       console.error("Failed to delete resume:", errorMsg);
     }
   };
@@ -181,9 +142,9 @@ function DashboardPageContent() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Top Header Navigation Tabs - My Jobs */}
+        {/* Top Header Navigation Tabs - Resume Parent Section */}
         <div className="bg-surface border border-border rounded-2xl p-2 shadow-xs flex items-center gap-1.5 overflow-x-auto no-scrollbar select-none">
-          {MY_JOBS_TABS.map((tab) => {
+          {RESUME_PARENT_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;
             return (
@@ -205,73 +166,7 @@ function DashboardPageContent() {
           })}
         </div>
 
-        {/* 1. Overview Section */}
-        {activeSection === "overview" && (
-          <CareerOverviewSection
-            onSwitchTab={handleSwitchTab}
-            onOpenCreateResume={() => setIsModalOpen(true)}
-          />
-        )}
-
-        {/* 2. Kanban Board */}
-        {activeSection === "kanban" && (
-          <JobsBoard
-            onSwitchTab={handleSwitchTab}
-            initialStageFilter={selectedStage}
-            initialViewMode="kanban"
-          />
-        )}
-
-        {/* 3. Calendar Workspace */}
-        {activeSection === "calendar" && (
-          <div className="space-y-4">
-            <CalendarWorkspace
-              title="My Jobs & Applications Schedule"
-              subtitle="Keep track of your interview timings, assessment deadlines, and job application timelines in one place."
-              badgeLabel="Candidate Schedule"
-              defaultView="week"
-            />
-          </div>
-        )}
-
-        {/* 4. Jobs Board (Explore & Search Jobs) */}
-        {activeSection === "jobs" && (
-          <JobsBoard
-            onSwitchTab={handleSwitchTab}
-            initialStageFilter={selectedStage}
-            initialViewMode="list"
-          />
-        )}
-
-        {/* 3. Cover Letter Section */}
-        {activeSection === "coverLetter" && (
-          <div className="space-y-6">
-            <SectionTabs
-              options={[
-                { id: "myCoverLetter", label: "My Cover Letter" },
-                { id: "tailorCoverLetter", label: "Tailor Cover Letter" },
-              ]}
-              active={coverLetterInnerTab}
-              onChange={setCoverLetterInnerTab}
-            />
-
-            {coverLetterInnerTab === "myCoverLetter" && <MyCoverLetters />}
-
-            {coverLetterInnerTab === "tailorCoverLetter" && (
-              <ComingSoon
-                title="Tailor Cover Letter"
-                description="Paste a job description and let AI tailor your cover letter to match it, automatically."
-                icon={Mail}
-                compact
-              />
-            )}
-          </div>
-        )}
-
-        {/* 4. Video Profile Section */}
-        {activeSection === "videoProfile" && <VideoProfileSection />}
-
-        {/* 5. Resume Builder & Storage Section */}
+        {/* 1. Resume Builder & Storage Section */}
         {activeSection === "resume" && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Banner */}
@@ -379,6 +274,34 @@ function DashboardPageContent() {
             </div>
           </div>
         )}
+
+        {/* 2. Cover Letter Section */}
+        {activeSection === "coverLetter" && (
+          <div className="space-y-6">
+            <SectionTabs
+              options={[
+                { id: "myCoverLetter", label: "My Cover Letter" },
+                { id: "tailorCoverLetter", label: "Tailor Cover Letter" },
+              ]}
+              active={coverLetterInnerTab}
+              onChange={setCoverLetterInnerTab}
+            />
+
+            {coverLetterInnerTab === "myCoverLetter" && <MyCoverLetters />}
+
+            {coverLetterInnerTab === "tailorCoverLetter" && (
+              <ComingSoon
+                title="Tailor Cover Letter"
+                description="Paste a job description and let AI tailor your cover letter to match it, automatically."
+                icon={Mail}
+                compact
+              />
+            )}
+          </div>
+        )}
+
+        {/* 3. Video Profile Section */}
+        {activeSection === "videoProfile" && <VideoProfileSection />}
       </main>
 
       <CreateResumeModal
@@ -391,10 +314,10 @@ function DashboardPageContent() {
   );
 }
 
-export default function DashboardPage() {
+export default function ResumePage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
-      <DashboardPageContent />
+      <ResumePageContent />
     </Suspense>
   );
 }

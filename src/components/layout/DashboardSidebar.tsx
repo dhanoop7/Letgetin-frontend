@@ -168,9 +168,16 @@ export function DashboardSidebar({
         {
           name: "My Jobs",
           shortName: "Jobs",
-          href: "/resume",
+          href: "/jobs",
           icon: Briefcase,
-          description: "Jobs, resumes, cover letters & video profile",
+          description: "Jobs pipeline, kanban board & calendar schedule",
+        },
+        {
+          name: "Resume",
+          shortName: "Resume",
+          href: "/resume",
+          icon: FileText,
+          description: "Resumes, cover letters & video profile",
         },
         {
           name: "Resume Translator",
