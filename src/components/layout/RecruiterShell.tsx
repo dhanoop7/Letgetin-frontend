@@ -61,6 +61,7 @@ import {
   Folder,
   FlaskConical,
   GitBranch,
+  GitCommit,
   type LucideIcon,
 } from "lucide-react";
 
@@ -83,6 +84,13 @@ interface NavItem {
 
 const TOP_ITEMS: NavItem[] = [
   {
+    name: "Dashboard",
+    shortName: "Dashboard",
+    href: "/recruiter/dashboard",
+    icon: LayoutGrid,
+    description: "Recruiter command center & key metrics",
+  },
+  {
     name: "AI Hire",
     shortName: "AI Hire",
     href: "/recruiter/ai-hire",
@@ -96,36 +104,19 @@ const TOP_ITEMS: NavItem[] = [
     icon: Contact,
     description: "Organization profile, team & settings",
   },
-];
-
-const HIRING_ITEMS: NavItem[] = [
   {
-    name: "Dashboard",
-    shortName: "Dashboard",
-    href: "/recruiter/dashboard",
-    icon: LayoutGrid,
-    description: "Recruiter command center & key metrics",
+    name: "Calendar",
+    shortName: "Calendar",
+    href: "/recruiter/calendar",
+    icon: CalendarDays,
+    description: "Company events, workforce schedules & shifts",
   },
   {
-    name: "Create Job",
-    shortName: "Post Job",
-    href: "/recruiter/jobs/create",
-    icon: PlusCircle,
-    description: "Create and publish new job postings",
-  },
-  {
-    name: "Jobs",
-    shortName: "Jobs",
-    href: "/recruiter/jobs",
-    icon: KanbanSquare,
-    description: "Manage active jobs & dynamic hiring pipeline",
-    subItems: [
-      { name: "Hiring Timeline", shortName: "Timeline", href: "/recruiter/jobs?tab=timeline" },
-      { name: "Kanban Board", shortName: "Kanban", href: "/recruiter/jobs?tab=kanban" },
-      { name: "Resume Shortlisting", shortName: "Shortlisting", href: "/recruiter/hiring-pipeline/resume-screening" },
-      { name: "Final Shortlist", shortName: "Finalists", href: "/recruiter/hiring-pipeline/final-shortlist" },
-      { name: "Candidate Listing", shortName: "Candidates", href: "/recruiter/jobs?tab=candidates" },
-    ],
+    name: "Taskmite",
+    shortName: "Taskmite",
+    href: "/recruiter/taskmite",
+    icon: ListChecks,
+    description: "Team task delegation, sprint tracking & productivity",
   },
   {
     name: "Verified Resumes",
@@ -147,6 +138,38 @@ const HIRING_ITEMS: NavItem[] = [
       { name: "Track Applicants", shortName: "Track", href: "/recruiter/track" },
     ],
   },
+];
+
+const HIRING_ITEMS: NavItem[] = [
+  {
+    name: "Create Job",
+    shortName: "Post Job",
+    href: "/recruiter/jobs/create",
+    icon: PlusCircle,
+    description: "Create and publish new job postings",
+  },
+  {
+    name: "Timeline",
+    shortName: "Timeline",
+    href: "/recruiter/jobs?tab=timeline",
+    icon: GitCommit,
+    description: "Stage timeline & progress of currently posted jobs",
+  },
+  {
+    name: "Jobs",
+    shortName: "Jobs",
+    href: "/recruiter/jobs",
+    icon: KanbanSquare,
+    description: "Manage active jobs & dynamic hiring pipeline",
+    subItems: [
+      { name: "Create Job", shortName: "Post Job", href: "/recruiter/jobs/create" },
+      { name: "Hiring Timeline", shortName: "Timeline", href: "/recruiter/jobs?tab=timeline" },
+      { name: "Kanban Board", shortName: "Kanban", href: "/recruiter/jobs?tab=kanban" },
+      { name: "Resume Shortlisting", shortName: "Shortlisting", href: "/recruiter/hiring-pipeline/resume-screening" },
+      { name: "Final Shortlist", shortName: "Finalists", href: "/recruiter/hiring-pipeline/final-shortlist" },
+      { name: "Candidate Listing", shortName: "Candidates", href: "/recruiter/jobs?tab=candidates" },
+    ],
+  },
   {
     name: "Candidate Chat",
     shortName: "Chat",
@@ -157,41 +180,74 @@ const HIRING_ITEMS: NavItem[] = [
   },
 ];
 
-const INTERVIEW_ITEMS: NavItem[] = [
+const HIRING_FUNNEL_ITEMS: NavItem[] = [
   {
-    name: "Interview Schedule",
-    shortName: "Schedule",
-    href: "/recruiter/interview-schedule",
-    icon: CalendarDays,
-    description: "Calendar & slot management for candidate interviews",
+    name: "Shortlist",
+    shortName: "Shortlist",
+    href: "/recruiter/hiring-pipeline/resume-screening",
+    icon: FileCheck,
+    description: "Candidate screening, scoring & ATS matching",
   },
   {
-    name: "AI Interview",
-    shortName: "AI Interview",
-    href: "/recruiter/ai-interview",
-    icon: Sparkles,
-    soon: true,
-    description: "Autonomous AI screening and technical assessments",
+    name: "Domain Assessment",
+    shortName: "Assessment",
+    href: "/recruiter/domain-assessments",
+    icon: BrainCircuit,
+    description: "Technical, aptitude & domain assessment tests",
+  },
+  {
+    name: "Interview",
+    shortName: "Interview",
+    href: "/recruiter/interview-schedule",
+    icon: Video,
+    description: "Schedules, AI interview & video assessment rounds",
     subItems: [
-      { name: "AI Interview", shortName: "AI Interview", href: "/recruiter/ai-interview", soon: true },
-      { name: "AI Assessment", shortName: "Assessment", href: "/recruiter/ai-assessment", soon: true },
+      {
+        name: "Interview Schedule",
+        shortName: "Schedule",
+        href: "/recruiter/interview-schedule",
+      },
+      {
+        name: "AI Interview",
+        shortName: "AI Interview",
+        href: "/recruiter/ai-interview",
+        soon: true,
+      },
+      {
+        name: "Video Interview",
+        shortName: "Video",
+        href: "/recruiter/video-interview",
+        soon: true,
+      },
+      {
+        name: "Interview Buddy",
+        shortName: "Buddy",
+        href: "/recruiter/interview-buddy",
+        soon: true,
+      },
     ],
   },
   {
-    name: "Interview Buddy",
-    shortName: "Buddy",
-    href: "/recruiter/interview-buddy",
-    icon: Bot,
-    soon: true,
-    description: "AI co-pilot for live candidate interview questioning",
+    name: "Background Verification",
+    shortName: "Verification",
+    href: "/recruiter/background-verification",
+    icon: ShieldCheck,
+    description: "Employment history, education, identity & police verification",
   },
   {
-    name: "Video Interview",
-    shortName: "Video",
-    href: "/recruiter/video-interview",
-    icon: Video,
+    name: "Onboarding",
+    shortName: "Onboarding",
+    href: "/recruiter/onboarding",
+    icon: UserCheck,
+    description: "Pre-boarding & talent induction workflows",
+  },
+  {
+    name: "Finalist",
+    shortName: "Finalist",
+    href: "/recruiter/final-list",
+    icon: ClipboardCheck,
     soon: true,
-    description: "Live interactive video interview rooms",
+    description: "Offer stage, final selections & hire outcomes",
   },
 ];
 
@@ -255,34 +311,12 @@ const CAREER_GUIDANCE_ITEMS: NavItem[] = [
 
 const WORKFORCE_ITEMS: NavItem[] = [
   {
-    name: "Finalist",
-    shortName: "Finalist",
-    href: "/recruiter/final-list",
-    icon: ClipboardCheck,
-    soon: true,
-    description: "Offer stage & selection outcomes",
-  },
-  {
     name: "Training",
     shortName: "Training",
     href: "/recruiter/training",
     icon: GraduationCap,
     soon: true,
     description: "Onboarding & talent development tracks",
-  },
-  {
-    name: "Calendar",
-    shortName: "Calendar",
-    href: "/recruiter/calendar",
-    icon: CalendarDays,
-    description: "Company events, workforce schedules & shifts",
-  },
-  {
-    name: "Taskmite",
-    shortName: "Taskmite",
-    href: "/recruiter/taskmite",
-    icon: ListChecks,
-    description: "Team task delegation, sprint tracking & productivity",
   },
   {
     name: "Network",
@@ -355,34 +389,12 @@ const MANAGEMENT_ITEMS: NavItem[] = [
 
 const STARTUP_WORKFORCE_ITEMS: NavItem[] = [
   {
-    name: "Finalist",
-    shortName: "Finalist",
-    href: "/recruiter/final-list",
-    icon: ClipboardCheck,
-    soon: true,
-    description: "Offer stage & selection outcomes",
-  },
-  {
     name: "Training",
     shortName: "Training",
     href: "/recruiter/training",
     icon: GraduationCap,
     soon: true,
     description: "Onboarding & talent development tracks",
-  },
-  {
-    name: "Calendar",
-    shortName: "Calendar",
-    href: "/recruiter/calendar",
-    icon: CalendarDays,
-    description: "Company events, workforce schedules & shifts",
-  },
-  {
-    name: "Taskmite",
-    shortName: "Taskmite",
-    href: "/recruiter/taskmite",
-    icon: ListChecks,
-    description: "Team task delegation, sprint tracking & productivity",
   },
   {
     name: "Network",
@@ -711,8 +723,14 @@ function resolveActiveHref(
   for (const item of allItems) {
     const list = [item.href, ...(item.subItems?.map((s) => s.href) || [])];
     for (const href of list) {
-      const matches = pathname === href || pathname.startsWith(href + "/");
-      if (matches && (!best || href.length > best.length)) {
+      const cleanHref = href.split("?")[0];
+      const matches =
+        pathname === cleanHref ||
+        (cleanHref !== "/recruiter" && pathname.startsWith(cleanHref + "/"));
+      if (
+        matches &&
+        (!best || cleanHref.length > (best.split("?")[0]?.length || 0))
+      ) {
         best = href;
       }
     }
@@ -827,7 +845,7 @@ export function RecruiterShell({
           ...INSTITUTION_RECORDS_ITEMS,
           ...INSTITUTION_PLACEMENT_SUITE_ITEMS,
           ...HIRING_ITEMS,
-          ...INTERVIEW_ITEMS,
+          ...HIRING_FUNNEL_ITEMS,
           ...INSTITUTION_PLACEMENT_MARKETING_ITEMS,
           ...CAREER_GUIDANCE_ITEMS,
           ...WORKFORCE_ITEMS,
@@ -837,7 +855,7 @@ export function RecruiterShell({
       ? [
           ...TOP_ITEMS,
           ...HIRING_ITEMS,
-          ...INTERVIEW_ITEMS,
+          ...HIRING_FUNNEL_ITEMS,
           ...RECRUITMENT_MARKETING_ITEMS,
           ...CAREER_GUIDANCE_ITEMS,
           ...STARTUP_WORKFORCE_ITEMS,
@@ -850,7 +868,7 @@ export function RecruiterShell({
       : [
           ...TOP_ITEMS,
           ...HIRING_ITEMS,
-          ...INTERVIEW_ITEMS,
+          ...HIRING_FUNNEL_ITEMS,
           ...RECRUITMENT_MARKETING_ITEMS,
           ...CAREER_GUIDANCE_ITEMS,
           ...WORKFORCE_ITEMS,
@@ -858,6 +876,69 @@ export function RecruiterShell({
         ]),
   ];
   const activeHref = resolveActiveHref(pathname, allItems);
+
+  const isItemActive = (item: NavItem) => {
+    // If item has a query param (e.g. Timeline: "/recruiter/jobs?tab=timeline")
+    if (item.href.includes("?")) {
+      const [subPath, subQuery] = item.href.split("?");
+      const params = new URLSearchParams(subQuery);
+      const tabParam = params.get("tab");
+      if (tabParam && pathname === subPath) {
+        return (searchParams?.get("tab") || "timeline") === tabParam;
+      }
+      return false;
+    }
+
+    // Check if any child sub-item is active
+    if (item.subItems?.some((s) => checkSubActive(s.href))) {
+      return true;
+    }
+
+    // Special handling for "/recruiter/jobs" (Jobs menu)
+    if (item.href === "/recruiter/jobs") {
+      const currentTab = searchParams?.get("tab");
+      if (
+        (pathname === "/recruiter/jobs" && currentTab === "timeline") ||
+        pathname === "/recruiter/jobs/timeline"
+      ) {
+        return false;
+      }
+      if (pathname === "/recruiter/jobs/create") {
+        return false;
+      }
+      return (
+        pathname === "/recruiter/jobs" ||
+        (pathname.startsWith("/recruiter/jobs/") && pathname !== "/recruiter/jobs/create")
+      );
+    }
+
+    // Shortlist / Resume Screening
+    if (item.href === "/recruiter/hiring-pipeline/resume-screening") {
+      return (
+        pathname === "/recruiter/hiring-pipeline/resume-screening" ||
+        pathname === "/recruiter/shortlist"
+      );
+    }
+
+    // Domain Assessment
+    if (
+      item.href === "/recruiter/domain-assessments" ||
+      item.href === "/recruiter/ai-assessment"
+    ) {
+      return (
+        pathname.startsWith("/recruiter/domain-assessments") ||
+        pathname === "/recruiter/ai-assessment" ||
+        pathname === "/recruiter/domain-assessment"
+      );
+    }
+
+    // General matching
+    return (
+      item.href === activeHref ||
+      pathname === item.href ||
+      (item.href !== "/recruiter" && pathname.startsWith(item.href + "/"))
+    );
+  };
 
   // Renders a navigation group in full or mini mode
   const renderNavGroup = (title: string, items: NavItem[]) => {
@@ -867,15 +948,7 @@ export function RecruiterShell({
           {items.map((item) => {
             const Icon = item.icon;
             const hasSub = !!item.subItems?.length;
-            const isChildActive = !!item.subItems?.some(
-              (s) => checkSubActive(s.href)
-            );
-            const isJobOrPipelineMatch =
-              item.href === "/recruiter/jobs" &&
-              (pathname === "/recruiter/jobs" ||
-                pathname.startsWith("/recruiter/jobs") ||
-                pathname.startsWith("/recruiter/hiring-pipeline"));
-            const isActive = item.href === activeHref || isChildActive || isJobOrPipelineMatch;
+            const isActive = isItemActive(item);
 
             return (
               <div
@@ -978,16 +1051,7 @@ export function RecruiterShell({
           {items.map((item) => {
             const Icon = item.icon;
             const hasSub = !!item.subItems?.length;
-            const isChildActive = !!item.subItems?.some(
-              (s) => checkSubActive(s.href)
-            );
-            const isActive = item.href === activeHref;
-            const isJobOrPipelineMatch =
-              item.href === "/recruiter/jobs" &&
-              (pathname === "/recruiter/jobs" ||
-                pathname.startsWith("/recruiter/jobs") ||
-                pathname.startsWith("/recruiter/hiring-pipeline"));
-            const isHighlighted = isActive || isChildActive || isJobOrPipelineMatch;
+            const isHighlighted = isItemActive(item);
             const isOpen =
               openSubmenus[item.href] !== undefined
                 ? openSubmenus[item.href]
@@ -1219,7 +1283,7 @@ export function RecruiterShell({
             {renderNavGroup("Records", INSTITUTION_RECORDS_ITEMS)}
             {renderNavGroup("Placement Suite", INSTITUTION_PLACEMENT_SUITE_ITEMS)}
             {renderNavGroup("Hiring Suite", HIRING_ITEMS)}
-            {renderNavGroup("Interview", INTERVIEW_ITEMS)}
+            {renderNavGroup("Hiring Funnel", HIRING_FUNNEL_ITEMS)}
             {renderNavGroup("Placement Marketing", INSTITUTION_PLACEMENT_MARKETING_ITEMS)}
             {renderNavGroup("Career Guidance", CAREER_GUIDANCE_ITEMS)}
             {renderNavGroup("Workforce", WORKFORCE_ITEMS)}
@@ -1228,7 +1292,7 @@ export function RecruiterShell({
         ) : isStartup ? (
           <>
             {renderNavGroup("Hiring Suite", HIRING_ITEMS)}
-            {renderNavGroup("Interview", INTERVIEW_ITEMS)}
+            {renderNavGroup("Hiring Funnel", HIRING_FUNNEL_ITEMS)}
             {renderNavGroup("Recruitment Marketing", RECRUITMENT_MARKETING_ITEMS)}
             {renderNavGroup("Career Guidance", CAREER_GUIDANCE_ITEMS)}
             {renderNavGroup("Workforce", STARTUP_WORKFORCE_ITEMS)}
@@ -1241,7 +1305,7 @@ export function RecruiterShell({
         ) : (
           <>
             {renderNavGroup("Hiring Suite", HIRING_ITEMS)}
-            {renderNavGroup("Interview", INTERVIEW_ITEMS)}
+            {renderNavGroup("Hiring Funnel", HIRING_FUNNEL_ITEMS)}
             {renderNavGroup("Recruitment Marketing", RECRUITMENT_MARKETING_ITEMS)}
             {renderNavGroup("Career Guidance", CAREER_GUIDANCE_ITEMS)}
             {renderNavGroup("Workforce", WORKFORCE_ITEMS)}

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function AIAssessmentRedirect() {
+export default function DomainAssessmentRedirect() {
   const router = useRouter();
 
   useEffect(() => {

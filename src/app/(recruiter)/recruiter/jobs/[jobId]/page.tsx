@@ -21,6 +21,7 @@ import {
   Play,
   ArrowRight,
   ShieldAlert,
+  Sliders,
 } from "lucide-react";
 import { toast } from "sonner";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
@@ -588,6 +589,144 @@ export default function JobDetailPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Assessment Rounds & Pipeline Stages Section */}
+      {job.assessment?.rounds && job.assessment.rounds.length > 0 && (
+        <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6 mb-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-border/80 pb-3 flex-wrap gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary-glow" />
+                <span>Candidate Assessment Rounds ({job.assessment.rounds.length})</span>
+              </h2>
+              <p className="text-xs text-ink-soft mt-0.5">
+                Review and configure questions, passing marks, and schedules for each assessment stage before or during candidate progression.
+              </p>
+            </div>
+            <Link
+              href={`/recruiter/jobs?tab=timeline&jobId=${jobId}`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-glow bg-primary/10 border border-primary/20 hover:bg-primary/20 px-3 py-1.5 rounded-xl transition"
+            >
+              <span>View in Hiring Timeline</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {job.assessment.rounds.map((round: any, idx: number) => {
+              const roundStageId = round.id || round.roundId || `round_${round.type}`;
+              const roundType = (round.type || round.roundType || "").toLowerCase();
+              const roundId = (roundStageId || "").toLowerCase();
+              const roundName = (round.name || "").toLowerCase();
+
+              const isOnlineTest =
+                roundType === "general_aptitude" ||
+                roundType === "technical_test" ||
+                roundType === "rapid_round" ||
+                roundId.includes("general_aptitude") ||
+                roundId.includes("technical_test") ||
+                roundId.includes("rapid_round") ||
+                roundName.includes("aptitude") ||
+                roundName.includes("technical test") ||
+                roundName.includes("rapid round") ||
+                roundName.includes("online test");
+
+              const isInterview =
+                roundType.includes("interview") ||
+                roundId.includes("interview") ||
+                roundName.includes("interview");
+
+              const isConfigured = Boolean(
+                round.config?.isConfigured ||
+                  (Array.isArray(round.config?.customQuestions) && round.config.customQuestions.length > 0)
+              );
+              const qCount = round.config?.customQuestions?.length || round.config?.totalQuestions || 0;
+
+              return (
+                <div
+                  key={roundStageId || idx}
+                  className="p-4 rounded-xl border border-border bg-surface-alt/40 hover:bg-surface-alt/70 transition flex items-center justify-between gap-4 flex-wrap"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-bold text-ink">{round.name || round.type}</h3>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-glow border border-primary/20 capitalize">
+                          {round.type?.replace(/_/g, " ")}
+                        </span>
+                        {isOnlineTest ? (
+                          isConfigured ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Configured ({qCount} Qs)</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                              <span>Questions Not Configured Yet</span>
+                            </span>
+                          )
+                        ) : isInterview ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-blue-600" />
+                            <span>Live Interview Session</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-alt text-ink-soft border border-border flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            <span>Automated Evaluation</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-ink-soft mt-1">
+                        Duration: <strong>{round.config?.durationMinutes || 30} mins</strong> · Passing Threshold:{" "}
+                        <strong>{round.config?.passingScore || 70}%</strong>
+                        {round.config?.schedule?.date && (
+                          <span> · Scheduled: {round.config.schedule.date}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isOnlineTest ? (
+                    <Link
+                      href={`/recruiter/jobs/${jobId}/stages/${roundStageId}/configure`}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+                        isConfigured
+                          ? "bg-surface border border-border hover:bg-surface-alt text-ink"
+                          : "bg-amber-500 hover:bg-amber-600 text-black shadow-md animate-pulse"
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>{isConfigured ? "Edit Questions & Rules" : "Configure Round"}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : isInterview ? (
+                    <Link
+                      href="/recruiter/interview-schedule"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border border-blue-500/25 transition shadow-xs cursor-pointer"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Interview Schedule</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/recruiter/domain-assessments"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-border hover:bg-surface-alt text-ink transition shadow-xs cursor-pointer"
+                    >
+                      <span>Domain Studio</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

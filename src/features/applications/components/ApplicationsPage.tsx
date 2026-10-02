@@ -433,7 +433,15 @@ export function ApplicationsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {candidateStatus.actionRequired && (
+                    {(app.stageStatus === 'invited' || app.stageStatus === 'started') ? (
+                      <Link
+                        href={`/assessment/take?applicationId=${app._id}&stageId=${encodeURIComponent(app.currentStageId || 'stage_general_aptitude')}&jobId=${encodeURIComponent(app.job?._id || '')}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs shadow-xs transition cursor-pointer animate-pulse"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 fill-black" />
+                        <span>Take Assessment</span>
+                      </Link>
+                    ) : candidateStatus.actionRequired ? (
                       <button
                         type="button"
                         onClick={() => setTrackingModalApp(app)}
@@ -442,7 +450,7 @@ export function ApplicationsPage() {
                         <Clock className="w-3.5 h-3.5" />
                         <span>{candidateStatus.actionLabel || 'Action Required'}</span>
                       </button>
-                    )}
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => setTrackingModalApp(app)}
@@ -576,6 +584,44 @@ export function ApplicationsPage() {
             })()}
 
             {/* Dynamic Status Follow-Up Action Banners */}
+            {(selectedApp.stageStatus === 'invited' || selectedApp.stageStatus === 'started') && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 shadow-xs border border-amber-500/30">
+                    <Sparkles className="w-5 h-5 text-amber-400 fill-amber-400" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-extrabold text-ink">Assessment Round Active</h4>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-black shadow-xs">
+                        Action Required
+                      </span>
+                    </div>
+                    <p className="text-xs text-ink-soft leading-relaxed">
+                      You are invited to complete the <strong>{selectedApp.currentStageId ? selectedApp.currentStageId.replace(/_/g, ' ') : 'Assessment Round'}</strong>. Complete your proctored evaluation before the deadline to qualify for the next stage.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Link
+                    href={`/assessment/take?applicationId=${selectedApp._id}&stageId=${encodeURIComponent(selectedApp.currentStageId || 'stage_general_aptitude')}&jobId=${encodeURIComponent(selectedApp.job?._id || '')}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-black text-xs shadow-md transition cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 fill-black" />
+                    <span>Enter Proctored Assessment Room &rarr;</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setTrackingModalApp(selectedApp)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface border border-border hover:bg-surface-alt text-ink font-semibold text-xs transition cursor-pointer"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-ink-soft" />
+                    <span>View Funnel Timeline</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {selectedApp.status === 'interviewing' && (
               <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3">
                 <div className="flex items-start gap-3">

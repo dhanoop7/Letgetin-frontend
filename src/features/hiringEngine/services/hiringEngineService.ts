@@ -44,6 +44,43 @@ export const hiringEngineService = {
   },
 
   /**
+   * GET /api/recruiter/jobs/:jobId/hiring-engine/stages/:stageId
+   * Retrieves full details and custom questions for a stage.
+   */
+  async getStageDetails(jobId: string, stageId: string): Promise<any> {
+    const res = await apiClient.get<never, ApiResponse<any>>(
+      `/recruiter/jobs/${jobId}/hiring-engine/stages/${stageId}`
+    );
+    return res.data;
+  },
+
+  /**
+   * PUT /api/recruiter/jobs/:jobId/hiring-engine/stages/:stageId
+   * Updates stage rules, duration, passing score, questions, and mark configured.
+   */
+  async updateStageConfig(
+    jobId: string,
+    stageId: string,
+    payload: {
+      stageName?: string;
+      durationMinutes?: number;
+      passingScore?: number;
+      questionCount?: number;
+      deadlineHours?: number;
+      autoAdvanceScoreThreshold?: number;
+      schedule?: any;
+      customQuestions?: any[];
+      config?: Record<string, unknown>;
+    }
+  ): Promise<{ success: boolean; stage: any }> {
+    const res = await apiClient.put<never, ApiResponse<{ success: boolean; stage: any }>>(
+      `/recruiter/jobs/${jobId}/hiring-engine/stages/${stageId}`,
+      payload
+    );
+    return res.data;
+  },
+
+  /**
    * GET /api/recruiter/jobs/:jobId/hiring-engine/stages/:stageId/candidates
    * Lists primary and reserve candidates for a specific stage.
    */
@@ -199,5 +236,55 @@ export const hiringEngineService = {
       }>
     >(`/recruiter/jobs/${jobId}/hiring-engine/final-shortlist/${applicationId}/decision`, payload);
     return res.data;
+  },
+
+  /**
+   * POST /api/recruiter/jobs/:jobId/hiring-engine/stages/:stageId/upload-questions
+   * Uploads an Excel (.xlsx/.xls), CSV (.csv), JSON, PDF, or Word document to parse into questions.
+   */
+  async uploadStageQuestions(
+    jobId: string,
+    stageId: string,
+    file: File
+  ): Promise<{
+    success: boolean;
+    totalQuestions: number;
+    questions: any[];
+    filename: string;
+    format: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await apiClient.post<
+      never,
+      ApiResponse<{
+        totalQuestions: number;
+        questions: any[];
+        filename: string;
+        format: string;
+      }>
+    >(`/recruiter/jobs/${jobId}/hiring-engine/stages/${stageId}/upload-questions`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return {
+      success: true,
+      ...res.data,
+    };
+  },
+
+  /**
+   * GET /api/recruiter/jobs/:jobId/hiring-engine/sample-question-template?format=excel|csv
+   * Downloads a sample question bank template.
+   */
+  async downloadSampleTemplate(jobId: string, format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
+    const res = await apiClient.get<never, Blob>(
+      `/recruiter/jobs/${jobId}/hiring-engine/sample-question-template?format=${format}`,
+      { responseType: 'blob' as any }
+    );
+    return res;
   },
 };
