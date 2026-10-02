@@ -19,7 +19,10 @@ import {
   Sparkles,
   Loader2,
   ShieldCheck,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   HiringEngineCandidate,
   ICandidateStageHistory,
@@ -187,6 +190,32 @@ export function CandidateDetailDrawer({
                   </span>
                 </div>
               )}
+
+              {/* Assessment link quick actions */}
+              <div className="col-span-2 pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const origin = typeof window !== "undefined" ? window.location.origin : "";
+                    const testUrl = `${origin}/assessment/take?applicationId=${candidate._id}&stageId=${encodeURIComponent(candidate.currentStageId || 'stage_general_aptitude')}&jobId=${encodeURIComponent(jobId)}`;
+                    navigator.clipboard.writeText(testUrl);
+                    toast.success("Candidate assessment test link copied to clipboard!");
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-border hover:bg-surface-alt text-ink text-[11px] font-semibold transition cursor-pointer shadow-2xs"
+                >
+                  <Copy className="w-3 h-3 text-ink-soft" />
+                  <span>Copy Test Link</span>
+                </button>
+                <a
+                  href={`/assessment/take?applicationId=${candidate._id}&stageId=${encodeURIComponent(candidate.currentStageId || 'stage_general_aptitude')}&jobId=${encodeURIComponent(jobId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-semibold"
+                >
+                  <span>Preview Test Room</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           </div>
 

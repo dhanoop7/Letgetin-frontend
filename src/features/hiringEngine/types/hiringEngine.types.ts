@@ -6,6 +6,7 @@ export interface IFunnelStage {
   stageId: string;
   stageName: string;
   stageType: FunnelStageType;
+  assessmentType?: string;
   order: number;
   expectedAttendanceRate: number;
   expectedPassRate: number;
@@ -13,6 +14,17 @@ export interface IFunnelStage {
   deadlineHours: number;
   autoAdvanceScoreThreshold: number;
   autoRefillEnabled: boolean;
+  durationMinutes?: number;
+  passingScore?: number;
+  questionCount?: number;
+  schedule?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationHours?: number | string;
+    durationFormatted?: string;
+  };
+  config?: Record<string, any>;
 }
 
 export interface IHiringFunnelConfig {
@@ -33,6 +45,7 @@ export interface IStageMetrics {
   stageId: string;
   stageName: string;
   stageType: string;
+  assessmentType?: string;
   order: number;
   targetCount: number;
   activeCount: number;
@@ -43,6 +56,12 @@ export interface IStageMetrics {
   noShowCount: number;
   deficit: number;
   reserveAvailable: number;
+  durationMinutes?: number;
+  passingScore?: number;
+  questionCount?: number;
+  isConfigured?: boolean;
+  schedule?: any;
+  config?: Record<string, any>;
 }
 
 export interface IFunnelMetricsReport {

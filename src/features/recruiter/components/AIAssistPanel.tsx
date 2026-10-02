@@ -17,9 +17,9 @@ import {
 } from "lucide-react";
 
 export interface AIAssistPanelProps {
-  step: 1 | 2 | 3;
+  step: 1 | 2 | 3 | 4;
   jobTitle?: string;
-  onApplySuggestion?: (type: "skills" | "pipeline" | "funnel") => void;
+  onApplySuggestion?: (type: "skills" | "pipeline" | "funnel" | "promotion") => void;
   onDraftWithAi?: () => void;
   isGenerating?: boolean;
 }
@@ -36,6 +36,7 @@ export function AIAssistPanel({
     1: "idle",
     2: "idle",
     3: "idle",
+    4: "idle",
   });
 
   const currentSuggestionState = suggestionState[step];
@@ -45,6 +46,7 @@ export function AIAssistPanel({
     if (step === 1 && onApplySuggestion) onApplySuggestion("skills");
     if (step === 2 && onApplySuggestion) onApplySuggestion("pipeline");
     if (step === 3 && onApplySuggestion) onApplySuggestion("funnel");
+    if (step === 4 && onApplySuggestion) onApplySuggestion("promotion");
   };
 
   const handleReject = () => {
@@ -75,7 +77,7 @@ export function AIAssistPanel({
         </div>
 
         <div className="flex items-center gap-1 text-[11px] font-semibold text-ink-soft bg-surface-alt px-2.5 py-1 rounded-lg">
-          <span>Step {step} of 3</span>
+          <span>Step {step} of 4</span>
         </div>
       </div>
 
@@ -127,11 +129,23 @@ export function AIAssistPanel({
         {step === 3 && (
           <div className="space-y-1.5">
             <p className="text-xs text-ink-soft leading-relaxed">
-              The automated statistical funnel tracks candidate drop-offs across rounds. AI dynamically computes percentile thresholds so only candidates matching your high standards reach the final shortlist.
+              Calibrate candidate intake targets and job promotion. Activating <strong>Standard Job Listing</strong> and <strong>Featured Job Listing</strong> maximizes role discovery across candidate search and talent pool feeds.
             </p>
             <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>1.5x intake target ensures zero talent shortages at final round.</span>
+              <span>Featured listings yield 3.2x more qualified applicants within 48h.</span>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-1.5">
+            <p className="text-xs text-ink-soft leading-relaxed">
+              Review your complete credit breakdown and current subscription plan. Publishing deducts credits only for chosen features — draft savings are always free.
+            </p>
+            <div className="flex items-center gap-1 text-[11px] text-primary-glow font-medium">
+              <Zap className="w-3.5 h-3.5" />
+              <span>Transparent credit breakdown with real-time balance tracking.</span>
             </div>
           </div>
         )}
@@ -193,11 +207,28 @@ export function AIAssistPanel({
             </li>
             <li className="flex items-start gap-2">
               <span className="text-amber-500 font-bold shrink-0">•</span>
-              <span><strong>Auto-Extension:</strong> A 3-day extension prevents closing roles when applicants apply on weekends.</span>
+              <span><strong>Job Promotion:</strong> Combining Standard + Featured listings provides top-of-feed placement.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-amber-500 font-bold shrink-0">•</span>
+              <span><strong>Auto-Extension:</strong> A 3-day extension prevents closing roles when applicants apply on weekends.</span>
+            </li>
+          </ul>
+        )}
+
+        {step === 4 && (
+          <ul className="space-y-2 text-xs text-ink-soft">
+            <li className="flex items-start gap-2">
+              <span className="text-amber-500 font-bold shrink-0">•</span>
               <span><strong>Zero Waste:</strong> Credits are only deducted when you publish; draft jobs cost 0 credits.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-500 font-bold shrink-0">•</span>
+              <span><strong>Bulk Savings:</strong> Top-up credit packs provide up to 25% discount per credit.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-500 font-bold shrink-0">•</span>
+              <span><strong>Plan Upgrades:</strong> Growth Pro and Enterprise tiers include generous recurring monthly credits.</span>
             </li>
           </ul>
         )}
@@ -234,7 +265,13 @@ export function AIAssistPanel({
 
             {step === 3 && (
               <p className="text-xs text-ink leading-relaxed">
-                Set <strong>Minimum Intake: 8</strong> and <strong>Ideal Intake: 15</strong> with <strong>Auto-Start</strong> enabled for maximum hiring velocity.
+                Set <strong>Minimum Intake: 8</strong> and enable <strong>Featured Job Listing</strong> for maximum applicant velocity.
+              </p>
+            )}
+
+            {step === 4 && (
+              <p className="text-xs text-ink leading-relaxed">
+                Review your credit allocation and ensure a healthy credit reserve for ongoing applicant evaluation.
               </p>
             )}
 

@@ -7,6 +7,10 @@ import {
   AssessmentRoundType,
   GeneralAssessmentQuestionType,
 } from "../types";
+import {
+  RoundScheduleSelector,
+  calculateRoundHours,
+} from "./RoundScheduleSelector";
 
 export interface AssessmentConfigCardProps {
   enabled: boolean;
@@ -80,6 +84,10 @@ export function AssessmentConfigCard({
       order: rounds.length + 1,
       name: meta.defaultName,
       enabled: true,
+      date: "",
+      startTime: meta.type === "general" ? "10:00" : "14:00",
+      endTime: meta.type === "general" ? "11:00" : "15:30",
+      durationHours: meta.type === "general" ? 1 : 1.5,
       config: defaultConfig,
     };
 
@@ -626,6 +634,36 @@ export function AssessmentConfigCard({
                           </div>
                         </div>
                       )}
+
+                      {/* Schedule & Timing (Date, Start Time, End Time & Live Hours Calculation) */}
+                      <div className="mt-3 pt-3 border-t border-border/60 pl-7">
+                        <RoundScheduleSelector
+                          label={`${round.name} Schedule & Timing`}
+                          schedule={{
+                            date: round.date || "",
+                            startTime: round.startTime || "",
+                            endTime: round.endTime || "",
+                          }}
+                          onChange={(nextSchedule) => {
+                            const timing = calculateRoundHours(nextSchedule.startTime, nextSchedule.endTime);
+                            const updated = rounds.map((r) =>
+                              r.id === round.id
+                                ? {
+                                    ...r,
+                                    date: nextSchedule.date,
+                                    startTime: nextSchedule.startTime,
+                                    endTime: nextSchedule.endTime,
+                                    durationHours: timing.hours > 0 ? timing.hours : undefined,
+                                  }
+                                : r
+                            );
+                            onChangeRounds(updated);
+                          }}
+                          onDurationChange={(mins) => {
+                            handleUpdateDuration(round.id, mins);
+                          }}
+                        />
+                      </div>
                     </div>
                   );
                 })}

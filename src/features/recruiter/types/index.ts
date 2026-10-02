@@ -19,7 +19,21 @@ export type RecruiterJobStage = "open" | "shortlisting" | "interview" | "review"
 
 export type PipelineSection = "resumeMatch" | "assessment" | "aiInterview";
 
-export type AssessmentRoundType = "general" | "coding";
+export type AssessmentRoundType =
+  | "general"
+  | "coding"
+  | "custom_test"
+  | "custom_interview"
+  | "custom_domain"
+  | "general_aptitude"
+  | "technical_test"
+  | "rapid_round"
+  | "ai_assessment"
+  | "domain"
+  | "skills"
+  | "technical"
+  | "rapid_question"
+  | (string & {});
 
 export type GeneralAssessmentQuestionType = "mcq" | "short_answer" | "scenario";
 
@@ -54,6 +68,10 @@ export interface AssessmentRoundConfig {
   order: number;
   name: string;
   enabled: boolean;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  durationHours?: number | string;
   config?: Record<string, unknown>;
 }
 
@@ -66,6 +84,8 @@ export interface PipelineOptions {
   matchVolume: string | null;
   resumeMatch: boolean;
   resumeMatchTypes: string[];
+  checkResumeVerification?: boolean;
+  onlineTestSource?: "ai" | "question_bank";
   assessment: boolean;
   assessmentTypes: string[];
   aiInterview: boolean;
@@ -73,6 +93,62 @@ export interface PipelineOptions {
   humanInterview?: boolean;
   humanInterviewTypes?: string[];
   roundOrder?: string[];
+  listAsJob?: boolean;
+  featuredJob?: boolean;
+  listInLandingPage?: boolean;
+  listInRecentlyPosted?: boolean;
+  screeningSchedule?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationHours?: number | string;
+  };
+  technicalSchedule?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationHours?: number | string;
+  };
+  videoSchedule?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationHours?: number | string;
+  };
+  linguisticTest?: LinguisticTestConfig;
+  psychometricGeniusTest?: PsychometricGeniusTestConfig;
+}
+
+export interface LinguisticTestConfig {
+  enabled: boolean;
+  language?: string;
+  speak?: boolean;
+  read?: boolean;
+  write?: boolean;
+  fluencyScore?: number;
+  expertiseScore?: number;
+  nativeSpeaker?: boolean;
+  certificateType?: string;
+  certificateScore?: string;
+}
+
+export interface PsychometricGeniusTestConfig {
+  psychometricEnabled?: boolean;
+  geniusEnabled?: boolean;
+  psychometricSchedule?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationMinutes?: number;
+  };
+  geniusSchedule?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    durationMinutes?: number;
+  };
+  psychometricDuration?: number;
+  geniusDuration?: number;
 }
 
 export interface PipelineSubOption {
@@ -163,7 +239,12 @@ export interface RecruiterJob {
   title: string;
   company: { name: string; logo?: string; website?: string };
   description: string;
+  responsibilities?: string[];
+  requirements?: string[];
   skills: string[];
+  experienceLevel?: string;
+  minimumExperience?: number;
+  maximumExperience?: number;
   employmentType: EmploymentType;
   workplaceType: WorkplaceType;
   location: { city?: string; state?: string; country: string; remote: boolean };
@@ -274,6 +355,13 @@ export interface CreateJobInput {
   humanInterviewTypes?: string[];
   pipelineOptions?: PipelineOptions;
   assessment?: JobAssessmentConfig;
+  listAsJob?: boolean;
+  featuredJob?: boolean;
+  listInLandingPage?: boolean;
+  listInRecentlyPosted?: boolean;
+  checkResumeVerification?: boolean;
+  linguisticTest?: LinguisticTestConfig;
+  psychometricGeniusTest?: PsychometricGeniusTestConfig;
 }
 
 

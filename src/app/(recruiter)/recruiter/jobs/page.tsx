@@ -66,6 +66,24 @@ const STAGE_TYPE_ICONS: Record<string, typeof FileText> = {
   human_interview: UserCheck,
 };
 
+const isOnlineTestStage = (stage: IStageMetrics) => {
+  const type = (stage.stageType || stage.assessmentType || "").toLowerCase();
+  const id = (stage.stageId || "").toLowerCase();
+  const name = (stage.stageName || "").toLowerCase();
+  return (
+    type === "general_aptitude" ||
+    type === "technical_test" ||
+    type === "rapid_round" ||
+    id.includes("general_aptitude") ||
+    id.includes("technical_test") ||
+    id.includes("rapid_round") ||
+    name.includes("aptitude") ||
+    name.includes("technical test") ||
+    name.includes("rapid round") ||
+    name.includes("online test")
+  );
+};
+
 const PIPELINE_TABS: {
   id: ActiveTab;
   name: string;
@@ -514,6 +532,14 @@ export default function RecruiterJobsBoardPage() {
                   {/* Actions & Refresh */}
                   <div className="flex items-center gap-2.5 flex-wrap shrink-0">
                     <Link
+                      href="/recruiter/jobs/create"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-brand text-primary-foreground shadow-glow hover:opacity-95 transition"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Create Job</span>
+                    </Link>
+
+                    <Link
                       href={`/recruiter/jobs/${selectedJob._id}`}
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface border border-border text-ink hover:bg-surface-alt shadow-xs transition"
                     >
@@ -772,7 +798,7 @@ export default function RecruiterJobsBoardPage() {
                                   <Icon className="w-5 h-5" />
                                 </div>
                                 <div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-surface-alt border border-border text-ink-soft">
                                       STAGE {stage.order}
                                     </span>
@@ -780,10 +806,34 @@ export default function RecruiterJobsBoardPage() {
                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-glow border border-primary/20 capitalize">
                                       {stage.stageType.replace(/_/g, " ")}
                                     </span>
+
+                                    {/* Configuration Status Badge */}
+                                    {stage.stageType === "resume_match" ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                        ATS Resume Screening
+                                      </span>
+                                    ) : stage.isConfigured || (stage.questionCount && stage.questionCount > 0) ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                        <span>
+                                          Configured ({stage.questionCount || 0} Qs · {stage.durationMinutes || 30}m · {stage.passingScore || 70}%)
+                                        </span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                                        <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                        <span>Questions Not Configured Yet</span>
+                                      </span>
+                                    )}
                                   </div>
                                   <p className="text-xs text-ink-soft mt-1">
                                     Intake Target: <strong className="text-ink font-bold">{stage.targetCount}</strong> | Active:{" "}
                                     <strong className="text-ink font-bold">{stage.activeCount}</strong>
+                                    {stage.stageType !== "resume_match" && (
+                                      <span className="ml-2 text-ink-soft">
+                                        · Passing Score: <strong className="text-ink">{stage.passingScore || 70}%</strong>
+                                      </span>
+                                    )}
                                   </p>
                                 </div>
                               </div>
@@ -816,14 +866,87 @@ export default function RecruiterJobsBoardPage() {
                                 </div>
                               </div>
 
-                              {/* Inspect Stage in Kanban */}
-                              <div className="flex items-center gap-3 lg:border-l lg:border-border/70 lg:pl-5 shrink-0">
+                              {/* Stage Actions */}
+                              <div className="flex items-center gap-2 lg:border-l lg:border-border/70 lg:pl-5 shrink-0 flex-wrap sm:flex-nowrap">
+                                {(() => {
+                                  if (isOnlineTestStage(stage)) {
+                                    const isConfigured = Boolean(stage.isConfigured || (stage.questionCount && stage.questionCount > 0));
+                                    return (
+                                      <Link
+                                        href={`/recruiter/jobs/${selectedJobId}/stages/${stage.stageId}/configure`}
+                                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+                                          isConfigured
+                                            ? "bg-surface border border-border hover:bg-surface-alt text-ink"
+                                            : "bg-amber-500 hover:bg-amber-600 text-black shadow-md animate-pulse"
+                                        }`}
+                                      >
+                                        <Sliders className="w-3.5 h-3.5" />
+                                        <span>{isConfigured ? "Edit Questions & Rules" : "Configure Round"}</span>
+                                      </Link>
+                                    );
+                                  }
+
+                                  const type = (stage.stageType || stage.assessmentType || "").toLowerCase();
+                                  const id = (stage.stageId || "").toLowerCase();
+                                  const name = (stage.stageName || "").toLowerCase();
+
+                                  if (type.includes("interview") || id.includes("interview") || name.includes("interview")) {
+                                    return (
+                                      <Link
+                                        href="/recruiter/interview-schedule"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border border-blue-500/25 transition shadow-xs cursor-pointer"
+                                      >
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        <span>Interview Hub</span>
+                                      </Link>
+                                    );
+                                  }
+
+                                  if (id.includes("background_verification") || name.includes("verification")) {
+                                    return (
+                                      <Link
+                                        href="/recruiter/background-verification"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/25 transition shadow-xs cursor-pointer"
+                                      >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>BGC Hub</span>
+                                      </Link>
+                                    );
+                                  }
+
+                                  if (id.includes("onboarding") || name.includes("onboarding")) {
+                                    return (
+                                      <Link
+                                        href="/recruiter/onboarding"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 transition shadow-xs cursor-pointer"
+                                      >
+                                        <Users className="w-3.5 h-3.5" />
+                                        <span>Onboarding Hub</span>
+                                      </Link>
+                                    );
+                                  }
+
+                                  if (type === "domain" || type === "skills" || type === "ai_assessment" || id.includes("domain") || id.includes("skills")) {
+                                    return (
+                                      <Link
+                                        href="/recruiter/domain-assessments"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-border hover:bg-surface-alt text-ink transition shadow-xs cursor-pointer"
+                                      >
+                                        <Layers className="w-3.5 h-3.5" />
+                                        <span>Domain Studio</span>
+                                      </Link>
+                                    );
+                                  }
+
+                                  return null;
+                                })()}
+
                                 <button
                                   type="button"
                                   onClick={() => handleTabChange("kanban")}
-                                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-alt hover:bg-surface border border-border text-xs font-bold text-ink shadow-xs transition cursor-pointer"
+                                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt hover:bg-surface border border-border text-xs font-bold text-ink shadow-xs transition cursor-pointer"
                                 >
-                                  <span>Inspect Stage</span>
+                                  <span>Inspect</span>
                                   <ArrowRight className="w-3.5 h-3.5 text-primary" />
                                 </button>
                               </div>
@@ -894,6 +1017,100 @@ export default function RecruiterJobsBoardPage() {
                               {stage.activeCount ?? pool.primary.length}/{stage.targetCount}
                             </span>
                           </div>
+
+                          {/* Stage Configuration Quick Link */}
+                          {(() => {
+                            if (isOnlineTestStage(stage)) {
+                              return (
+                                <div className="flex items-center justify-between pt-0.5">
+                                  {stage.isConfigured || (stage.questionCount && stage.questionCount > 0) ? (
+                                    <Link
+                                      href={`/recruiter/jobs/${selectedJobId}/stages/${stage.stageId}/configure`}
+                                      className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1 transition"
+                                      title="Edit questions & stage rules"
+                                    >
+                                      <CheckCircle2 className="w-2.5 h-2.5" />
+                                      <span>Configured ({stage.questionCount || 0} Qs)</span>
+                                    </Link>
+                                  ) : (
+                                    <Link
+                                      href={`/recruiter/jobs/${selectedJobId}/stages/${stage.stageId}/configure`}
+                                      className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 px-2 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1 animate-pulse transition"
+                                      title="Questions not configured yet. Click to configure!"
+                                    >
+                                      <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                                      <span>Configure Round</span>
+                                    </Link>
+                                  )}
+                                  <span className="text-[10px] text-ink-soft">
+                                    Pass: <strong className="text-ink">{stage.passingScore || 70}%</strong>
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            const id = (stage.stageId || "").toLowerCase();
+                            const type = (stage.stageType || stage.assessmentType || "").toLowerCase();
+                            const name = (stage.stageName || "").toLowerCase();
+
+                            if (type.includes("interview") || id.includes("interview") || name.includes("interview")) {
+                              return (
+                                <div className="flex items-center justify-between pt-0.5">
+                                  <Link
+                                    href="/recruiter/interview-schedule"
+                                    className="text-[10px] font-bold text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded-md border border-blue-500/20 flex items-center gap-1 transition"
+                                  >
+                                    <Calendar className="w-2.5 h-2.5" />
+                                    <span>Interview Hub</span>
+                                  </Link>
+                                  <span className="text-[10px] text-ink-soft">Live Panel</span>
+                                </div>
+                              );
+                            }
+
+                            if (id.includes("background_verification") || name.includes("verification")) {
+                              return (
+                                <div className="flex items-center justify-between pt-0.5">
+                                  <Link
+                                    href="/recruiter/background-verification"
+                                    className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1 transition"
+                                  >
+                                    <CheckCircle2 className="w-2.5 h-2.5" />
+                                    <span>BGC Hub</span>
+                                  </Link>
+                                  <span className="text-[10px] text-ink-soft">Verification</span>
+                                </div>
+                              );
+                            }
+
+                            if (id.includes("onboarding") || name.includes("onboarding")) {
+                              return (
+                                <div className="flex items-center justify-between pt-0.5">
+                                  <Link
+                                    href="/recruiter/onboarding"
+                                    className="text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md border border-primary/20 flex items-center gap-1 transition"
+                                  >
+                                    <Users className="w-2.5 h-2.5" />
+                                    <span>Onboarding</span>
+                                  </Link>
+                                  <span className="text-[10px] text-ink-soft">Offers</span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="flex items-center justify-between pt-0.5">
+                                <span className="text-[10px] font-semibold text-ink-soft">
+                                  {stage.stageType === "resume_match" ? "Automated Matching" : "Stage Active"}
+                                </span>
+                                {stage.passingScore ? (
+                                  <span className="text-[10px] text-ink-soft">
+                                    Pass: <strong className="text-ink">{stage.passingScore}%</strong>
+                                  </span>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
 
                           {/* Quota Progress */}
                           <div className="space-y-1">
