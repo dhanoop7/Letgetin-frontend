@@ -191,3 +191,52 @@ export interface AssessmentResultsResponse {
     verdict: string;
   }>;
 }
+
+export interface ChatTurnInput {
+  jobTitle?: string;
+  stageName?: string;
+  difficulty?: string;
+  currentTopic: string;
+  topics?: string[];
+  topicIndex?: number;
+  history?: Array<{ role: 'ai' | 'candidate'; message: string }>;
+  candidateMessage: string;
+  blueprint?: any;
+}
+
+export interface ChatTurnOutput {
+  reply: string;
+  turnScore: number;
+  feedback: string;
+  suggestedNextAction: 'probe_deeper' | 'transition_next_topic' | 'conclude';
+  guidanceTip: string;
+}
+
+export interface EvaluateChatSessionInput {
+  jobTitle?: string;
+  stageName?: string;
+  passingScore?: number;
+  difficulty?: string;
+  topics?: string[];
+  transcript: Array<{ topic?: string; role: 'ai' | 'candidate'; message: string; turnScore?: number }>;
+  durationMinutes?: number;
+  timeSpentSeconds?: number;
+}
+
+export interface ChatSessionEvaluation {
+  totalScore: number;
+  percentage: number;
+  passed: boolean;
+  passingScore: number;
+  verdict: 'strong_hire' | 'hire' | 'borderline' | 'reject';
+  summary: string;
+  rubricBreakdown: {
+    conceptClarity: { score: number; maxScore: number; feedback: string };
+    technicalDepth: { score: number; maxScore: number; feedback: string };
+    problemSolving: { score: number; maxScore: number; feedback: string };
+    communication: { score: number; maxScore: number; feedback: string };
+  };
+  topicScores: Array<{ topic: string; score: number; maxScore: number; feedback: string }>;
+  strengths: string[];
+  areasForImprovement: string[];
+}

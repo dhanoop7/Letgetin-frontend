@@ -84,6 +84,23 @@ const isOnlineTestStage = (stage: IStageMetrics) => {
   );
 };
 
+const isAiAssessmentStage = (stage: IStageMetrics) => {
+  const type = (stage.stageType || stage.assessmentType || "").toLowerCase();
+  const id = (stage.stageId || "").toLowerCase();
+  const name = (stage.stageName || "").toLowerCase();
+  return (
+    type === "ai_assessment" ||
+    type === "ai_chat" ||
+    type === "ai_voice" ||
+    id.includes("ai_assessment") ||
+    id.includes("ai_chat") ||
+    id.includes("ai_voice") ||
+    name.includes("ai assessment") ||
+    name.includes("ai chat") ||
+    name.includes("ai voice")
+  );
+};
+
 const PIPELINE_TABS: {
   id: ActiveTab;
   name: string;
@@ -886,6 +903,23 @@ export default function RecruiterJobsBoardPage() {
                                     );
                                   }
 
+                                  if (isAiAssessmentStage(stage)) {
+                                    const isConfigured = Boolean(stage.isConfigured || (stage.config as any)?.isConfigured);
+                                    return (
+                                      <Link
+                                        href={`/recruiter/jobs/${selectedJobId}/stages/${stage.stageId}/configure`}
+                                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+                                          isConfigured
+                                            ? "bg-purple-500/10 border border-purple-500/30 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20"
+                                            : "bg-purple-600 hover:bg-purple-700 text-white shadow-md animate-pulse"
+                                        }`}
+                                      >
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>{isConfigured ? "Edit AI Assessment" : "Configure AI Assessment"}</span>
+                                      </Link>
+                                    );
+                                  }
+
                                   const type = (stage.stageType || stage.assessmentType || "").toLowerCase();
                                   const id = (stage.stageId || "").toLowerCase();
                                   const name = (stage.stageName || "").toLowerCase();
@@ -926,7 +960,7 @@ export default function RecruiterJobsBoardPage() {
                                     );
                                   }
 
-                                  if (type === "domain" || type === "skills" || type === "ai_assessment" || id.includes("domain") || id.includes("skills")) {
+                                  if (type === "domain" || type === "skills" || id.includes("domain") || id.includes("skills")) {
                                     return (
                                       <Link
                                         href="/recruiter/domain-assessments"

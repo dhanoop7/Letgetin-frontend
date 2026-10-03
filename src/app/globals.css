@@ -334,4 +334,124 @@
   background-color: #f8fbfe;
 }
 
+/* ==========================================================================
+   Assessment Test Portal — Light Mode System Styles
+   ========================================================================== */
+.portal-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  color-scheme: light;
+}
+
+.portal-light .bg-slate-950,
+.portal-light.bg-slate-950 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.portal-light .bg-slate-900,
+.portal-light .bg-slate-900\/95,
+.portal-light .bg-slate-900\/90,
+.portal-light .bg-slate-900\/80,
+.portal-light .bg-slate-900\/70,
+.portal-light .bg-slate-900\/60,
+.portal-light .bg-slate-900\/50,
+.portal-light .bg-slate-900\/40,
+.portal-light .bg-slate-900\/30 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.portal-light .bg-slate-800,
+.portal-light .bg-slate-800\/90,
+.portal-light .bg-slate-800\/80,
+.portal-light .bg-slate-800\/70,
+.portal-light .bg-slate-800\/60,
+.portal-light .bg-slate-800\/50,
+.portal-light .bg-slate-800\/40,
+.portal-light .bg-slate-800\/30,
+.portal-light .bg-slate-800\/20,
+.portal-light .bg-slate-800\/10 {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+.portal-light .bg-gradient-to-br.from-violet-950\/40.to-slate-900 {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%) !important;
+  border-color: #ddd6fe !important;
+}
+
+.portal-light header,
+.portal-light .portal-header {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.portal-light .border-slate-800,
+.portal-light .border-slate-800\/80,
+.portal-light .border-slate-800\/60,
+.portal-light .border-slate-700,
+.portal-light .border-slate-700\/80,
+.portal-light .border-slate-700\/60,
+.portal-light .border-slate-700\/50 {
+  border-color: #e2e8f0 !important;
+}
+
+.portal-light .text-white {
+  color: #0f172a !important;
+}
+
+.portal-light .text-slate-100,
+.portal-light .text-slate-200,
+.portal-light .text-slate-300,
+.portal-light .text-slate-300\/90 {
+  color: #1e293b !important;
+}
+
+.portal-light .text-slate-400 {
+  color: #64748b !important;
+}
+
+.portal-light .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.portal-light textarea,
+.portal-light input[type="text"],
+.portal-light input[type="email"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.portal-light textarea:focus,
+.portal-light input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 1px var(--primary) !important;
+}
+
+.portal-light textarea::placeholder,
+.portal-light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.portal-light pre {
+  background-color: #0f172a !important;
+  color: #34d399 !important;
+}
+
+.portal-light .chat-ai-bubble {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.portal-light .chat-user-bubble {
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #1e3a8a !important;
+}
+
+
 
