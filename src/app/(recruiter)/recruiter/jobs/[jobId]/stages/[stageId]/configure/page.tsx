@@ -40,6 +40,11 @@ import {
   Timer,
   Briefcase,
   Code2,
+  MessageSquare,
+  Mic,
+  Volume2,
+  Bot,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { hiringEngineService } from "@/features/hiringEngine/services/hiringEngineService";
@@ -116,6 +121,55 @@ export default function StageConfigurationPage() {
   ]);
   const [manualCorrectOptionId, setManualCorrectOptionId] = useState("A");
 
+  const isAiChatStage = Boolean(
+    stage?.assessmentType === "ai_chat" ||
+    stageId?.includes("ai_chat") ||
+    stageName.toLowerCase().includes("ai chat") ||
+    (stageName.toLowerCase().includes("chat") && (stageId?.includes("ai") || stageName.toLowerCase().includes("ai")))
+  );
+
+  const isAiVoiceStage = Boolean(
+    stage?.assessmentType === "ai_voice" ||
+    stageId?.includes("ai_voice") ||
+    stageName.toLowerCase().includes("ai voice") ||
+    (stageName.toLowerCase().includes("voice") && (stageId?.includes("ai") || stageName.toLowerCase().includes("ai")))
+  );
+
+  const isAiAssessment = Boolean(
+    isAiChatStage ||
+    isAiVoiceStage ||
+    stage?.assessmentType === "ai_assessment" ||
+    stage?.stageType === "ai_interview" ||
+    stage?.stageType === "ai_assessment" ||
+    stageId?.includes("ai_assessment") ||
+    stageId?.includes("ai_interview") ||
+    stageName.toLowerCase().includes("ai assessment") ||
+    stageName.toLowerCase().includes("ai interview")
+  );
+
+  // AI Assessment specific states
+  const [aiModalities, setAiModalities] = useState<("chat" | "voice")[]>(["chat", "voice"]);
+  const [aiInterviewTopics, setAiInterviewTopics] = useState<string[]>([]);
+  const [newTopicInput, setNewTopicInput] = useState("");
+  const [aiSystemPromptGuidance, setAiSystemPromptGuidance] = useState("");
+
+  const handleSelectAiRoundType = (roundType: "chat" | "voice") => {
+    setAiModalities([roundType]);
+    toast.success(`Configured as ${roundType === "voice" ? "AI Voice Assessment Round" : "AI Chat Assessment Round"}.`);
+  };
+
+  const handleAddTopic = () => {
+    if (!newTopicInput.trim()) return;
+    setAiInterviewTopics((prev) => [...prev, newTopicInput.trim()]);
+    setNewTopicInput("");
+    toast.success("Interview topic added.");
+  };
+
+  const handleRemoveTopic = (index: number) => {
+    setAiInterviewTopics((prev) => prev.filter((_, idx) => idx !== index));
+    toast.info("Topic removed.");
+  };
+
   const isGeneralAptitude = Boolean(
     stage?.assessmentType === "general_aptitude" ||
     stage?.stageType === "general_aptitude" ||
@@ -141,8 +195,10 @@ export default function StageConfigurationPage() {
   );
 
   // The 3-section question configuration window is dedicated strictly for the Online Test section
-  const isOnlineTestRound = isGeneralAptitude || isTechnicalTest || isRapidRound;
+  const isOnlineTestRound = !isAiAssessment && (isGeneralAptitude || isTechnicalTest || isRapidRound);
   const isAptitudeRound = isOnlineTestRound;
+  // Technical Test, Rapid Round, and AI Assessment are grounded in the 5-tier Role Blueprint (Job Title -> Exp -> JD -> Responsibilities -> Skills)
+  const isRoleGroundedRound = isTechnicalTest || isRapidRound || isAiAssessment;
 
   const getQuestionSection = useCallback((q: ConfiguredQuestionItem): "mcq" | "descriptive" | "rapid" => {
     if (q.section === "rapid" || q.type === "rapid" || Boolean(q.timeLimitSeconds)) return "rapid";
@@ -155,7 +211,9 @@ export default function StageConfigurationPage() {
   const rapidQuestions = questions.filter((q) => getQuestionSection(q) === "rapid");
 
   const displayedQuestions =
-    !isAptitudeRound || activeSection === "all"
+    isRapidRound
+      ? questions
+      : !isAptitudeRound || activeSection === "all"
       ? questions
       : activeSection === "mcq"
       ? mcqQuestions
@@ -273,6 +331,97 @@ export default function StageConfigurationPage() {
           30;
         setRapidTimeLimitSeconds(savedRapidTime);
         setManualTimeLimitSeconds(savedRapidTime);
+
+        const isRapidStage = Boolean(
+          stageRes.assessmentType === "rapid_round" ||
+          stageRes.stageType === "rapid_round" ||
+          stageId?.includes("rapid") ||
+          stageRes.stageName?.toLowerCase().includes("rapid")
+        );
+        if (isRapidStage) {
+          setActiveSection("rapid");
+          setAiQuestionFormat("rapid");
+          setManualType("rapid");
+        }
+
+        // AI Assessment configuration loading
+        const isCurrentChat =
+          stageRes.assessmentType === "ai_chat" ||
+          stageId?.includes("ai_chat") ||
+          stageRes.stageName?.toLowerCase().includes("ai chat") ||
+          (stageRes.stageName?.toLowerCase().includes("chat") && (stageId?.includes("ai") || stageRes.stageName?.toLowerCase().includes("ai")));
+
+        const isCurrentVoice =
+          stageRes.assessmentType === "ai_voice" ||
+          stageId?.includes("ai_voice") ||
+          stageRes.stageName?.toLowerCase().includes("ai voice") ||
+          (stageRes.stageName?.toLowerCase().includes("voice") && (stageId?.includes("ai") || stageRes.stageName?.toLowerCase().includes("ai")));
+
+        if (isCurrentChat) {
+          setAiModalities(["chat"]);
+        } else if (isCurrentVoice) {
+          setAiModalities(["voice"]);
+        } else {
+          const savedModalities =
+            stageRes.config?.modalities || (roundMatch?.config as any)?.modalities;
+          if (Array.isArray(savedModalities) && savedModalities.length > 0) {
+            setAiModalities(savedModalities.includes("voice") && !savedModalities.includes("chat") ? ["voice"] : ["chat"]);
+          }
+        }
+
+        const savedTopics =
+          stageRes.config?.topics || (roundMatch?.config as any)?.topics;
+        if (Array.isArray(savedTopics) && savedTopics.length > 0) {
+          setAiInterviewTopics(savedTopics);
+        } else if (
+          isCurrentChat ||
+          isCurrentVoice ||
+          stageRes.assessmentType === "ai_assessment" ||
+          stageRes.stageType === "ai_interview" ||
+          stageId?.includes("ai_assessment") ||
+          stageRes.stageName?.toLowerCase().includes("ai assessment")
+        ) {
+          if (isCurrentVoice) {
+            setAiInterviewTopics([
+              `System Architecture & High-Level Design Trade-offs (${foundJob?.title || "Target Role"})`,
+              "Spoken Technical Explanation, Problem Deconstruction & Communication Clarity",
+              "Production Incident Management & Real-Time Troubleshooting Scenarios",
+              "Engineering Leadership, Mentorship & Situational Ownership",
+            ]);
+          } else if (isCurrentChat) {
+            setAiInterviewTopics([
+              `Hands-on Technical Stack Proficiency & Syntax Reasoning (${foundJob?.title || "Core Tech"})`,
+              "Real-World Problem Solving, Algorithmic Logic & Edge Cases",
+              "Code Quality, Refactoring, Modularity & Unit Testing",
+              "Daily Engineering Deliverables, Git Workflows & Ownership",
+            ]);
+          } else {
+            setAiInterviewTopics([
+              `Hands-on Technical Stack Proficiency (${foundJob?.title || "Core Tech"})`,
+              "Real-World Problem Solving & Architecture Design",
+              "Debugging, Incident Troubleshooting & Code Quality",
+              "Core Deliverables, Daily Responsibilities & Ownership",
+            ]);
+          }
+        }
+
+        const savedGuidance =
+          stageRes.config?.promptGuidance || (roundMatch?.config as any)?.promptGuidance;
+        if (savedGuidance) {
+          setAiSystemPromptGuidance(String(savedGuidance));
+        }
+
+        const savedAiDifficulty =
+          stageRes.config?.difficulty || (roundMatch?.config as any)?.difficulty;
+        if (savedAiDifficulty) {
+          setAiDifficulty(savedAiDifficulty);
+        }
+
+        const savedAiCount =
+          stageRes.config?.questionCount || stageRes.questionCount || (roundMatch?.config as any)?.questionCount;
+        if (savedAiCount) {
+          setAiCount(Number(savedAiCount));
+        }
       } else if (foundJob) {
         const round = foundJob.assessment?.rounds?.find(
           (r: any) => r.id === stageId || r.roundId === stageId || r.type === stageId
@@ -302,6 +451,80 @@ export default function StageConfigurationPage() {
             30;
           setRapidTimeLimitSeconds(savedRapidTime);
           setManualTimeLimitSeconds(savedRapidTime);
+
+          const isRapidStage = Boolean(
+            round.type === "rapid_round" ||
+            stageId?.includes("rapid") ||
+            round.name?.toLowerCase().includes("rapid")
+          );
+          if (isRapidStage) {
+            setActiveSection("rapid");
+            setAiQuestionFormat("rapid");
+            setManualType("rapid");
+          }
+
+          const isFallbackChat =
+            round.type === "ai_chat" ||
+            stageId?.includes("ai_chat") ||
+            round.name?.toLowerCase().includes("ai chat") ||
+            (round.name?.toLowerCase().includes("chat") && (stageId?.includes("ai") || round.name?.toLowerCase().includes("ai")));
+
+          const isFallbackVoice =
+            round.type === "ai_voice" ||
+            stageId?.includes("ai_voice") ||
+            round.name?.toLowerCase().includes("ai voice") ||
+            (round.name?.toLowerCase().includes("voice") && (stageId?.includes("ai") || round.name?.toLowerCase().includes("ai")));
+
+          if (isFallbackChat) {
+            setAiModalities(["chat"]);
+          } else if (isFallbackVoice) {
+            setAiModalities(["voice"]);
+          } else if (Array.isArray((round.config as any)?.modalities) && (round.config as any).modalities.length > 0) {
+            const mods = (round.config as any).modalities;
+            setAiModalities(mods.includes("voice") && !mods.includes("chat") ? ["voice"] : ["chat"]);
+          }
+
+          if (Array.isArray((round.config as any)?.topics) && (round.config as any).topics.length > 0) {
+            setAiInterviewTopics((round.config as any).topics);
+          } else if (
+            isFallbackChat ||
+            isFallbackVoice ||
+            round.type === "ai_assessment" ||
+            stageId?.includes("ai_assessment") ||
+            round.name?.toLowerCase().includes("ai assessment")
+          ) {
+            if (isFallbackVoice) {
+              setAiInterviewTopics([
+                `System Architecture & High-Level Design Trade-offs (${foundJob.title || "Target Role"})`,
+                "Spoken Technical Explanation, Problem Deconstruction & Communication Clarity",
+                "Production Incident Management & Real-Time Troubleshooting Scenarios",
+                "Engineering Leadership, Mentorship & Situational Ownership",
+              ]);
+            } else if (isFallbackChat) {
+              setAiInterviewTopics([
+                `Hands-on Technical Stack Proficiency & Syntax Reasoning (${foundJob.title || "Core Tech"})`,
+                "Real-World Problem Solving, Algorithmic Logic & Edge Cases",
+                "Code Quality, Refactoring, Modularity & Unit Testing",
+                "Daily Engineering Deliverables, Git Workflows & Ownership",
+              ]);
+            } else {
+              setAiInterviewTopics([
+                `Hands-on Technical Stack Proficiency (${foundJob.title || "Core Tech"})`,
+                "Real-World Problem Solving & Architecture Design",
+                "Debugging, Incident Troubleshooting & Code Quality",
+                "Core Deliverables, Daily Responsibilities & Ownership",
+              ]);
+            }
+          }
+          if ((round.config as any)?.promptGuidance) {
+            setAiSystemPromptGuidance(String((round.config as any).promptGuidance));
+          }
+          if ((round.config as any)?.difficulty) {
+            setAiDifficulty((round.config as any).difficulty);
+          }
+          if ((round.config as any)?.questionCount) {
+            setAiCount(Number((round.config as any).questionCount));
+          }
         }
       }
     } catch (err: any) {
@@ -316,7 +539,11 @@ export default function StageConfigurationPage() {
   }, [loadData]);
 
   // AI Generation Handler
-  const handleGenerateAIQuestions = async () => {
+  const handleGenerateAIQuestions = async (overrideDifficulty?: any) => {
+    const resolvedDifficulty: "easy" | "medium" | "hard" =
+      overrideDifficulty === "easy" || overrideDifficulty === "medium" || overrideDifficulty === "hard"
+        ? overrideDifficulty
+        : aiDifficulty;
     try {
       setAiGenerating(true);
       const roundType = stage?.assessmentType || stage?.stageType || "general_aptitude";
@@ -324,7 +551,10 @@ export default function StageConfigurationPage() {
       let targetSection: "mcq" | "descriptive" | "rapid" | undefined = undefined;
       let targetFormat: "mcq" | "descriptive" | "rapid" | "mixed" = aiQuestionFormat;
 
-      if (isAptitudeRound && activeSection !== "all") {
+      if (isRapidRound) {
+        targetSection = "rapid";
+        targetFormat = "rapid";
+      } else if (isAptitudeRound && activeSection !== "all") {
         targetSection = activeSection;
         targetFormat = activeSection;
       }
@@ -343,42 +573,47 @@ export default function StageConfigurationPage() {
         jobTitle: jobTitleText || job?.title || "Professional Role",
         skills: resolvedSkills,
         experience: jobExperienceText,
-        difficulty: aiDifficulty,
+        difficulty: resolvedDifficulty,
         count: aiCount,
         focusTopic: aiFocusTopic,
         section: targetSection,
         questionFormat: targetFormat,
-        timeLimitSeconds: isRapidTarget ? rapidTimeLimitSeconds : undefined,
-        jobDescription: isTechnicalTest ? jobDescriptionText : undefined,
-        jobResponsibilities: isTechnicalTest ? jobResponsibilitiesText : undefined,
+        timeLimitSeconds: isRapidTarget || isRapidRound ? rapidTimeLimitSeconds : undefined,
+        jobDescription: isRoleGroundedRound ? jobDescriptionText : undefined,
+        jobResponsibilities: isRoleGroundedRound ? jobResponsibilitiesText : undefined,
       });
 
       if (generated && generated.length > 0) {
         const tagged = generated.map((g) => {
-          const isRapid = g.section === "rapid" || targetSection === "rapid" || g.type === "rapid";
+          const isRapid = g.section === "rapid" || targetSection === "rapid" || g.type === "rapid" || isRapidRound;
           return {
             ...g,
-            section: g.section || targetSection,
+            section: isRapidRound ? "rapid" : (g.section || targetSection || undefined),
             timeLimitSeconds: isRapid ? g.timeLimitSeconds || rapidTimeLimitSeconds || 30 : g.timeLimitSeconds,
           };
         });
 
-        if (isAptitudeRound && activeSection !== "all") {
+        if (isRapidRound) {
+          setQuestions(tagged);
+          toast.success(
+            `Generated ${tagged.length} rapid-fire speed questions (${rapidTimeLimitSeconds}s timer) based on ${jobTitleText || "Role"}, ${jobExperienceText}, JD & Responsibilities!`
+          );
+        } else if (isAptitudeRound && activeSection !== "all") {
           setQuestions((prev) => {
             const others = prev.filter((p) => getQuestionSection(p) !== activeSection);
             return [...others, ...tagged];
           });
           const sectionLabel = activeSection === "mcq" ? "MCQ" : activeSection === "descriptive" ? "Descriptive" : "Rapid Round";
           toast.success(
-            isTechnicalTest
+            isRoleGroundedRound
               ? `Generated ${tagged.length} ${sectionLabel} questions tailored to ${jobTitleText || "Role"} (${jobExperienceText})!`
               : `Generated ${tagged.length} ${sectionLabel} questions with AI!`
           );
         } else {
           setQuestions(tagged);
           toast.success(
-            isTechnicalTest
-              ? `Generated ${tagged.length} technical questions based on ${jobTitleText || "Role"}, ${jobExperienceText}, JD & Responsibilities!`
+            isRoleGroundedRound
+              ? `Generated ${tagged.length} questions based on ${jobTitleText || "Role"}, ${jobExperienceText}, JD & Responsibilities!`
               : `Generated ${tagged.length} questions with AI!`
           );
         }
@@ -413,20 +648,21 @@ export default function StageConfigurationPage() {
       }
     }
 
-    const assignedSection = isAptitudeRound && activeSection !== "all" ? activeSection : manualType;
+    const assignedSection = isRapidRound ? "rapid" : (isAptitudeRound && activeSection !== "all" ? activeSection : manualType);
+    const resolvedType = isRapidRound ? "rapid" : manualType;
 
     const newQ: ConfiguredQuestionItem = {
       id: `custom-q-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       section: assignedSection,
-      type: manualType,
+      type: resolvedType,
       question: manualQuestion.trim(),
       points: manualPoints || 10,
       difficulty: manualDifficulty,
-      ...(manualType === "mcq" || manualType === "rapid"
+      ...(resolvedType === "mcq" || resolvedType === "rapid"
         ? {
             options: manualOptions.filter((o) => o.text.trim()),
             correctOptionId: manualCorrectOptionId,
-            timeLimitSeconds: manualType === "rapid" ? manualTimeLimitSeconds || rapidTimeLimitSeconds || 30 : undefined,
+            timeLimitSeconds: resolvedType === "rapid" ? manualTimeLimitSeconds || rapidTimeLimitSeconds || 30 : undefined,
           }
         : {
             options: [],
@@ -436,7 +672,7 @@ export default function StageConfigurationPage() {
     };
 
     setQuestions((prev) => [...prev, newQ]);
-    const typeLabel = manualType === "descriptive" ? "Descriptive" : manualType === "rapid" ? "Rapid Round" : "Multiple Choice";
+    const typeLabel = isRapidRound ? "Rapid Speed" : manualType === "descriptive" ? "Descriptive" : manualType === "rapid" ? "Rapid Round" : "Multiple Choice";
     toast.success(`Added ${typeLabel} question!`);
 
     // Reset fields
@@ -517,16 +753,18 @@ export default function StageConfigurationPage() {
       return;
     }
 
-    const targetSection = isAptitudeRound && activeSection !== "all" ? activeSection : undefined;
+    const targetSection = isRapidRound ? "rapid" : (isAptitudeRound && activeSection !== "all" ? activeSection : undefined);
     const tagged = selectedList.map((q) => ({
       ...q,
-      section: q.section || targetSection,
-      type: targetSection === "rapid" ? ("rapid" as const) : targetSection === "descriptive" ? ("descriptive" as const) : q.type,
-      timeLimitSeconds: targetSection === "rapid" ? q.timeLimitSeconds || rapidTimeLimitSeconds || 30 : q.timeLimitSeconds,
+      section: isRapidRound ? "rapid" : (q.section || targetSection),
+      type: isRapidRound || targetSection === "rapid" ? ("rapid" as const) : targetSection === "descriptive" ? ("descriptive" as const) : q.type,
+      timeLimitSeconds: isRapidRound || targetSection === "rapid" ? q.timeLimitSeconds || rapidTimeLimitSeconds || 30 : q.timeLimitSeconds,
     }));
 
     if (mode === "replace") {
-      if (isAptitudeRound && activeSection !== "all") {
+      if (isRapidRound) {
+        setQuestions(tagged);
+      } else if (isAptitudeRound && activeSection !== "all") {
         setQuestions((prev) => {
           const others = prev.filter((p) => getQuestionSection(p) !== activeSection);
           return [...others, ...tagged];
@@ -542,7 +780,11 @@ export default function StageConfigurationPage() {
       });
     }
 
-    const sectionLabel = isAptitudeRound && activeSection !== "all" ? `into Section ${activeSection.toUpperCase()}` : `into stage question bank`;
+    const sectionLabel = isRapidRound
+      ? `into Rapid Round (${rapidTimeLimitSeconds}s speed)`
+      : isAptitudeRound && activeSection !== "all"
+      ? `into Section ${activeSection.toUpperCase()}`
+      : `into stage question bank`;
     toast.success(`Imported ${tagged.length} questions ${sectionLabel}!`);
   };
 
@@ -567,6 +809,62 @@ export default function StageConfigurationPage() {
   const handleDeleteQuestion = (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
     toast.info("Question removed.");
+  };
+
+  // Open live candidate test portal preview (captures draft questions/topics into sessionStorage)
+  const handleOpenPreview = () => {
+    if (typeof window !== "undefined") {
+      try {
+        const roundType = isGeneralAptitude
+          ? "general_aptitude"
+          : isTechnicalTest
+          ? "technical_test"
+          : isRapidRound
+          ? "rapid_round"
+          : isAiChatStage || (isAiAssessment && aiModalities.includes("chat"))
+          ? "ai_chat"
+          : isAiVoiceStage || (isAiAssessment && aiModalities.includes("voice"))
+          ? "ai_voice"
+          : stage?.stageType || "general_aptitude";
+
+        const roundAssessmentType = isGeneralAptitude
+          ? "general_aptitude"
+          : isTechnicalTest
+          ? "technical_test"
+          : isRapidRound
+          ? "rapid_round"
+          : isAiChatStage || (isAiAssessment && aiModalities.includes("chat"))
+          ? "ai_chat"
+          : isAiVoiceStage || (isAiAssessment && aiModalities.includes("voice"))
+          ? "ai_voice"
+          : stage?.assessmentType || "general_aptitude";
+
+        const isActuallyAi = isAiAssessment && !isGeneralAptitude && !isTechnicalTest && !isRapidRound;
+
+        sessionStorage.setItem(
+          `stage_preview_${jobId}_${stageId}`,
+          JSON.stringify({
+            stageName,
+            durationMinutes,
+            passingScore,
+            stageType: roundType,
+            assessmentType: roundAssessmentType,
+            isGeneralAptitude,
+            isTechnicalTest,
+            isRapidRound,
+            isAiAssessment: isActuallyAi,
+            modality: aiModalities.includes("voice") ? "voice" : "chat",
+            modalities: isActuallyAi ? (aiModalities.includes("voice") ? ["voice"] : ["chat"]) : [],
+            difficulty: aiDifficulty,
+            topics: isActuallyAi ? aiInterviewTopics : [],
+            customQuestions: questions,
+          })
+        );
+      } catch (e) {
+        console.warn("Failed to store preview draft in sessionStorage", e);
+      }
+    }
+    window.open(`/assessment/take?jobId=${jobId}&stageId=${stageId}&preview=true`, "_blank");
   };
 
   // Save & Confirm Stage Configuration
@@ -596,6 +894,7 @@ export default function StageConfigurationPage() {
           configuredAt: new Date().toISOString(),
           totalQuestions: questions.length,
           rapidTimeLimitSeconds: rapidTimeLimitSeconds,
+          difficulty: aiDifficulty,
         },
       });
 
@@ -608,6 +907,399 @@ export default function StageConfigurationPage() {
     }
   };
 
+  // Save & Confirm AI Assessment Stage Configuration
+  const handleSaveAiAssessment = async () => {
+    if (aiModalities.length === 0) {
+      toast.error("Please select an AI round format (Chat or Voice).");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await hiringEngineService.updateStageConfig(jobId, stageId, {
+        stageName,
+        durationMinutes,
+        passingScore,
+        autoAdvanceScoreThreshold: passingScore,
+        deadlineHours,
+        questionCount: aiCount,
+        schedule: {
+          date: scheduleDate,
+          startTime: scheduleStartTime,
+          endTime: scheduleEndTime,
+        },
+        config: {
+          isConfigured: true,
+          configuredAt: new Date().toISOString(),
+          modality: aiModalities.includes("voice") ? "voice" : "chat",
+          modalities: aiModalities.includes("voice") ? ["voice"] : ["chat"],
+          difficulty: aiDifficulty,
+          questionCount: aiCount,
+          durationMinutes: durationMinutes,
+          passingScore: passingScore,
+          topics: aiInterviewTopics,
+          promptGuidance: aiSystemPromptGuidance,
+          blueprint: {
+            jobTitle: jobTitleText,
+            experience: jobExperienceText,
+            skills: jobSkillsText,
+            description: jobDescriptionText,
+            responsibilities: jobResponsibilitiesText,
+          },
+        },
+      });
+
+      toast.success(`AI Assessment configuration for '${stageName}' confirmed and saved!`);
+      router.push(`/recruiter/jobs?jobId=${jobId}&tab=timeline`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update AI Assessment configuration.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleGenerateAiTopics = async (overrideDifficulty?: any) => {
+    const resolvedDifficulty: "easy" | "medium" | "hard" =
+      overrideDifficulty === "easy" || overrideDifficulty === "medium" || overrideDifficulty === "hard"
+        ? overrideDifficulty
+        : aiDifficulty;
+    try {
+      setAiGenerating(true);
+      const resolvedSkills = jobSkillsText
+        ? jobSkillsText
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : job?.skills || [];
+
+      const roundTypeForGen = isAiChatStage ? "ai_chat" : isAiVoiceStage ? "ai_voice" : "ai_assessment";
+      const roundNameForGen = stageName || (isAiChatStage ? "AI Chat Assessment" : isAiVoiceStage ? "AI Voice Assessment" : "AI Assessment");
+
+      const generated = await domainAssessmentService.generateRoundQuestions({
+        roundType: roundTypeForGen,
+        roundName: roundNameForGen,
+        jobTitle: jobTitleText || job?.title || "Professional Role",
+        skills: resolvedSkills,
+        experience: jobExperienceText,
+        difficulty: resolvedDifficulty,
+        count: aiCount,
+        section: "descriptive",
+        questionFormat: "descriptive",
+        jobDescription: jobDescriptionText,
+        jobResponsibilities: jobResponsibilitiesText,
+      });
+
+      if (Array.isArray(generated) && generated.length > 0) {
+        const topics = generated.map((g: any) => g.question || g.title).filter(Boolean);
+        if (topics.length > 0) {
+          setAiInterviewTopics(topics);
+          toast.success(
+            `Generated ${topics.length} ${resolvedDifficulty.toUpperCase()} interview topics grounded in JD & responsibilities!`
+          );
+          return;
+        }
+      }
+
+      // Grounded topic fallback tailored by resolvedDifficulty
+      const fallbackTopics =
+        resolvedDifficulty === "easy"
+          ? [
+              `Core Programming Fundamentals & Syntax Mastery (${resolvedSkills.slice(0, 3).join(", ") || "Stack"})`,
+              `Basic Data Structures, Arrays & Object Traversal for ${jobTitleText || "Junior Developers"}`,
+              `Clean Code Principles, Code Formatting & Readable Logic`,
+              `Standard Error Handling, Try-Catch & Input Validation`,
+              `Foundational Daily Deliverables & Team Collaboration`,
+            ]
+          : resolvedDifficulty === "hard"
+          ? [
+              `Advanced System Architecture & Distributed Systems (${resolvedSkills.slice(0, 3).join(", ") || "Stack"})`,
+              `High-Concurrency Bottlenecks, Deadlocks & Thread Safety for ${jobTitleText || "Senior Architects"}`,
+              `Scalability Trade-Offs: Latency, Throughput, Partitioning & Caching Strategies`,
+              `Fault-Tolerant Incident Recovery, Circuit Breakers & Chaos Engineering`,
+              `Technical Leadership, Long-Term Technical Debt & Architecture Governance`,
+            ]
+          : [
+              `Core Technical & Architectural Proficiency (${resolvedSkills.slice(0, 3).join(", ") || "Stack"})`,
+              `Real-World Problem Solving & Engineering Design for ${jobTitleText || "this role"}`,
+              `Database Optimization, Indexing & API Contracts (${jobExperienceText})`,
+              `Debugging, Concurrency & Incident Troubleshooting`,
+              `Execution of Daily Deliverables, Code Quality & Feature Ownership`,
+            ];
+
+      setAiInterviewTopics(fallbackTopics);
+      toast.success(`Generated role-grounded ${resolvedDifficulty.toUpperCase()} interview agenda topics!`);
+    } catch (err: any) {
+      const resolvedSkills = jobSkillsText
+        ? jobSkillsText
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : job?.skills || [];
+      const fallbackTopics =
+        resolvedDifficulty === "easy"
+          ? [
+              `Core Programming Fundamentals & Syntax Mastery (${resolvedSkills.slice(0, 3).join(", ") || "Stack"})`,
+              `Basic Data Structures, Arrays & Object Traversal for ${jobTitleText || "Junior Developers"}`,
+              `Clean Code Principles, Code Formatting & Readable Logic`,
+              `Standard Error Handling, Try-Catch & Input Validation`,
+              `Foundational Daily Deliverables & Team Collaboration`,
+            ]
+          : resolvedDifficulty === "hard"
+          ? [
+              `Advanced System Architecture & Distributed Systems (${resolvedSkills.slice(0, 3).join(", ") || "Stack"})`,
+              `High-Concurrency Bottlenecks, Deadlocks & Thread Safety for ${jobTitleText || "Senior Architects"}`,
+              `Scalability Trade-Offs: Latency, Throughput, Partitioning & Caching Strategies`,
+              `Fault-Tolerant Incident Recovery, Circuit Breakers & Chaos Engineering`,
+              `Technical Leadership, Long-Term Technical Debt & Architecture Governance`,
+            ]
+          : [
+              `Core Technical & Architectural Proficiency (${resolvedSkills.slice(0, 3).join(", ") || "Stack"})`,
+              `Real-World Problem Solving & Engineering Design for ${jobTitleText || "this role"}`,
+              `Database Optimization, Indexing & API Contracts (${jobExperienceText})`,
+              `Debugging, Concurrency & Incident Troubleshooting`,
+              `Execution of Daily Deliverables, Code Quality & Feature Ownership`,
+            ];
+      setAiInterviewTopics(fallbackTopics);
+      toast.info(`Generated ${resolvedDifficulty.toUpperCase()} interview agenda topics based on your blueprint.`);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Render Modal: View & Edit Role Blueprint Context (Title, Exp, Skills, JD, Responsibilities)
+  const renderRoleBlueprintModal = () => {
+    if (!isJdModalOpen) return null;
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="bg-surface border border-border rounded-3xl p-6 max-w-3xl w-full shadow-2xl space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between border-b border-border pb-3 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+                <Sliders className="w-4 h-4 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-ink">
+                  {isAiAssessment
+                    ? "AI Assessment Role Blueprint Studio"
+                    : isRapidRound
+                    ? "Rapid Round Role Blueprint Studio"
+                    : "Technical Test Role Blueprint Studio"}
+                </h3>
+                <p className="text-[11px] text-ink-soft">
+                  {isAiAssessment
+                    ? "Review and customize the 5 core parameters used by AI to generate conversational interview agenda seeds and evaluation rubrics."
+                    : isRapidRound
+                    ? "Review and customize the 5 core parameters used by AI to generate rapid-fire speed questions for this stage."
+                    : "Review and customize the 5 core parameters used by AI to generate technical questions for this stage."}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsJdModalOpen(false)}
+              className="p-1.5 rounded-lg text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-4 text-xs overflow-y-auto pr-1">
+            <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-[11px] space-y-1.5">
+              <p className="font-bold text-ink flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span>5-Tier AI Generation Calibration Order:</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-ink-soft text-[11px] leading-relaxed">
+                <div><strong>1. Job Title:</strong> Establishes domain &amp; industry terminology.</div>
+                <div><strong>2. Experience:</strong> Calibrates difficulty &amp; architectural depth.</div>
+                <div><strong>3. Job Description:</strong> Anchors problem space &amp; company context.</div>
+                <div><strong>4. Key Responsibilities:</strong> Drives real-world deliverables testing.</div>
+                <div className="sm:col-span-2"><strong>5. Skills Set:</strong> Dictates required languages, frameworks, databases, and tooling.</div>
+              </div>
+            </div>
+
+            {/* Row: Job Title & Experience */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* 1. Job Title */}
+              <div>
+                <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
+                  <Briefcase className="w-3.5 h-3.5 text-primary" />
+                  <span>1. Target Job Title</span>
+                </label>
+                <input
+                  type="text"
+                  value={jobTitleText}
+                  onChange={(e) => {
+                    setJobTitleText(e.target.value);
+                    setIsJdCustomized(true);
+                  }}
+                  placeholder="e.g. Senior Full Stack Engineer"
+                  className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-semibold"
+                />
+              </div>
+
+              {/* 2. Experience Level & Presets */}
+              <div>
+                <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <span>2. Target Experience Level &amp; Seniority</span>
+                </label>
+                <input
+                  type="text"
+                  value={jobExperienceText}
+                  onChange={(e) => {
+                    setJobExperienceText(e.target.value);
+                    setIsJdCustomized(true);
+                  }}
+                  placeholder="e.g. 5+ years (Senior Level)"
+                  className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-semibold mb-1.5"
+                />
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] text-ink-soft mr-1 font-medium">Quick presets:</span>
+                  {[
+                    "0-2 years (Junior / Entry)",
+                    "3-5 years (Mid-Level)",
+                    "5-8 years (Senior)",
+                    "8+ years (Lead / Architect)",
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setJobExperienceText(preset);
+                        setIsJdCustomized(true);
+                      }}
+                      className={`text-[10px] px-2 py-0.5 rounded-md border transition cursor-pointer ${
+                        jobExperienceText === preset
+                          ? "bg-primary text-white border-primary font-bold"
+                          : "bg-surface hover:bg-surface-alt border-border text-ink-soft"
+                      }`}
+                    >
+                      {preset.split(" ")[0]} {preset.includes("Junior") ? "Junior" : preset.includes("Mid") ? "Mid" : preset.includes("Senior") ? "Senior" : "Lead"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Required Skills & Tech Stack */}
+            <div>
+              <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
+                <Code2 className="w-3.5 h-3.5 text-purple-600" />
+                <span>5. Skills Set &amp; Tech Stack (Comma separated)</span>
+              </label>
+              <input
+                type="text"
+                value={jobSkillsText}
+                onChange={(e) => {
+                  setJobSkillsText(e.target.value);
+                  setIsJdCustomized(true);
+                }}
+                placeholder="e.g. React, Node.js, TypeScript, PostgreSQL, Docker, AWS, GraphQL"
+                className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary"
+              />
+              {jobSkillsText && (
+                <div className="flex flex-wrap items-center gap-1 pt-1.5">
+                  {jobSkillsText
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .map((sk, sidx) => (
+                      <span
+                        key={sidx}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
+                      >
+                        {sk}
+                      </span>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Job Description Textarea */}
+            <div>
+              <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5 text-ink-soft" />
+                <span>3. Job Description (Role Scope, Architecture &amp; Context)</span>
+              </label>
+              <textarea
+                rows={4}
+                value={jobDescriptionText}
+                onChange={(e) => {
+                  setJobDescriptionText(e.target.value);
+                  setIsJdCustomized(true);
+                }}
+                placeholder="Paste or edit the job description..."
+                className="w-full bg-surface-alt/40 border border-border rounded-xl p-3 text-xs text-ink outline-none focus:border-primary placeholder:text-ink-soft/50 font-normal leading-relaxed"
+              />
+            </div>
+
+            {/* 4. Key Responsibilities Textarea */}
+            <div>
+              <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5 text-ink-soft" />
+                <span>4. Key Responsibilities &amp; Deliverables (One per line)</span>
+              </label>
+              <textarea
+                rows={4}
+                value={jobResponsibilitiesText}
+                onChange={(e) => {
+                  setJobResponsibilitiesText(e.target.value);
+                  setIsJdCustomized(true);
+                }}
+                placeholder={"e.g. Design and implement microservices in Node.js\nOptimize PostgreSQL database queries and indexes\nBuild responsive UI in React & Tailwind..."}
+                className="w-full bg-surface-alt/40 border border-border rounded-xl p-3 text-xs text-ink outline-none focus:border-primary placeholder:text-ink-soft/50 font-normal leading-relaxed font-mono"
+              />
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div className="flex items-center justify-between pt-3 border-t border-border shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setJobTitleText(originalJobTitle);
+                  setJobExperienceText(originalJobExperience);
+                  setJobSkillsText(originalJobSkills);
+                  setJobDescriptionText(originalJobDescription);
+                  setJobResponsibilitiesText(originalJobResponsibilities);
+                  setIsJdCustomized(false);
+                  toast.info("Reset to original Job Post parameters.");
+                }}
+                className="text-xs text-ink-soft hover:text-ink font-semibold cursor-pointer"
+              >
+                Reset to Original Job Post
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsJdModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-ink-soft hover:bg-surface-alt transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsJdModalOpen(false);
+                    toast.success(
+                      isAiAssessment
+                        ? "Applied Role Blueprint context to AI Interviewer!"
+                        : "Applied Role Blueprint context to AI question generation!"
+                    );
+                  }}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Apply Blueprint &amp; Done</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 space-y-3">
@@ -617,7 +1309,7 @@ export default function StageConfigurationPage() {
     );
   }
 
-  if (!isOnlineTestRound) {
+  if (!isOnlineTestRound && !isAiAssessment) {
     const isInterview =
       stage?.stageType?.includes("interview") ||
       stage?.assessmentType?.includes("interview") ||
@@ -715,6 +1407,714 @@ export default function StageConfigurationPage() {
     );
   }
 
+  if (isAiAssessment) {
+    return (
+      <div className="min-h-screen bg-background text-ink p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto">
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 text-xs text-ink-soft">
+          <Link href={`/recruiter/jobs?jobId=${jobId}&tab=timeline`} className="hover:text-ink transition flex items-center gap-1">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Hiring Timeline</span>
+          </Link>
+          <ChevronRight className="w-3.5 h-3.5 text-ink-soft/40" />
+          <span className="text-ink-soft">{job?.title || "Job Requisition"}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-ink-soft/40" />
+          <span className="font-bold text-ink">{stageName}</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 ml-1">
+            AI Assessment Round
+          </span>
+        </div>
+
+        {/* AI Assessment Studio Content */}
+        <div className="space-y-6">
+          {/* Hero Banner */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/10 via-purple-500/5 to-indigo-600/10 border border-violet-500/25 p-6 sm:p-8 backdrop-blur-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-2 max-w-2xl">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-violet-600 text-white uppercase tracking-wider shadow-xs">
+                    {isAiChatStage
+                      ? "AI Chat Assessment"
+                      : isAiVoiceStage
+                      ? "AI Voice Assessment"
+                      : "Conversational AI Round"}
+                  </span>
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-surface border border-violet-500/30 text-violet-700 dark:text-violet-300 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-violet-600" />
+                    <span>
+                      {isAiChatStage
+                        ? "Interactive Text Chat Mode"
+                        : isAiVoiceStage
+                        ? "Voice-to-Voice Audio Stream"
+                        : aiModalities.length === 2
+                        ? "Chat + Voice Active"
+                        : aiModalities.includes("voice")
+                        ? "Voice-Only Active"
+                        : "Chat-Only Active"}
+                    </span>
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight">
+                  {isAiChatStage
+                    ? `AI Chat Assessment Studio: ${stageName}`
+                    : isAiVoiceStage
+                    ? `AI Voice Assessment Studio: ${stageName}`
+                    : `AI Assessment Studio: ${stageName}`}
+                </h1>
+                <p className="text-xs text-ink-soft leading-relaxed">
+                  {isAiChatStage
+                    ? "Configure conversational turn-by-turn text chat interview sessions with real-time AI evaluation, code snippet validation, and probing questions grounded in the JD."
+                    : isAiVoiceStage
+                    ? "Configure natural spoken voice-to-voice interview sessions powered by bidirectional real-time audio streaming and speech evaluation."
+                    : "Configure conversational turn-by-turn AI interview sessions supporting text Chat and Voice-to-Voice interviews. The AI interviewer dynamically evaluates candidates against your Job Description, Key Responsibilities, and Experience Level."}
+                </p>
+              </div>
+
+              {/* Quick Summary Pill Box & Preview Button */}
+              <div className="flex flex-wrap sm:flex-col items-center sm:items-end gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenPreview}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20 text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                  <span>Preview Candidate View</span>
+                  <ExternalLink className="w-3 h-3 opacity-60" />
+                </button>
+                <div className="flex sm:flex-col items-center sm:items-end gap-2 bg-surface/80 border border-border/80 rounded-2xl p-2.5 text-xs">
+                  <div className="text-right">
+                    <span className="text-[10px] font-medium text-ink-soft block">Target Duration</span>
+                    <span className="font-extrabold text-ink">{durationMinutes} Minutes</span>
+                  </div>
+                  <div className="text-right sm:border-t sm:border-border/60 sm:pt-1">
+                    <span className="text-[10px] font-medium text-ink-soft block">Passing Score</span>
+                    <span className="font-extrabold text-emerald-600">{passingScore}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 1. ROUND FORMAT (AI Chat Assessment vs AI Voice Assessment) */}
+          <div className="bg-surface border border-border rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
+            {isAiChatStage ? (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center font-bold text-xs">
+                        1
+                      </div>
+                      <h2 className="text-base font-extrabold text-ink">
+                        Round Format: AI Chat Assessment
+                      </h2>
+                    </div>
+                    <p className="text-xs text-ink-soft mt-1 ml-9">
+                      This stage is configured as a dedicated <strong>AI Chat Assessment Round</strong>. Candidates communicate with the AI interviewer via real-time conversational messaging and code submissions.
+                    </p>
+                  </div>
+
+                  <div className="text-xs font-bold px-3 py-1 rounded-xl bg-violet-500/10 border border-violet-500/30 text-violet-700 dark:text-violet-300">
+                    Dedicated Chat Round Locked
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl border bg-violet-500/5 border-violet-500 shadow-sm ring-1 ring-violet-500/20 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-violet-600 text-white shadow-md shadow-violet-500/25">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-ink">Conversational Chat Assessment</h3>
+                        <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400">
+                          Interactive Text Chatting &amp; Code Input Mode
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-5 h-5 rounded-lg border bg-violet-600 border-violet-600 text-white flex items-center justify-center shrink-0 mt-1">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-ink-soft leading-relaxed">
+                    Candidate participates in a real-time text chat interview. The AI asks situational and technical questions,
+                    prompts for explanations or code snippets, and provides multi-turn conversational evaluation.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-medium text-ink-soft">
+                    <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Turn-by-turn chat</span>
+                    <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Code &amp; syntax input</span>
+                    <span className="px-2 py-0.5 rounded-md bg-surface border border-border">AI instant rubric</span>
+                  </div>
+                </div>
+              </div>
+            ) : isAiVoiceStage ? (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                        1
+                      </div>
+                      <h2 className="text-base font-extrabold text-ink">
+                        Round Format: AI Voice-to-Voice Assessment
+                      </h2>
+                    </div>
+                    <p className="text-xs text-ink-soft mt-1 ml-9">
+                      This stage is configured as a dedicated <strong>AI Voice Assessment Round</strong>. Candidates converse with the AI interviewer verbally via bidirectional audio streaming.
+                    </p>
+                  </div>
+
+                  <div className="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                    Dedicated Voice Round Locked
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl border bg-emerald-500/5 border-emerald-500 shadow-sm ring-1 ring-emerald-500/20 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-emerald-600 text-white shadow-md shadow-emerald-500/25">
+                        <Mic className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-ink">Voice-to-Voice Live Interview</h3>
+                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          Real-Time Audio Stream (Gemini Live)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-5 h-5 rounded-lg border bg-emerald-600 border-emerald-600 text-white flex items-center justify-center shrink-0 mt-1">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-ink-soft leading-relaxed">
+                    Candidate speaks directly with the AI interviewer using native voice-to-voice streaming.
+                    Evaluates spoken technical communication, conceptual articulation, problem framing, and real-time verbal reasoning.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-medium text-ink-soft">
+                    <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Bidirectional audio</span>
+                    <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Fluency &amp; reasoning</span>
+                    <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Low-latency conversation</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center font-bold text-xs">
+                        1
+                      </div>
+                      <h2 className="text-base font-extrabold text-ink">
+                        Select AI Assessment Round Type
+                      </h2>
+                    </div>
+                    <p className="text-xs text-ink-soft mt-1 ml-9">
+                      Select whether this stage operates as an <strong>AI Chat Assessment Round</strong> or an <strong>AI Voice Assessment Round</strong>.
+                    </p>
+                  </div>
+
+                  <div className="text-xs font-bold px-3 py-1 rounded-xl bg-surface-alt border border-border text-ink-soft">
+                    {aiModalities.includes("voice") ? "Voice Assessment Round" : "Chat Assessment Round"}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {/* Chat Assessment Card */}
+                  <div
+                    onClick={() => handleSelectAiRoundType("chat")}
+                    className={`p-5 rounded-2xl border transition-all cursor-pointer select-none space-y-3 relative ${
+                      aiModalities.includes("chat") && !aiModalities.includes("voice")
+                        ? "bg-violet-500/5 border-violet-500 shadow-sm ring-1 ring-violet-500/20"
+                        : "bg-surface-alt/30 border-border hover:border-border-hover opacity-70"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-2xl flex items-center justify-center transition ${
+                            aiModalities.includes("chat") && !aiModalities.includes("voice")
+                              ? "bg-violet-600 text-white shadow-md shadow-violet-500/25"
+                              : "bg-surface border border-border text-ink-soft"
+                          }`}
+                        >
+                          <MessageSquare className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-ink">AI Chat Assessment Round</h3>
+                          <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400">
+                            Interactive Text Chat &amp; Coding Mode
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded-lg border flex items-center justify-center transition shrink-0 mt-1 ${
+                          aiModalities.includes("chat") && !aiModalities.includes("voice")
+                            ? "bg-violet-600 border-violet-600 text-white"
+                            : "border-border bg-surface"
+                        }`}
+                      >
+                        {aiModalities.includes("chat") && !aiModalities.includes("voice") && (
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-ink-soft leading-relaxed">
+                      Candidate participates in a real-time text chat interview. The AI asks situational and technical questions,
+                      prompts for explanations or code snippets, and provides multi-turn conversational evaluation.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-medium text-ink-soft">
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Turn-by-turn chat</span>
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Code &amp; syntax input</span>
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-border">AI instant rubric</span>
+                    </div>
+                  </div>
+
+                  {/* Voice-to-Voice Interview Card */}
+                  <div
+                    onClick={() => handleSelectAiRoundType("voice")}
+                    className={`p-5 rounded-2xl border transition-all cursor-pointer select-none space-y-3 relative ${
+                      aiModalities.includes("voice")
+                        ? "bg-emerald-500/5 border-emerald-500 shadow-sm ring-1 ring-emerald-500/20"
+                        : "bg-surface-alt/30 border-border hover:border-border-hover opacity-70"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-2xl flex items-center justify-center transition ${
+                            aiModalities.includes("voice")
+                              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/25"
+                              : "bg-surface border border-border text-ink-soft"
+                          }`}
+                        >
+                          <Mic className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-ink">AI Voice Assessment Round</h3>
+                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            Real-Time Audio Stream (Gemini Live)
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded-lg border flex items-center justify-center transition shrink-0 mt-1 ${
+                          aiModalities.includes("voice")
+                            ? "bg-emerald-600 border-emerald-600 text-white"
+                            : "border-border bg-surface"
+                        }`}
+                      >
+                        {aiModalities.includes("voice") && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-ink-soft leading-relaxed">
+                      Candidate speaks directly with the AI interviewer using native voice-to-voice streaming.
+                      Evaluates spoken technical communication, conceptual articulation, problem framing, and real-time verbal reasoning.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-medium text-ink-soft">
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Bidirectional audio</span>
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Fluency &amp; reasoning</span>
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-border">Low-latency conversation</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Selected round banner */}
+            <div className="p-3.5 rounded-2xl bg-surface-alt/50 border border-border/80 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-violet-600 shrink-0" />
+                <span className="text-ink-soft">
+                  Selected Assessment Round:{" "}
+                  <strong className="text-ink">
+                    {aiModalities.includes("voice")
+                      ? "AI Voice Assessment Round (Voice-to-Voice Streaming)"
+                      : "AI Chat Assessment Round (Conversational Text Interview)"}
+                  </strong>
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-violet-600 dark:text-violet-400 shrink-0">
+                {aiModalities.includes("voice") ? "VOICE ROUND" : "CHAT ROUND"}
+              </span>
+            </div>
+          </div>
+
+          {/* 2. SESSION PARAMETERS & CALIBRATION */}
+          <div className="bg-surface border border-border rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center font-bold text-xs">
+                2
+              </div>
+              <h2 className="text-base font-extrabold text-ink">
+                Session Duration &amp; Calibration Rules
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1 text-xs">
+              {/* Duration Minutes */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-primary" />
+                  <span>Assessment Duration</span>
+                </label>
+                <select
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 30)}
+                  className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-semibold"
+                >
+                  <option value={15}>15 Minutes (Express)</option>
+                  <option value={20}>20 Minutes</option>
+                  <option value={30}>30 Minutes (Standard)</option>
+                  <option value={45}>45 Minutes (In-Depth)</option>
+                  <option value={60}>60 Minutes (Comprehensive)</option>
+                </select>
+                <span className="text-[10px] text-ink-soft block">
+                  Time limit allocated for the interactive interview session.
+                </span>
+              </div>
+
+              {/* Number of Questions / Topics */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
+                  <FileQuestion className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Number of Questions / Topics</span>
+                </label>
+                <select
+                  value={aiCount}
+                  onChange={(e) => setAiCount(parseInt(e.target.value) || 8)}
+                  className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-semibold"
+                >
+                  <option value={5}>5 Core Questions</option>
+                  <option value={8}>8 Questions (Balanced)</option>
+                  <option value={10}>10 Questions</option>
+                  <option value={12}>12 Questions (Thorough)</option>
+                  <option value={15}>15 Questions</option>
+                </select>
+                <span className="text-[10px] text-ink-soft block">
+                  Target count of topic seeds explored by the AI interviewer.
+                </span>
+              </div>
+
+              {/* Difficulty */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
+                  <Sliders className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Interview Difficulty</span>
+                  <span className="ml-auto text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                    Applies to AI Questions
+                  </span>
+                </label>
+                <select
+                  value={aiDifficulty}
+                  onChange={async (e) => {
+                    const newDiff = e.target.value as "easy" | "medium" | "hard";
+                    setAiDifficulty(newDiff);
+                    toast.info(`Difficulty updated to ${newDiff.toUpperCase()}. Recalibrating AI interview questions...`);
+                    await handleGenerateAiTopics(newDiff);
+                  }}
+                  className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-semibold"
+                >
+                  <option value="easy">Easy (Foundational / Junior)</option>
+                  <option value="medium">Medium (Mid-Level Practical)</option>
+                  <option value="hard">Hard (Senior / Architectural)</option>
+                </select>
+                <span className="text-[10px] text-ink-soft block">
+                  {aiDifficulty === "easy"
+                    ? "Focus on fundamental knowledge and core concepts."
+                    : aiDifficulty === "hard"
+                    ? "Focus on high-scale tradeoffs and concurrency."
+                    : "Balanced real-world problem solving and patterns."}
+                </span>
+              </div>
+
+              {/* Passing Score Threshold */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-ink-soft flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Passing Score Threshold</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={40}
+                    max={100}
+                    value={passingScore}
+                    onChange={(e) => setPassingScore(Math.min(100, Math.max(40, parseInt(e.target.value) || 70)))}
+                    className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-bold pr-8"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-ink-soft font-bold">%</span>
+                </div>
+                <span className="text-[10px] text-ink-soft block">
+                  Score required to automatically advance to the next pipeline stage.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. 5-TIER ROLE BLUEPRINT GROUNDING */}
+          <div className="bg-surface border border-border rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center font-bold text-xs">
+                    3
+                  </div>
+                  <h2 className="text-base font-extrabold text-ink">
+                    5-Tier Role Blueprint Grounding
+                  </h2>
+                </div>
+                <p className="text-xs text-ink-soft mt-1 ml-9">
+                  The AI interviewer strictly derives questions, conversational follow-ups, and grading rubrics from these 5 role parameters:
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsJdModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 font-bold text-xs border border-violet-500/25 transition cursor-pointer"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>{isJdCustomized ? "Edit Customized Blueprint" : "Customize Role Blueprint"}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-xs">
+              {/* 1. Job Title & 2. Experience */}
+              <div className="p-3.5 rounded-2xl bg-surface-alt/40 border border-border space-y-1.5">
+                <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">
+                  1 &amp; 2. Role Title &amp; Target Experience
+                </span>
+                <p className="font-extrabold text-ink text-sm">
+                  {jobTitleText || job?.title || "Professional Role"}
+                </p>
+                <span className="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  {jobExperienceText || "3-5 years (Mid-Level)"}
+                </span>
+              </div>
+
+              {/* 5. Required Skills */}
+              <div className="p-3.5 rounded-2xl bg-surface-alt/40 border border-border space-y-1.5">
+                <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">
+                  5. Required Skills Set &amp; Tech Stack
+                </span>
+                <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto">
+                  {jobSkillsText
+                    ? jobSkillsText
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .map((sk, sidx) => (
+                          <span
+                            key={sidx}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
+                          >
+                            {sk}
+                          </span>
+                        ))
+                    : <span className="text-[11px] text-ink-soft">Core languages &amp; frameworks</span>}
+                </div>
+              </div>
+
+              {/* 3. Job Description */}
+              <div className="p-3.5 rounded-2xl bg-surface-alt/40 border border-border space-y-1">
+                <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">
+                  3. Job Description (Scope &amp; Context)
+                </span>
+                <p className="text-[11px] text-ink line-clamp-3 leading-relaxed">
+                  {jobDescriptionText || "No job description specified. Click Customize Role Blueprint to add."}
+                </p>
+              </div>
+
+              {/* 4. Key Responsibilities */}
+              <div className="p-3.5 rounded-2xl bg-surface-alt/40 border border-border space-y-1">
+                <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">
+                  4. Key Responsibilities &amp; Deliverables
+                </span>
+                <p className="text-[11px] text-ink line-clamp-3 leading-relaxed font-mono">
+                  {jobResponsibilitiesText || "No key responsibilities specified. Click Customize Role Blueprint to add."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. INTERVIEW AGENDA & TOPICS */}
+          <div className="bg-surface border border-border rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center font-bold text-xs">
+                    4
+                  </div>
+                  <h2 className="text-base font-extrabold text-ink">
+                    Interview Agenda &amp; Question Seeds
+                  </h2>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                      aiDifficulty === "easy"
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"
+                        : aiDifficulty === "hard"
+                        ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20"
+                        : "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
+                    }`}
+                  >
+                    Calibrated: {aiDifficulty.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-xs text-ink-soft mt-1 ml-9">
+                  The specific technical modules and deliverables the AI will explore during the Chat and Voice session.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleGenerateAiTopics()}
+                disabled={aiGenerating}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs shadow-sm transition cursor-pointer disabled:opacity-50"
+              >
+                {aiGenerating ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                <span>{aiGenerating ? "Generating Topics..." : `Regenerate ${aiDifficulty.toUpperCase()} Topics with AI`}</span>
+              </button>
+            </div>
+
+            {/* Topics List */}
+            <div className="space-y-2 pt-1">
+              {aiInterviewTopics.map((topic, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-surface-alt/40 border border-border hover:border-violet-500/30 transition text-xs"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-6 h-6 rounded-lg bg-violet-500/10 text-violet-700 dark:text-violet-300 flex items-center justify-center font-bold text-[11px] shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="text-ink font-medium leading-relaxed truncate">{topic}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTopic(idx)}
+                    className="p-1.5 rounded-lg text-ink-soft hover:text-red-500 hover:bg-red-500/10 transition cursor-pointer shrink-0"
+                    title="Remove Topic"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              {aiInterviewTopics.length === 0 && (
+                <div className="p-6 rounded-2xl bg-surface-alt/30 border border-dashed border-border text-center space-y-2">
+                  <p className="text-xs text-ink-soft">No interview topics added yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateAiTopics()}
+                    className="text-xs font-bold text-violet-600 hover:underline cursor-pointer"
+                  >
+                    Click here to generate agenda topics with AI
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Add Custom Topic Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                value={newTopicInput}
+                onChange={(e) => setNewTopicInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTopic();
+                  }
+                }}
+                placeholder="Add a custom topic or specific interview seed question..."
+                className="flex-1 bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-violet-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddTopic}
+                className="px-4 py-2 rounded-xl bg-surface border border-border hover:bg-surface-alt text-ink text-xs font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Topic</span>
+              </button>
+            </div>
+
+            {/* Optional AI System Prompt Guidance */}
+            <div className="space-y-1.5 pt-2 border-t border-border">
+              <label className="text-[11px] font-bold text-ink-soft block flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                <span>Special AI Interviewer Guidelines &amp; Directives (Optional)</span>
+              </label>
+              <textarea
+                rows={2}
+                value={aiSystemPromptGuidance}
+                onChange={(e) => setAiSystemPromptGuidance(e.target.value)}
+                placeholder="e.g. Focus specifically on handling database connection pool exhaustion and microservice recovery..."
+                className="w-full bg-surface-alt/40 border border-border rounded-xl p-3 text-xs text-ink outline-none focus:border-violet-500 leading-relaxed"
+              />
+              <span className="text-[10px] text-ink-soft block">
+                These instructions will be included in the AI interviewer system prompt for both Chat and Voice modes.
+              </span>
+            </div>
+          </div>
+
+          {/* Action Footer */}
+          <div className="flex items-center justify-between gap-4 p-4 rounded-3xl bg-surface border border-border shadow-xs flex-wrap">
+            <Link
+              href={`/recruiter/jobs?jobId=${jobId}&tab=timeline`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-ink-soft hover:bg-surface-alt hover:text-ink transition cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Pipeline Timeline</span>
+            </Link>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleOpenPreview}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-alt text-ink font-bold text-xs transition shadow-xs cursor-pointer"
+              >
+                <Eye className="w-4 h-4 text-violet-600" />
+                <span>Preview Candidate Portal</span>
+                <ExternalLink className="w-3.5 h-3.5 text-ink-soft" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveAiAssessment}
+                disabled={saving || aiModalities.length === 0}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-95 text-white font-extrabold text-xs shadow-md transition cursor-pointer disabled:opacity-50"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>{saving ? "Saving AI Configuration..." : "Save & Confirm AI Assessment"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal: View & Edit Role Blueprint Context */}
+        {renderRoleBlueprintModal()}
+      </div>
+    );
+  }
+
   const isConfigured = Boolean(
     stage?.config?.isConfigured || (questions && questions.length > 0)
   );
@@ -765,15 +2165,15 @@ export default function StageConfigurationPage() {
 
         {/* Quick Save / Preview buttons */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <a
-            href={`/assessment/take?jobId=${jobId}&stageId=${stageId}&preview=true`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={handleOpenPreview}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface border border-border hover:bg-surface-alt text-ink font-semibold text-xs transition cursor-pointer shadow-xs"
           >
+            <Eye className="w-3.5 h-3.5 text-purple-600" />
             <span>Preview Candidate Portal</span>
             <ExternalLink className="w-3.5 h-3.5 text-ink-soft" />
-          </a>
+          </button>
           <button
             type="button"
             onClick={handleSaveAndConfirm}
@@ -816,8 +2216,89 @@ export default function StageConfigurationPage() {
 
       {activeTab === "questions" ? (
         <div className="space-y-6">
-          {/* General Aptitude 3-Section Selector Bar */}
-          {isAptitudeRound && (
+          {/* Dedicated Rapid Round Studio Bar */}
+          {isRapidRound ? (
+            <div className="p-4 sm:p-5 rounded-2xl bg-surface border border-amber-500/30 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0 border border-amber-500/25">
+                    <Zap className="w-5 h-5 fill-current" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-extrabold text-ink">
+                        Rapid Round Configuration Studio
+                      </h3>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                        Dedicated Speed Round
+                      </span>
+                    </div>
+                    <p className="text-xs text-ink-soft mt-0.5">
+                      Dedicated to fast-response speed questions evaluated under a strict timer, calibrated directly to the job role, JD, and key responsibilities.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300">
+                    Total Rapid Questions: <strong>{questions.length}</strong> Qs
+                  </span>
+                </div>
+              </div>
+
+              {/* Rapid Question Timer Settings Bar */}
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-ink">Per-Question Speed Timer</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                        {rapidTimeLimitSeconds}s per question
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-ink-soft">
+                      Select a speed preset or enter custom seconds for candidate answer submission.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 self-start md:self-auto">
+                  <span className="text-[11px] font-semibold text-ink-soft mr-1">Presets:</span>
+                  {[10, 15, 20, 30, 45, 60, 90, 120].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => handleApplyRapidSecondsToAll(s)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        rapidTimeLimitSeconds === s
+                          ? "bg-amber-600 text-white shadow-2xs ring-2 ring-amber-500/30"
+                          : "bg-surface hover:bg-surface-alt border border-border text-ink"
+                      }`}
+                    >
+                      {s}s
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-1 pl-1">
+                    <input
+                      type="number"
+                      min={5}
+                      max={300}
+                      value={rapidTimeLimitSeconds}
+                      onChange={(e) => {
+                        const val = Math.max(5, parseInt(e.target.value) || 30);
+                        handleApplyRapidSecondsToAll(val);
+                      }}
+                      className="w-16 bg-surface border border-amber-500/30 rounded-lg px-2 py-1 text-xs text-ink font-bold text-center outline-none"
+                    />
+                    <span className="text-[11px] font-semibold text-ink-soft">sec</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : isAptitudeRound ? (
+            /* Multi-Section Selector Bar for General Aptitude & Technical Test */
             <div className="p-4 rounded-2xl bg-surface border border-border shadow-xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-2.5">
                 <div>
@@ -828,8 +2309,6 @@ export default function StageConfigurationPage() {
                         ? "General Aptitude Sections"
                         : isTechnicalTest
                         ? "Technical Test Sections"
-                        : isRapidRound
-                        ? "Rapid Round Sections"
                         : `${stageName} Sections (Online Test)`}
                     </span>
                   </h3>
@@ -888,8 +2367,6 @@ export default function StageConfigurationPage() {
                       >
                         {isTechnicalTest
                           ? "Technical Concepts & Architecture"
-                          : isRapidRound
-                          ? "Fast-Response Knowledge"
                           : "Quantitative & Reasoning"}
                       </p>
                     </div>
@@ -934,8 +2411,6 @@ export default function StageConfigurationPage() {
                       >
                         {isTechnicalTest
                           ? "Code Implementation / System Design"
-                          : isRapidRound
-                          ? "Timed Written Analysis"
                           : "Analytical / Written Proof"}
                       </p>
                     </div>
@@ -949,7 +2424,7 @@ export default function StageConfigurationPage() {
                   </span>
                 </button>
 
-                {/* Section 3: Rapid Question Round */}
+                {/* Section 3: Rapid Round */}
                 <button
                   type="button"
                   onClick={() => {
@@ -983,8 +2458,6 @@ export default function StageConfigurationPage() {
                       >
                         {isTechnicalTest
                           ? "Rapid Technical Blitz"
-                          : isRapidRound
-                          ? "Speed Trivia & Problem Solving"
                           : "Speed Math & Logic"}{" "}
                         ({rapidTimeLimitSeconds}s)
                       </p>
@@ -1000,11 +2473,11 @@ export default function StageConfigurationPage() {
                 </button>
               </div>
 
-              {/* Rapid Round Speed & Timer Settings Bar */}
+              {/* Rapid Round Speed & Timer Settings Bar (when activeSection is rapid in multi-section stage) */}
               {activeSection === "rapid" && (
                 <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-col md:flex-row md:items-center justify-between gap-3 animate-in fade-in duration-150">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
                       <Zap className="w-4 h-4 fill-current" />
                     </div>
                     <div>
@@ -1022,7 +2495,7 @@ export default function StageConfigurationPage() {
 
                   <div className="flex flex-wrap items-center gap-1.5 self-start md:self-auto">
                     <span className="text-[11px] font-semibold text-ink-soft mr-1">Presets:</span>
-                    {[15, 20, 30, 45, 60, 90].map((s) => (
+                    {[10, 15, 20, 30, 45, 60, 90, 120].map((s) => (
                       <button
                         key={s}
                         type="button"
@@ -1054,7 +2527,7 @@ export default function StageConfigurationPage() {
                 </div>
               )}
             </div>
-          )}
+          ) : null}
 
           {/* Mode Switch: Upload Question Bank vs AI Generation */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 bg-surface-alt/60 rounded-2xl border border-border">
@@ -1322,7 +2795,9 @@ export default function StageConfigurationPage() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-sm font-extrabold text-ink">
-                          {isTechnicalTest
+                          {isRapidRound
+                            ? `Generate Rapid Round Speed Questions (${rapidTimeLimitSeconds}s Timed - JD Grounded)`
+                            : isTechnicalTest
                             ? activeSection === "mcq"
                               ? "Generate Technical MCQs (JD & Responsibilities Grounded)"
                               : activeSection === "descriptive"
@@ -1338,11 +2813,9 @@ export default function StageConfigurationPage() {
                               : activeSection === "rapid"
                               ? "Generate Rapid Question Round with AI"
                               : "Generate General Aptitude Questions with AI"
-                            : isRapidRound
-                            ? "Generate Rapid Speed Round Questions with AI"
                             : "Generate Questions with AI"}
                         </h3>
-                        {isTechnicalTest ? (
+                        {isRoleGroundedRound ? (
                           <span className="text-[10px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-500/15 border border-purple-500/25 px-2 py-0.5 rounded-full flex items-center gap-1">
                             <CheckCircle2 className="w-2.5 h-2.5" />
                             JD &amp; Responsibilities Grounded
@@ -1354,7 +2827,9 @@ export default function StageConfigurationPage() {
                         ) : null}
                       </div>
                       <p className="text-xs text-ink-soft">
-                        {isTechnicalTest
+                        {isRapidRound
+                          ? `Generates rapid-fire speed assessment questions (${rapidTimeLimitSeconds}s per question) directly evaluated against the Job Description, Key Responsibilities, and Technical Stack of ${job?.title || "this position"}. Review or edit the blueprint below.`
+                          : isTechnicalTest
                           ? `Questions are directly generated from the Job Description, Key Responsibilities, and Technical Stack of ${job?.title || "this position"}. Review or edit the context below.`
                           : isGeneralAptitude
                           ? activeSection === "mcq"
@@ -1371,7 +2846,7 @@ export default function StageConfigurationPage() {
 
                   <button
                     type="button"
-                    onClick={handleGenerateAIQuestions}
+                    onClick={() => handleGenerateAIQuestions()}
                     disabled={aiGenerating}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 self-start sm:self-auto"
                   >
@@ -1380,8 +2855,8 @@ export default function StageConfigurationPage() {
                   </button>
                 </div>
 
-                {/* Technical Test: 5-Tier Role Blueprint Context Banner */}
-                {isTechnicalTest && (
+                {/* Technical Test / Rapid Round: 5-Tier Role Blueprint Context Banner */}
+                {isRoleGroundedRound && (
                   <div className="p-4 rounded-xl bg-surface border border-purple-500/30 space-y-3 shadow-2xs">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-start gap-2.5">
@@ -1505,7 +2980,7 @@ export default function StageConfigurationPage() {
                 {/* AI Settings Controls */}
                 <div
                   className={`grid grid-cols-1 sm:grid-cols-2 ${
-                    activeSection === "rapid" || aiQuestionFormat === "rapid" ? "lg:grid-cols-5" : "lg:grid-cols-4"
+                    isRapidRound || activeSection === "rapid" || aiQuestionFormat === "rapid" ? "lg:grid-cols-5" : "lg:grid-cols-4"
                   } gap-3 pt-2 border-t border-purple-500/20 text-xs`}
                 >
                   <div>
@@ -1526,33 +3001,40 @@ export default function StageConfigurationPage() {
 
                   <div>
                     <label className="text-[11px] font-bold text-ink-soft block mb-1">Question Format</label>
-                    <select
-                      value={aiQuestionFormat}
-                      onChange={(e) => setAiQuestionFormat(e.target.value as any)}
-                      className="w-full bg-surface border border-border rounded-xl px-3 py-1.5 text-xs text-ink outline-none font-medium"
-                    >
-                      {isAptitudeRound ? (
-                        <>
-                          <option value="mcq">Multiple Choice Only (MCQ)</option>
-                          <option value="descriptive">Descriptive Only (Analytical / Proof)</option>
-                          <option value="rapid">Rapid Speed Round ({rapidTimeLimitSeconds}s Timed)</option>
-                          <option value="mixed">Mixed (All Formats)</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="mixed">Mixed (MCQ + Descriptive)</option>
-                          <option value="mcq">Multiple Choice Only (MCQ)</option>
-                          <option value="descriptive">Descriptive Only (Analytical / Proof)</option>
-                        </>
-                      )}
-                    </select>
+                    {isRapidRound ? (
+                      <div className="w-full bg-surface-alt/70 border border-amber-500/30 rounded-xl px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 fill-current text-amber-600" />
+                        <span>Rapid Speed ({rapidTimeLimitSeconds}s Timed)</span>
+                      </div>
+                    ) : (
+                      <select
+                        value={aiQuestionFormat}
+                        onChange={(e) => setAiQuestionFormat(e.target.value as any)}
+                        className="w-full bg-surface border border-border rounded-xl px-3 py-1.5 text-xs text-ink outline-none font-medium"
+                      >
+                        {isAptitudeRound ? (
+                          <>
+                            <option value="mcq">Multiple Choice Only (MCQ)</option>
+                            <option value="descriptive">Descriptive Only (Analytical / Proof)</option>
+                            <option value="rapid">Rapid Speed Round ({rapidTimeLimitSeconds}s Timed)</option>
+                            <option value="mixed">Mixed (All Formats)</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="mixed">Mixed (MCQ + Descriptive)</option>
+                            <option value="mcq">Multiple Choice Only (MCQ)</option>
+                            <option value="descriptive">Descriptive Only (Analytical / Proof)</option>
+                          </>
+                        )}
+                      </select>
+                    )}
                   </div>
 
-                  {(activeSection === "rapid" || aiQuestionFormat === "rapid") && (
+                  {(isRapidRound || activeSection === "rapid" || aiQuestionFormat === "rapid") && (
                     <div>
                       <label className="text-[11px] font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1 mb-1">
                         <Zap className="w-3 h-3 fill-current" />
-                        Rapid Timer per Question
+                        Speed Timer per Question
                       </label>
                       <select
                         value={rapidTimeLimitSeconds}
@@ -1560,14 +3042,16 @@ export default function StageConfigurationPage() {
                           const val = parseInt(e.target.value) || 30;
                           handleApplyRapidSecondsToAll(val);
                         }}
-                        className="w-full bg-surface border border-amber-500/30 rounded-xl px-3 py-1.5 text-xs text-ink font-bold outline-none"
+                        className="w-full bg-surface border border-amber-500/30 rounded-xl px-3 py-1.5 text-xs text-ink font-bold outline-none cursor-pointer"
                       >
+                        <option value={10}>10 Seconds (Speed Blitz)</option>
                         <option value={15}>15 Seconds (Blitz)</option>
                         <option value={20}>20 Seconds (Fast)</option>
-                        <option value={30}>30 Seconds (Default)</option>
-                        <option value={45}>45 Seconds (Standard)</option>
+                        <option value={30}>30 Seconds (Default Standard)</option>
+                        <option value={45}>45 Seconds (Moderate)</option>
                         <option value={60}>60 Seconds (1 Minute)</option>
                         <option value={90}>90 Seconds (1.5 Mins)</option>
+                        <option value={120}>120 Seconds (2 Minutes)</option>
                       </select>
                     </div>
                   )}
@@ -1576,7 +3060,16 @@ export default function StageConfigurationPage() {
                     <label className="text-[11px] font-bold text-ink-soft block mb-1">Difficulty</label>
                     <select
                       value={aiDifficulty}
-                      onChange={(e) => setAiDifficulty(e.target.value as any)}
+                      onChange={async (e) => {
+                        const newDiff = e.target.value as "easy" | "medium" | "hard";
+                        setAiDifficulty(newDiff);
+                        if (questions.length > 0) {
+                          toast.info(`Difficulty switched to ${newDiff.toUpperCase()}. Recalibrating test questions...`);
+                          await handleGenerateAIQuestions(newDiff);
+                        } else {
+                          toast.info(`Difficulty set to ${newDiff.toUpperCase()}.`);
+                        }
+                      }}
                       className="w-full bg-surface border border-border rounded-xl px-3 py-1.5 text-xs text-ink outline-none"
                     >
                       <option value="easy">Easy (Fundamentals)</option>
@@ -1590,10 +3083,10 @@ export default function StageConfigurationPage() {
                     <input
                       type="text"
                       placeholder={
-                        isTechnicalTest
+                        isRapidRound
+                          ? "e.g. Quick code output, Syntax trivia, API lookup, Rapid debugging"
+                          : isTechnicalTest
                           ? "e.g. Data Structures, React hooks, SQL optimization, REST API design"
-                          : isRapidRound
-                          ? "e.g. Quick calculations, Terminology, Syntax trivia, Mental math"
                           : "e.g. Work & Time, Number Series, Syllogisms, Profit & Loss"
                       }
                       value={aiFocusTopic}
@@ -1611,7 +3104,9 @@ export default function StageConfigurationPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-extrabold text-ink">
-                  {isAptitudeRound
+                  {isRapidRound
+                    ? "Active Rapid-Fire Speed Questions"
+                    : isAptitudeRound
                     ? activeSection === "mcq"
                       ? "Active Questions - Section 1: Multiple Choice (MCQ)"
                       : activeSection === "descriptive"
@@ -1624,7 +3119,7 @@ export default function StageConfigurationPage() {
                 <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   {displayedQuestions.length} {displayedQuestions.length === 1 ? "Question" : "Questions"}
                 </span>
-                {isAptitudeRound && activeSection !== "all" && (
+                {!isRapidRound && isAptitudeRound && activeSection !== "all" && (
                   <span className="text-[11px] text-ink-soft">
                     (Round Total: <strong>{questions.length}</strong>)
                   </span>
@@ -1635,7 +3130,10 @@ export default function StageConfigurationPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (isAptitudeRound && activeSection !== "all") {
+                    if (isRapidRound) {
+                      setManualType("rapid");
+                      setManualTimeLimitSeconds(rapidTimeLimitSeconds);
+                    } else if (isAptitudeRound && activeSection !== "all") {
                       setManualType(activeSection);
                     }
                     setShowManualModal(true);
@@ -1645,7 +3143,9 @@ export default function StageConfigurationPage() {
                   <Plus className="w-3.5 h-3.5 text-primary" />
                   <span>
                     + Add{" "}
-                    {isAptitudeRound && activeSection !== "all"
+                    {isRapidRound
+                      ? "Rapid Speed"
+                      : isAptitudeRound && activeSection !== "all"
                       ? activeSection === "mcq"
                         ? "MCQ"
                         : activeSection === "descriptive"
@@ -1661,9 +3161,11 @@ export default function StageConfigurationPage() {
                     type="button"
                     onClick={() => {
                       const sectionLabel =
-                        isAptitudeRound && activeSection !== "all" ? activeSection.toUpperCase() : "all";
+                        isRapidRound ? "Rapid Round" : (isAptitudeRound && activeSection !== "all" ? activeSection.toUpperCase() : "all");
                       if (confirm(`Clear ${sectionLabel} questions for this stage?`)) {
-                        if (isAptitudeRound && activeSection !== "all") {
+                        if (isRapidRound) {
+                          setQuestions([]);
+                        } else if (isAptitudeRound && activeSection !== "all") {
                           setQuestions((prev) => prev.filter((p) => getQuestionSection(p) !== activeSection));
                         } else {
                           setQuestions([]);
@@ -1672,11 +3174,34 @@ export default function StageConfigurationPage() {
                     }}
                     className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 hover:underline cursor-pointer pl-1"
                   >
-                    Clear {isAptitudeRound && activeSection !== "all" ? `${activeSection.toUpperCase()}` : "Active"} Questions
+                    Clear {isRapidRound ? "Rapid Round" : (isAptitudeRound && activeSection !== "all" ? `${activeSection.toUpperCase()}` : "Active")} Questions
                   </button>
                 )}
               </div>
             </div>
+
+            {/* If Rapid Round: Speed & Timing Directive Banner */}
+            {isRapidRound && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-150">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+                    <Zap className="w-4 h-4 fill-current" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-ink">Rapid-Fire Speed Round Active</p>
+                    <p className="text-[11px] text-ink-soft">
+                      Candidates will be evaluated under a strict {rapidTimeLimitSeconds}s per question countdown. Questions test practical speed and problem solving based on {jobTitleText || "the job profile"}, JD, and responsibilities.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{rapidTimeLimitSeconds}s Countdown</span>
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Explanatory Info Card: How 100+ Question Pools Work in Assessments */}
             <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-3">
@@ -1686,7 +3211,9 @@ export default function StageConfigurationPage() {
               <div className="text-xs space-y-1">
                 <p className="font-bold text-ink">Handling 100+ Question Banks & Anti-Cheating</p>
                 <p className="text-ink-soft leading-relaxed text-[11px]">
-                  You can keep 100+ questions across the 3 sections or pick only 10, 30, or 60. When you keep a large pool (e.g. 100 questions), our testing engine will automatically select a unique pseudo-random draw for each candidate based on their application ID. This prevents cheating and answer leakage across candidates!
+                  {isRapidRound
+                    ? "You can keep 100+ rapid-fire questions in your question bank or pick only 10, 30, or 60. When you keep a large pool (e.g. 100 questions), our testing engine will automatically select a unique pseudo-random draw for each candidate based on their application ID. This prevents cheating and answer leakage across candidates!"
+                    : "You can keep 100+ questions across the 3 sections or pick only 10, 30, or 60. When you keep a large pool (e.g. 100 questions), our testing engine will automatically select a unique pseudo-random draw for each candidate based on their application ID. This prevents cheating and answer leakage across candidates!"}
                 </p>
               </div>
             </div>
@@ -1698,10 +3225,14 @@ export default function StageConfigurationPage() {
               <FileQuestion className="w-10 h-10 text-ink-soft/40 mx-auto" />
               <div className="space-y-1">
                 <h4 className="text-sm font-bold text-ink">
-                  No {isAptitudeRound && activeSection !== "all" ? `${activeSection.toUpperCase()}` : ""} Questions Configured Yet
+                  {isRapidRound
+                    ? "No Rapid Round Speed Questions Configured Yet"
+                    : `No ${isAptitudeRound && activeSection !== "all" ? `${activeSection.toUpperCase()}` : ""} Questions Configured Yet`}
                 </h4>
                 <p className="text-xs text-ink-soft max-w-sm mx-auto">
-                  Click <strong>&quot;Generate with AI&quot;</strong> to auto-create questions, or add questions manually.
+                  {isRapidRound
+                    ? `Click "Generate with AI" to auto-create ${rapidTimeLimitSeconds}s speed questions grounded in the JD and responsibilities, or upload a question bank.`
+                    : 'Click "Generate with AI" to auto-create questions, or add questions manually.'}
                 </p>
               </div>
             </div>
@@ -1722,11 +3253,27 @@ export default function StageConfigurationPage() {
                         <div className="space-y-1">
                           <p className="text-xs font-bold text-ink leading-relaxed">{q.question}</p>
                           <div className="flex items-center gap-2">
-                            {isRapid ? (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 inline-flex items-center gap-1">
+                            {isRapidRound || isRapid ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const current = q.timeLimitSeconds || rapidTimeLimitSeconds || 30;
+                                  const input = prompt("Enter timer in seconds for this question:", String(current));
+                                  if (input !== null) {
+                                    const parsed = Math.max(5, parseInt(input) || 30);
+                                    setQuestions((prev) =>
+                                      prev.map((item) => (item.id === q.id ? { ...item, timeLimitSeconds: parsed } : item))
+                                    );
+                                    toast.success(`Updated timer for question #${idx + 1} to ${parsed}s!`);
+                                  }
+                                }}
+                                className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20 inline-flex items-center gap-1 cursor-pointer transition"
+                                title="Click to adjust timer for this individual question"
+                              >
                                 <Zap className="w-3 h-3 fill-current" />
-                                3. Rapid Round ({q.timeLimitSeconds || 30}s speed)
-                              </span>
+                                <span>{isRapidRound ? "Rapid Speed" : "3. Rapid Round"} ({q.timeLimitSeconds || rapidTimeLimitSeconds || 30}s speed)</span>
+                                <Edit3 className="w-2.5 h-2.5 opacity-60" />
+                              </button>
                             ) : isDescriptive ? (
                               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20 inline-flex items-center gap-1">
                                 <FileText className="w-3 h-3" />
@@ -1979,15 +3526,15 @@ export default function StageConfigurationPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <a
-            href={`/assessment/take?jobId=${jobId}&stageId=${stageId}&preview=true`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={handleOpenPreview}
             className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-surface border border-border hover:bg-surface-alt text-ink font-semibold text-xs transition cursor-pointer shadow-xs"
           >
+            <Eye className="w-3.5 h-3.5 text-purple-600" />
             <span>Preview Candidate Portal</span>
             <ExternalLink className="w-3.5 h-3.5 text-ink-soft" />
-          </a>
+          </button>
           <Link
             href={`/recruiter/jobs?jobId=${jobId}&tab=timeline`}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer"
@@ -2033,44 +3580,56 @@ export default function StageConfigurationPage() {
               {/* Type Switcher */}
               <div>
                 <label className="text-[11px] font-bold text-ink-soft block mb-1.5">Section / Question Type</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setManualType("mcq")}
-                    className={`py-2 px-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                      manualType === "mcq"
-                        ? "bg-primary/10 border-primary text-primary shadow-2xs"
-                        : "bg-surface-alt/40 border-border text-ink-soft hover:bg-surface-alt"
-                    }`}
-                  >
-                    <CheckSquare className="w-3.5 h-3.5" />
-                    <span>1. MCQ</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setManualType("descriptive")}
-                    className={`py-2 px-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                      manualType === "descriptive"
-                        ? "bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-300 shadow-2xs"
-                        : "bg-surface-alt/40 border-border text-ink-soft hover:bg-surface-alt"
-                    }`}
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>2. Descriptive</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setManualType("rapid")}
-                    className={`py-2 px-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                      manualType === "rapid"
-                        ? "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400 shadow-2xs"
-                        : "bg-surface-alt/40 border-border text-ink-soft hover:bg-surface-alt"
-                    }`}
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-current" />
-                    <span>3. Rapid Round</span>
-                  </button>
-                </div>
+                {isRapidRound ? (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                      <Zap className="w-4 h-4 fill-current" />
+                      <span className="text-xs font-black">Rapid-Fire Speed Question</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                      Dedicated Speed Round
+                    </span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setManualType("mcq")}
+                      className={`py-2 px-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                        manualType === "mcq"
+                          ? "bg-primary/10 border-primary text-primary shadow-2xs"
+                          : "bg-surface-alt/40 border-border text-ink-soft hover:bg-surface-alt"
+                      }`}
+                    >
+                      <CheckSquare className="w-3.5 h-3.5" />
+                      <span>1. MCQ</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualType("descriptive")}
+                      className={`py-2 px-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                        manualType === "descriptive"
+                          ? "bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-300 shadow-2xs"
+                          : "bg-surface-alt/40 border-border text-ink-soft hover:bg-surface-alt"
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>2. Descriptive</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualType("rapid")}
+                      className={`py-2 px-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                        manualType === "rapid"
+                          ? "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400 shadow-2xs"
+                          : "bg-surface-alt/40 border-border text-ink-soft hover:bg-surface-alt"
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      <span>3. Rapid Round</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Rapid Countdown Config */}
@@ -2255,223 +3814,7 @@ export default function StageConfigurationPage() {
       )}
 
       {/* Modal: View & Edit Role Blueprint Context (Title, Exp, Skills, JD, Responsibilities) */}
-      {isJdModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-surface border border-border rounded-3xl p-6 max-w-3xl w-full shadow-2xl space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-border pb-3 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
-                  <Sliders className="w-4 h-4 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-ink">
-                    Technical Test Role Blueprint Studio
-                  </h3>
-                  <p className="text-[11px] text-ink-soft">
-                    Review and customize the 5 core parameters used by AI to generate technical questions for this stage.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsJdModalOpen(false)}
-                className="p-1.5 rounded-lg text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs overflow-y-auto pr-1">
-              <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-[11px] space-y-1.5">
-                <p className="font-bold text-ink flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span>5-Tier AI Generation Calibration Order:</span>
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-ink-soft text-[11px] leading-relaxed">
-                  <div><strong>1. Job Title:</strong> Establishes domain &amp; industry terminology.</div>
-                  <div><strong>2. Experience:</strong> Calibrates difficulty &amp; architectural depth.</div>
-                  <div><strong>3. Job Description:</strong> Anchors problem space &amp; company context.</div>
-                  <div><strong>4. Key Responsibilities:</strong> Drives real-world deliverables testing.</div>
-                  <div className="sm:col-span-2"><strong>5. Skills Set:</strong> Dictates required languages, frameworks, databases, and tooling.</div>
-                </div>
-              </div>
-
-              {/* Row: Job Title & Experience */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* 1. Job Title */}
-                <div>
-                  <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
-                    <Briefcase className="w-3.5 h-3.5 text-primary" />
-                    <span>1. Target Job Title</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={jobTitleText}
-                    onChange={(e) => {
-                      setJobTitleText(e.target.value);
-                      setIsJdCustomized(true);
-                    }}
-                    placeholder="e.g. Senior Full Stack Engineer"
-                    className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                {/* 2. Experience Level & Presets */}
-                <div>
-                  <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-amber-500" />
-                    <span>2. Target Experience Level &amp; Seniority</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={jobExperienceText}
-                    onChange={(e) => {
-                      setJobExperienceText(e.target.value);
-                      setIsJdCustomized(true);
-                    }}
-                    placeholder="e.g. 5+ years (Senior Level)"
-                    className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary font-semibold mb-1.5"
-                  />
-                  <div className="flex flex-wrap items-center gap-1">
-                    <span className="text-[10px] text-ink-soft mr-1 font-medium">Quick presets:</span>
-                    {[
-                      "0-2 years (Junior / Entry)",
-                      "3-5 years (Mid-Level)",
-                      "5-8 years (Senior)",
-                      "8+ years (Lead / Architect)",
-                    ].map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => {
-                          setJobExperienceText(preset);
-                          setIsJdCustomized(true);
-                        }}
-                        className={`text-[10px] px-2 py-0.5 rounded-md border transition cursor-pointer ${
-                          jobExperienceText === preset
-                            ? "bg-primary text-white border-primary font-bold"
-                            : "bg-surface hover:bg-surface-alt border-border text-ink-soft"
-                        }`}
-                      >
-                        {preset.split(" ")[0]} {preset.includes("Junior") ? "Junior" : preset.includes("Mid") ? "Mid" : preset.includes("Senior") ? "Senior" : "Lead"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* 5. Required Skills & Tech Stack */}
-              <div>
-                <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
-                  <Code2 className="w-3.5 h-3.5 text-purple-600" />
-                  <span>5. Skills Set &amp; Tech Stack (Comma separated)</span>
-                </label>
-                <input
-                  type="text"
-                  value={jobSkillsText}
-                  onChange={(e) => {
-                    setJobSkillsText(e.target.value);
-                    setIsJdCustomized(true);
-                  }}
-                  placeholder="e.g. React, Node.js, TypeScript, PostgreSQL, Docker, AWS, GraphQL"
-                  className="w-full bg-surface-alt/40 border border-border rounded-xl px-3 py-2 text-xs text-ink outline-none focus:border-primary"
-                />
-                {jobSkillsText && (
-                  <div className="flex flex-wrap items-center gap-1 pt-1.5">
-                    {jobSkillsText
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                      .map((sk, sidx) => (
-                        <span
-                          key={sidx}
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
-                        >
-                          {sk}
-                        </span>
-                      ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 3. Job Description Textarea */}
-              <div>
-                <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-ink-soft" />
-                  <span>3. Job Description (Role Scope, Architecture &amp; Context)</span>
-                </label>
-                <textarea
-                  rows={4}
-                  value={jobDescriptionText}
-                  onChange={(e) => {
-                    setJobDescriptionText(e.target.value);
-                    setIsJdCustomized(true);
-                  }}
-                  placeholder="Paste or edit the job description..."
-                  className="w-full bg-surface-alt/40 border border-border rounded-xl p-3 text-xs text-ink outline-none focus:border-primary placeholder:text-ink-soft/50 font-normal leading-relaxed"
-                />
-              </div>
-
-              {/* 4. Key Responsibilities Textarea */}
-              <div>
-                <label className="text-[11px] font-bold text-ink-soft block mb-1 flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-ink-soft" />
-                  <span>4. Key Responsibilities &amp; Deliverables (One per line)</span>
-                </label>
-                <textarea
-                  rows={4}
-                  value={jobResponsibilitiesText}
-                  onChange={(e) => {
-                    setJobResponsibilitiesText(e.target.value);
-                    setIsJdCustomized(true);
-                  }}
-                  placeholder={"e.g. Design and implement microservices in Node.js\nOptimize PostgreSQL database queries and indexes\nBuild responsive UI in React & Tailwind..."}
-                  className="w-full bg-surface-alt/40 border border-border rounded-xl p-3 text-xs text-ink outline-none focus:border-primary placeholder:text-ink-soft/50 font-normal leading-relaxed font-mono"
-                />
-              </div>
-
-              {/* Modal Action Buttons */}
-              <div className="flex items-center justify-between pt-3 border-t border-border shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setJobTitleText(originalJobTitle);
-                    setJobExperienceText(originalJobExperience);
-                    setJobSkillsText(originalJobSkills);
-                    setJobDescriptionText(originalJobDescription);
-                    setJobResponsibilitiesText(originalJobResponsibilities);
-                    setIsJdCustomized(false);
-                    toast.info("Reset to original Job Post parameters.");
-                  }}
-                  className="text-xs text-ink-soft hover:text-ink font-semibold cursor-pointer"
-                >
-                  Reset to Original Job Post
-                </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsJdModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-ink-soft hover:bg-surface-alt transition cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsJdModalOpen(false);
-                      toast.success("Applied Role Blueprint context to AI question generation!");
-                    }}
-                    className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Apply Blueprint &amp; Done</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderRoleBlueprintModal()}
     </div>
   );
 }

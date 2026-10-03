@@ -18,6 +18,8 @@ import {
   Sparkles,
   HelpCircle,
   RefreshCw,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { domainAssessmentService } from "@/features/domainAssessment/services/domainAssessmentService";
@@ -36,6 +38,28 @@ export default function CandidatePreviewAssessmentPage() {
   const [simulatedTime, setSimulatedTime] = useState<number>(3600);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showScorecardModal, setShowScorecardModal] = useState(false);
+
+  // Theme state: 'dark' | 'light'
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("letgetin_test_theme") as "dark" | "light" | null;
+      if (savedTheme === "light" || savedTheme === "dark") {
+        setTheme(savedTheme);
+      }
+    } catch {}
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem("letgetin_test_theme", next);
+      } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -117,7 +141,7 @@ export default function CandidatePreviewAssessmentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-alt/20 flex flex-col justify-between">
+    <div className={`min-h-screen flex flex-col justify-between transition-colors duration-200 ${theme === "dark" ? "portal-dark dark bg-slate-950 text-slate-100" : "portal-light bg-slate-50 text-slate-900"}`}>
       {/* Top Preview Banner */}
       <div className="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-amber-800 dark:text-amber-200">
         <div className="flex items-center gap-2 font-medium">
@@ -136,33 +160,56 @@ export default function CandidatePreviewAssessmentPage() {
       </div>
 
       {/* Test Interface Header */}
-      <div className="bg-surface border-b border-border/80 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-brand text-primary-foreground flex items-center justify-center font-bold text-sm shadow-glow">
+      <div className="bg-slate-900/90 border-b border-slate-800 px-4 sm:px-6 py-2.5 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md gap-2 sm:gap-4 relative">
+        {/* Left: Assessment Info */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-brand text-primary-foreground flex items-center justify-center font-bold text-sm shadow-glow shrink-0">
             🧪
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-ink">{assessment.title}</h1>
-            <p className="text-[11px] text-ink-soft">
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold text-white line-clamp-1">{assessment.title}</h1>
+            <p className="text-[11px] text-slate-400 truncate">
               Question {currentIdx + 1} of {assessment.questions.length} • Domain: {assessment.domain}
             </p>
           </div>
         </div>
 
-        {/* Live Timer Demo */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-alt border border-border text-xs font-mono font-bold text-ink">
+        {/* Middle: Centered Countdown Timer */}
+        <div className="shrink-0 flex items-center justify-center px-1 sm:px-4">
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-2xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm font-mono font-black text-slate-100 shadow-sm">
             <Clock className="w-4 h-4 text-primary-glow" />
-            <span>{formatTimer(simulatedTime)}</span>
+            <span className="tracking-wider">{formatTimer(simulatedTime)}</span>
+            <span className="text-[10px] text-slate-400 hidden md:inline font-sans font-medium uppercase tracking-wider pl-1 border-l border-slate-700">
+              Simulated
+            </span>
           </div>
+        </div>
+
+        {/* Right: Theme Toggle & Finish Test Button */}
+        <div className="flex items-center justify-end gap-2.5 sm:gap-3 flex-1 min-w-0">
+          {/* Light / Dark Mode Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer flex items-center justify-center shrink-0"
+            aria-label="Toggle light and dark mode"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-indigo-400" />
+            )}
+          </button>
 
           <button
             type="button"
             onClick={() => setShowSubmitModal(true)}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-brand text-primary-foreground text-xs font-bold rounded-xl shadow-glow hover:scale-105 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 bg-gradient-brand text-primary-foreground text-xs font-bold rounded-xl shadow-glow hover:scale-105 transition cursor-pointer shrink-0"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Finish Test</span>
+            <span className="hidden sm:inline">Finish Test</span>
+            <span className="sm:hidden">Finish</span>
           </button>
         </div>
       </div>

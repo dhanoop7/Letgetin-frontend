@@ -622,26 +622,53 @@ export default function JobDetailPage() {
               const roundId = (roundStageId || "").toLowerCase();
               const roundName = (round.name || "").toLowerCase();
 
+              const isAiChat =
+                roundType === "ai_chat" ||
+                roundId.includes("ai_chat") ||
+                roundName.includes("ai chat") ||
+                (roundName.includes("chat") && (roundType.includes("ai") || roundName.includes("ai")));
+
+              const isAiVoice =
+                roundType === "ai_voice" ||
+                roundId.includes("ai_voice") ||
+                roundName.includes("ai voice") ||
+                (roundName.includes("voice") && (roundType.includes("ai") || roundName.includes("ai")));
+
+              const isAiAssessment =
+                isAiChat ||
+                isAiVoice ||
+                roundType === "ai_assessment" ||
+                roundType === "ai_interview" ||
+                roundId.includes("ai_assessment") ||
+                roundName.includes("ai assessment") ||
+                roundName.includes("ai interview");
+
               const isOnlineTest =
-                roundType === "general_aptitude" ||
-                roundType === "technical_test" ||
-                roundType === "rapid_round" ||
-                roundId.includes("general_aptitude") ||
-                roundId.includes("technical_test") ||
-                roundId.includes("rapid_round") ||
-                roundName.includes("aptitude") ||
-                roundName.includes("technical test") ||
-                roundName.includes("rapid round") ||
-                roundName.includes("online test");
+                !isAiAssessment &&
+                (roundType === "general_aptitude" ||
+                  roundType === "technical_test" ||
+                  roundType === "rapid_round" ||
+                  roundId.includes("general_aptitude") ||
+                  roundId.includes("technical_test") ||
+                  roundId.includes("rapid_round") ||
+                  roundName.includes("aptitude") ||
+                  roundName.includes("technical test") ||
+                  roundName.includes("rapid round") ||
+                  roundName.includes("online test"));
 
               const isInterview =
-                roundType.includes("interview") ||
-                roundId.includes("interview") ||
-                roundName.includes("interview");
+                !isAiAssessment &&
+                (roundType.includes("interview") ||
+                  roundId.includes("interview") ||
+                  roundName.includes("interview"));
 
               const isConfigured = Boolean(
                 round.config?.isConfigured ||
                   (Array.isArray(round.config?.customQuestions) && round.config.customQuestions.length > 0)
+              );
+              const isAiConfigured = Boolean(
+                round.config?.isConfigured ||
+                  (Array.isArray(round.config?.modalities) && round.config.modalities.length > 0)
               );
               const qCount = round.config?.customQuestions?.length || round.config?.totalQuestions || 0;
 
@@ -660,7 +687,19 @@ export default function JobDetailPage() {
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-glow border border-primary/20 capitalize">
                           {round.type?.replace(/_/g, " ")}
                         </span>
-                        {isOnlineTest ? (
+                        {isAiAssessment ? (
+                          isAiConfigured ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-600 border border-violet-500/20 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-violet-600" />
+                              <span>Configured ({isAiChat ? "Chat" : isAiVoice ? "Voice" : ((round.config?.modalities as string[]) || ["chat", "voice"]).join(" + ")})</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                              <span>{isAiChat ? "Chat Settings Pending" : isAiVoice ? "Voice Settings Pending" : "AI Settings Pending"}</span>
+                            </span>
+                          )
+                        ) : isOnlineTest ? (
                           isConfigured ? (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -694,7 +733,32 @@ export default function JobDetailPage() {
                     </div>
                   </div>
 
-                  {isOnlineTest ? (
+                  {isAiAssessment ? (
+                    <Link
+                      href={`/recruiter/jobs/${jobId}/stages/${roundStageId}/configure`}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+                        isAiConfigured
+                          ? "bg-surface border border-violet-500/30 hover:bg-violet-500/10 text-violet-700"
+                          : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-95 text-white shadow-md animate-pulse"
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>
+                        {isAiConfigured
+                          ? isAiChat
+                            ? "Edit AI Chat"
+                            : isAiVoice
+                            ? "Edit AI Voice"
+                            : "Edit AI Assessment"
+                          : isAiChat
+                          ? "Configure AI Chat"
+                          : isAiVoice
+                          ? "Configure AI Voice"
+                          : "Configure AI Assessment"}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : isOnlineTest ? (
                     <Link
                       href={`/recruiter/jobs/${jobId}/stages/${roundStageId}/configure`}
                       className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${

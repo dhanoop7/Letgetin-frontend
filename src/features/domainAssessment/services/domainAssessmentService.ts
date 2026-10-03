@@ -8,6 +8,10 @@ import {
   AssessmentAttempt,
   AssessmentResultsResponse,
   AttemptEvaluation,
+  ChatTurnInput,
+  ChatTurnOutput,
+  EvaluateChatSessionInput,
+  ChatSessionEvaluation,
 } from '../types';
 
 export const domainAssessmentService = {
@@ -162,6 +166,22 @@ export const domainAssessmentService = {
    */
   async getAssessmentResults(id: string): Promise<AssessmentResultsResponse> {
     const res: any = await apiClient.get(`/domain-assessments/${id}/results`);
+    return res.data;
+  },
+
+  /**
+   * Candidate / Recruiter: Process turn in AI Chat Assessment
+   */
+  async chatTurn(input: ChatTurnInput): Promise<ChatTurnOutput> {
+    const res: any = await apiClient.post('/domain-assessments/chat-turn', input);
+    return res.data;
+  },
+
+  /**
+   * Candidate / Recruiter: Strictly evaluate full AI Chat Assessment session
+   */
+  async evaluateChatSession(input: EvaluateChatSessionInput): Promise<ChatSessionEvaluation> {
+    const res: any = await apiClient.post('/domain-assessments/evaluate-chat-session', input);
     return res.data;
   },
 };

@@ -21,6 +21,8 @@ import {
   Check,
   HelpCircle,
   Loader2,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { domainAssessmentService } from "@/features/domainAssessment/services/domainAssessmentService";
@@ -55,6 +57,28 @@ export default function CandidateAssessmentTakePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState<AttemptEvaluation | null>(null);
+
+  // Theme state: 'dark' | 'light'
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("letgetin_test_theme") as "dark" | "light" | null;
+      if (savedTheme === "light" || savedTheme === "dark") {
+        setTheme(savedTheme);
+      }
+    } catch {}
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem("letgetin_test_theme", next);
+      } catch {}
+      return next;
+    });
+  };
 
   // Initial Assessment details fetch for Onboarding
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -199,7 +223,7 @@ export default function CandidateAssessmentTakePage() {
   // 1. ONBOARDING LANDING PHASE
   if (phase === "onboarding") {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-6 md:p-12">
+      <div className={`min-h-screen flex flex-col justify-between p-6 md:p-12 transition-colors duration-200 ${theme === "dark" ? "portal-dark dark bg-slate-950 text-slate-100" : "portal-light bg-slate-50 text-slate-900"}`}>
         {/* Brand header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-5">
           <div className="flex items-center gap-3">
@@ -212,8 +236,23 @@ export default function CandidateAssessmentTakePage() {
             </div>
           </div>
 
-          <div className="text-xs text-slate-400">
-            Secure Candidate Testing Session
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Secure Candidate Testing Session
+            </span>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              className="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer flex items-center justify-center shrink-0"
+              aria-label="Toggle light and dark mode"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-indigo-400" />
+              )}
+            </button>
           </div>
         </div>
 
@@ -305,7 +344,7 @@ export default function CandidateAssessmentTakePage() {
     const scorePct = evaluationResult?.percentage ?? 0;
 
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-6 md:p-12">
+      <div className={`min-h-screen flex flex-col justify-between p-6 md:p-12 transition-colors duration-200 ${theme === "dark" ? "portal-dark dark bg-slate-950 text-slate-100" : "portal-light bg-slate-50 text-slate-900"}`}>
         <div className="flex items-center justify-between border-b border-slate-800 pb-5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-base">
@@ -313,7 +352,22 @@ export default function CandidateAssessmentTakePage() {
             </div>
             <span className="font-extrabold tracking-tight text-white">LetGetIn Assessment</span>
           </div>
-          <span className="text-xs text-emerald-400 font-bold">Evaluation Complete</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-emerald-400 font-bold">Evaluation Complete</span>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              className="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer flex items-center justify-center shrink-0"
+              aria-label="Toggle light and dark mode"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-indigo-400" />
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="max-w-2xl mx-auto w-full my-auto py-8">
@@ -427,23 +481,43 @@ export default function CandidateAssessmentTakePage() {
   const answeredCount = Object.keys(answers).filter((k) => (answers[k] || "").trim().length > 0).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
+    <div className={`min-h-screen flex flex-col justify-between transition-colors duration-200 ${theme === "dark" ? "portal-dark dark bg-slate-950 text-slate-100" : "portal-light bg-slate-50 text-slate-900"}`}>
       {/* Top Test Session Header */}
-      <div className="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-sm">
+      <div className="bg-slate-900/90 border-b border-slate-800 px-4 sm:px-6 py-2.5 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md gap-2 sm:gap-4 relative">
+        {/* Left: Assessment Title & Candidate */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-sm shrink-0">
             L
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-sm font-bold text-white line-clamp-1">{assessmentMeta?.title}</h1>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-400 truncate">
               Question {currentIdx + 1} of {questions.length} • Candidate: {candidateName}
             </p>
           </div>
         </div>
 
-        {/* Timer & Controls */}
-        <div className="flex items-center gap-4">
+        {/* Middle: Centered Countdown Timer */}
+        <div className="shrink-0 flex items-center justify-center px-1 sm:px-4">
+          <div
+            className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-2xl border text-xs sm:text-sm font-mono font-black transition-colors ${
+              timeRemainingSeconds < 300
+                ? "bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse scale-105"
+                : timeRemainingSeconds < 600
+                ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                : "bg-slate-950 text-slate-200 border-slate-800"
+            }`}
+          >
+            <Clock className="w-4 h-4 text-emerald-400" />
+            <span className="tracking-wider">{formatTimer(timeRemainingSeconds)}</span>
+            <span className="text-[10px] text-slate-400 hidden md:inline font-sans font-medium uppercase tracking-wider pl-1 border-l border-slate-700">
+              Remaining
+            </span>
+          </div>
+        </div>
+
+        {/* Right: Controls & Light/Dark Mode */}
+        <div className="flex items-center justify-end gap-2.5 sm:gap-3 flex-1 min-w-0">
           {/* Auto-save indicator */}
           <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
             {isAutoSaving ? (
@@ -459,27 +533,29 @@ export default function CandidateAssessmentTakePage() {
             )}
           </div>
 
-          {/* Countdown Timer */}
-          <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-colors ${
-              timeRemainingSeconds < 300
-                ? "bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse"
-                : timeRemainingSeconds < 600
-                ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                : "bg-slate-950 text-slate-200 border-slate-800"
-            }`}
+          {/* Theme Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="p-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer flex items-center justify-center shrink-0"
+            aria-label="Toggle light and dark mode"
           >
-            <Clock className="w-4 h-4 text-emerald-400" />
-            <span>{formatTimer(timeRemainingSeconds)}</span>
-          </div>
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-indigo-400" />
+            )}
+          </button>
 
           <button
             type="button"
             onClick={() => setShowSubmitModal(true)}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-emerald-500/20 hover:scale-105 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-emerald-500/20 hover:scale-105 transition cursor-pointer shrink-0"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Submit Test</span>
+            <span className="hidden sm:inline">Submit Test</span>
+            <span className="sm:hidden">Submit</span>
           </button>
         </div>
       </div>

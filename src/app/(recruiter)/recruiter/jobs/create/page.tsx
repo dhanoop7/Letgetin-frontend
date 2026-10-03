@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Check,
   Loader2,
@@ -223,19 +224,32 @@ export default function CreateJobPage() {
   const [domainSpecificQuestions, setDomainSpecificQuestions] = useState(10);
   const [domainCustomQuestions, setDomainCustomQuestions] = useState<CustomQuestionItem[]>([]);
 
-  // Assessment Section (AI Assessment with Voice, Chat, Video; Domain, Skills, Technical; Rapid Question Round with AI/Manual Online Interview)
-  type AssessmentModality = "voice" | "chat" | "video";
+  // Assessment Section Rounds: AI Chat Assessment, AI Voice Assessment, Domain, Skills, Technical, Rapid Question Round
   type RapidInterviewMode = "ai_online_interview" | "manual_online_interview";
 
-  const [assessmentAiEnabled, setAssessmentAiEnabled] = useState(false);
-  const [assessmentAiModalities, setAssessmentAiModalities] = useState<AssessmentModality[]>(["voice", "chat", "video"]);
-  const [assessmentAiSchedule, setAssessmentAiSchedule] = useState<RoundSchedule>({
+  // 1. AI Chat Assessment Round
+  const [assessmentAiChatEnabled, setAssessmentAiChatEnabled] = useState(false);
+  const [assessmentAiChatQuestionCount, setAssessmentAiChatQuestionCount] = useState(8);
+  const [assessmentAiChatDifficulty, setAssessmentAiChatDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  const [assessmentAiChatSchedule, setAssessmentAiChatSchedule] = useState<RoundSchedule>({
     date: "",
     startTime: "14:00",
     endTime: "14:45",
   });
-  const [assessmentAiDuration, setAssessmentAiDuration] = useState(45);
-  const [assessmentAiPassScore, setAssessmentAiPassScore] = useState(70);
+  const [assessmentAiChatDuration, setAssessmentAiChatDuration] = useState(45);
+  const [assessmentAiChatPassScore, setAssessmentAiChatPassScore] = useState(70);
+
+  // 2. AI Voice Assessment Round
+  const [assessmentAiVoiceEnabled, setAssessmentAiVoiceEnabled] = useState(false);
+  const [assessmentAiVoiceQuestionCount, setAssessmentAiVoiceQuestionCount] = useState(6);
+  const [assessmentAiVoiceDifficulty, setAssessmentAiVoiceDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  const [assessmentAiVoiceSchedule, setAssessmentAiVoiceSchedule] = useState<RoundSchedule>({
+    date: "",
+    startTime: "15:00",
+    endTime: "15:30",
+  });
+  const [assessmentAiVoiceDuration, setAssessmentAiVoiceDuration] = useState(30);
+  const [assessmentAiVoicePassScore, setAssessmentAiVoicePassScore] = useState(70);
 
   const [assessmentDomainEnabled, setAssessmentDomainEnabled] = useState(false);
   const [assessmentDomainSchedule, setAssessmentDomainSchedule] = useState<RoundSchedule>({
@@ -274,19 +288,6 @@ export default function CreateJobPage() {
   const [assessmentRapidDuration, setAssessmentRapidDuration] = useState(20);
   const [assessmentRapidPassScore, setAssessmentRapidPassScore] = useState(65);
 
-  const toggleModality = (
-    current: AssessmentModality[],
-    setter: React.Dispatch<React.SetStateAction<AssessmentModality[]>>,
-    modality: AssessmentModality
-  ) => {
-    if (current.includes(modality)) {
-      if (current.length > 1) {
-        setter(current.filter((m) => m !== modality));
-      }
-    } else {
-      setter([...current, modality]);
-    }
-  };
 
   // Custom question modal state
   const [customQuestionModalTarget, setCustomQuestionModalTarget] = useState<"ai_online_test" | "ai_assessment" | null>(null);
@@ -646,7 +647,8 @@ export default function CreateJobPage() {
       setTechnicalInterviewEnabled(true);
       setVideoInterviewEnabled(true);
       setDomainSpecificEnabled(true);
-      setAssessmentAiEnabled(true);
+      setAssessmentAiChatEnabled(true);
+      setAssessmentAiVoiceEnabled(true);
     } else if (type === "funnel") {
       setMinimumIntake(8);
       setIdealIntake(15);
@@ -725,14 +727,26 @@ export default function CreateJobPage() {
       }
     }
 
-    if (assessmentAiEnabled) {
-      const timing = calculateRoundHours(assessmentAiSchedule.startTime, assessmentAiSchedule.endTime);
-      const scheduleTag = assessmentAiSchedule.date
-        ? ` (${assessmentAiSchedule.date}, ${assessmentAiSchedule.startTime}-${assessmentAiSchedule.endTime} • ${timing.hours > 0 ? `${timing.hours}h` : `${assessmentAiDuration}m`})`
-        : ` (${assessmentAiDuration}m)`;
+    if (assessmentAiChatEnabled) {
+      const timing = calculateRoundHours(assessmentAiChatSchedule.startTime, assessmentAiChatSchedule.endTime);
+      const scheduleTag = assessmentAiChatSchedule.date
+        ? ` (${assessmentAiChatSchedule.date}, ${assessmentAiChatSchedule.startTime}-${assessmentAiChatSchedule.endTime} • ${timing.hours > 0 ? `${timing.hours}h` : `${assessmentAiChatDuration}m`})`
+        : ` (${assessmentAiChatDuration}m)`;
       lines.push({
-        key: "assessment:aiAssessment",
-        label: `Assessment: AI Assessment [${assessmentAiModalities.map((m) => m.toUpperCase()).join("/")}]${scheduleTag}`,
+        key: "assessment:aiChat",
+        label: `Assessment: AI Chat Assessment${scheduleTag}`,
+        cost: subOptionCost,
+      });
+    }
+
+    if (assessmentAiVoiceEnabled) {
+      const timing = calculateRoundHours(assessmentAiVoiceSchedule.startTime, assessmentAiVoiceSchedule.endTime);
+      const scheduleTag = assessmentAiVoiceSchedule.date
+        ? ` (${assessmentAiVoiceSchedule.date}, ${assessmentAiVoiceSchedule.startTime}-${assessmentAiVoiceSchedule.endTime} • ${timing.hours > 0 ? `${timing.hours}h` : `${assessmentAiVoiceDuration}m`})`
+        : ` (${assessmentAiVoiceDuration}m)`;
+      lines.push({
+        key: "assessment:aiVoice",
+        label: `Assessment: AI Voice Assessment${scheduleTag}`,
         cost: subOptionCost,
       });
     }
@@ -901,10 +915,12 @@ export default function CreateJobPage() {
     domainSpecificEnabled,
     domainSpecificSchedule,
     domainSpecificDuration,
-    assessmentAiEnabled,
-    assessmentAiModalities,
-    assessmentAiSchedule,
-    assessmentAiDuration,
+    assessmentAiChatEnabled,
+    assessmentAiChatSchedule,
+    assessmentAiChatDuration,
+    assessmentAiVoiceEnabled,
+    assessmentAiVoiceSchedule,
+    assessmentAiVoiceDuration,
     assessmentDomainEnabled,
     assessmentDomainSchedule,
     assessmentDomainDuration,
@@ -1039,26 +1055,79 @@ export default function CreateJobPage() {
     }
 
     // Assessment Section Rounds
-    if (assessmentAiEnabled) {
-      const timing = calculateRoundHours(assessmentAiSchedule.startTime, assessmentAiSchedule.endTime);
+    // 1. AI Chat Assessment Round
+    if (assessmentAiChatEnabled) {
+      const timing = calculateRoundHours(assessmentAiChatSchedule.startTime, assessmentAiChatSchedule.endTime);
       rounds.push({
-        id: "round_ai_assessment",
-        type: "ai_assessment",
+        id: "round_ai_chat",
+        type: "ai_chat",
         order: rounds.length + 1,
-        name: "AI Assessment",
+        name: "AI Chat Assessment",
         enabled: true,
-        date: assessmentAiSchedule.date || undefined,
-        startTime: assessmentAiSchedule.startTime || undefined,
-        endTime: assessmentAiSchedule.endTime || undefined,
+        date: assessmentAiChatSchedule.date || undefined,
+        startTime: assessmentAiChatSchedule.startTime || undefined,
+        endTime: assessmentAiChatSchedule.endTime || undefined,
         durationHours: timing.hours > 0 ? timing.hours : undefined,
         config: {
-          modalities: assessmentAiModalities,
-          durationMinutes: assessmentAiDuration,
-          passingScore: assessmentAiPassScore,
+          modality: "chat",
+          modalities: ["chat"],
+          durationMinutes: assessmentAiChatDuration,
+          questionCount: assessmentAiChatQuestionCount,
+          difficulty: assessmentAiChatDifficulty,
+          passingScore: assessmentAiChatPassScore,
+          customQuestions: roundQuestionsMap["round_ai_chat"] || undefined,
+          topics: roundQuestionsMap["round_ai_chat"]?.length
+            ? roundQuestionsMap["round_ai_chat"].map((q) => q.question)
+            : [
+                "System State Management, Concurrency & Data Flow Patterns",
+                "API Contract Design, Schema Validation & Database Query Optimization",
+                "Asynchronous Workflows, Memory Leak Prevention & Error Boundaries",
+                "Automated Testing Strategy, CI/CD Pipeline & Production Resilience",
+              ],
           schedule: {
-            date: assessmentAiSchedule.date,
-            startTime: assessmentAiSchedule.startTime,
-            endTime: assessmentAiSchedule.endTime,
+            date: assessmentAiChatSchedule.date,
+            startTime: assessmentAiChatSchedule.startTime,
+            endTime: assessmentAiChatSchedule.endTime,
+            durationHours: timing.hours,
+            durationFormatted: timing.formatted,
+          },
+        },
+      });
+    }
+
+    // 2. AI Voice Assessment Round
+    if (assessmentAiVoiceEnabled) {
+      const timing = calculateRoundHours(assessmentAiVoiceSchedule.startTime, assessmentAiVoiceSchedule.endTime);
+      rounds.push({
+        id: "round_ai_voice",
+        type: "ai_voice",
+        order: rounds.length + 1,
+        name: "AI Voice Assessment",
+        enabled: true,
+        date: assessmentAiVoiceSchedule.date || undefined,
+        startTime: assessmentAiVoiceSchedule.startTime || undefined,
+        endTime: assessmentAiVoiceSchedule.endTime || undefined,
+        durationHours: timing.hours > 0 ? timing.hours : undefined,
+        config: {
+          modality: "voice",
+          modalities: ["voice"],
+          durationMinutes: assessmentAiVoiceDuration,
+          questionCount: assessmentAiVoiceQuestionCount,
+          difficulty: assessmentAiVoiceDifficulty,
+          passingScore: assessmentAiVoicePassScore,
+          customQuestions: roundQuestionsMap["round_ai_voice"] || undefined,
+          topics: roundQuestionsMap["round_ai_voice"]?.length
+            ? roundQuestionsMap["round_ai_voice"].map((q) => q.question)
+            : [
+                "Verbal Architecture Walkthrough & System Scalability Trade-offs",
+                "Live Production Outage Verbal Triage & Root Cause Articulation",
+                "Engineering Leadership, Resolving Technical Disagreements & Mentorship",
+                "Communicating Technical Debt & Architectural Decisions to Non-Technical Stakeholders",
+              ],
+          schedule: {
+            date: assessmentAiVoiceSchedule.date,
+            startTime: assessmentAiVoiceSchedule.startTime,
+            endTime: assessmentAiVoiceSchedule.endTime,
             durationHours: timing.hours,
             durationFormatted: timing.formatted,
           },
@@ -2845,31 +2914,31 @@ export default function CreateJobPage() {
                     </div>
 
                     <p className="text-xs text-ink-soft">
-                      Comprehensive evaluation rounds covering AI Assessment (Voice, Chat, Video), Domain, Skills, Technical, and Rapid Question Round (AI or Manual Online Interview).
+                      Comprehensive evaluation rounds covering AI Chat Assessment, AI Voice Assessment, Domain, Skills, Technical, and Rapid Question Round.
                     </p>
 
                     <div className="space-y-3.5">
-                      {/* 1. AI Assessment */}
+                      {/* 1. AI Chat Assessment Round */}
                       <div
                         className={`rounded-xl border transition ${
-                          assessmentAiEnabled ? "border-primary/40 bg-primary/5 p-4" : "border-border bg-surface-alt/40 p-4"
+                          assessmentAiChatEnabled ? "border-blue-500/40 bg-blue-500/5 p-4 shadow-xs" : "border-border bg-surface-alt/40 p-4"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <label className="flex items-start gap-3 cursor-pointer select-none flex-1 min-w-0">
                             <input
                               type="checkbox"
-                              checked={assessmentAiEnabled}
-                              onChange={(e) => setAssessmentAiEnabled(e.target.checked)}
-                              className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary/30 cursor-pointer"
+                              checked={assessmentAiChatEnabled}
+                              onChange={(e) => setAssessmentAiChatEnabled(e.target.checked)}
+                              className="mt-1 w-4 h-4 rounded text-blue-600 focus:ring-blue-500/30 cursor-pointer"
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
-                                  <Sparkles className="w-4 h-4 text-purple-500" />
-                                  <span className="text-sm font-bold text-ink">AI Assessment</span>
-                                  <span className="text-[10px] font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded-full">
-                                    Multi-Modal
+                                  <MessageSquare className="w-4 h-4 text-blue-500" />
+                                  <span className="text-sm font-bold text-ink">AI Chat Assessment</span>
+                                  <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-full">
+                                    Conversational Chat Round
                                   </span>
                                 </div>
                                 <span className="text-[10px] font-bold text-primary-glow bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
@@ -2877,75 +2946,55 @@ export default function CreateJobPage() {
                                 </span>
                               </div>
                               <p className="text-xs text-ink-soft mt-0.5">
-                                Conversational AI assessment testing candidate problem-solving, cognitive reasoning, and situational scenarios.
+                                Dedicated interactive text-based chat interview with real-time AI evaluation, code/syntax input, and turn-by-turn probing.
                               </p>
                             </div>
                           </label>
                         </div>
 
-                        {assessmentAiEnabled && (
+                        {assessmentAiChatEnabled && (
                           <div className="mt-4 pt-3 border-t border-border/70 space-y-3.5">
-                            {/* Modalities: Voice, Chat, Video */}
-                            <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <span className="text-xs font-semibold text-ink">Interaction Modes:</span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleModality(assessmentAiModalities, setAssessmentAiModalities, "voice")}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                                    assessmentAiModalities.includes("voice")
-                                      ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-xs"
-                                      : "bg-surface-alt/60 border border-border text-ink-soft hover:text-ink"
-                                  }`}
-                                >
-                                  <Mic className="w-3.5 h-3.5" />
-                                  Voice
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleModality(assessmentAiModalities, setAssessmentAiModalities, "chat")}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                                    assessmentAiModalities.includes("chat")
-                                      ? "bg-blue-500/15 border border-blue-500/40 text-blue-700 dark:text-blue-300 shadow-xs"
-                                      : "bg-surface-alt/60 border border-border text-ink-soft hover:text-ink"
-                                  }`}
-                                >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                  Chat
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleModality(assessmentAiModalities, setAssessmentAiModalities, "video")}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                                    assessmentAiModalities.includes("video")
-                                      ? "bg-purple-500/15 border border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-xs"
-                                      : "bg-surface-alt/60 border border-border text-ink-soft hover:text-ink"
-                                  }`}
-                                >
-                                  <Video className="w-3.5 h-3.5" />
-                                  Video
-                                </button>
-                              </div>
-                            </div>
-
                             <RoundScheduleSelector
-                              label="AI Assessment Schedule & Timing"
-                              schedule={assessmentAiSchedule}
-                              onChange={setAssessmentAiSchedule}
-                              onDurationChange={(mins) => setAssessmentAiDuration(mins)}
+                              label="AI Chat Assessment Schedule & Timing"
+                              schedule={assessmentAiChatSchedule}
+                              onChange={setAssessmentAiChatSchedule}
+                              onDurationChange={(mins) => setAssessmentAiChatDuration(mins)}
                             />
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                               <div>
-                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Session Duration (mins)</label>
+                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Duration (mins)</label>
                                 <input
                                   type="number"
-                                  min={15}
+                                  min={10}
                                   max={120}
-                                  value={assessmentAiDuration}
-                                  onChange={(e) => setAssessmentAiDuration(Math.max(15, parseInt(e.target.value) || 15))}
+                                  value={assessmentAiChatDuration}
+                                  onChange={(e) => setAssessmentAiChatDuration(Math.max(10, parseInt(e.target.value) || 10))}
                                   className="input-base text-xs py-1.5"
                                 />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Questions / Topics</label>
+                                <input
+                                  type="number"
+                                  min={3}
+                                  max={30}
+                                  value={assessmentAiChatQuestionCount}
+                                  onChange={(e) => setAssessmentAiChatQuestionCount(Math.max(3, parseInt(e.target.value) || 3))}
+                                  className="input-base text-xs py-1.5"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Difficulty</label>
+                                <select
+                                  value={assessmentAiChatDifficulty}
+                                  onChange={(e) => setAssessmentAiChatDifficulty(e.target.value as any)}
+                                  className="input-base text-xs py-1.5"
+                                >
+                                  <option value="easy">Easy (Foundations)</option>
+                                  <option value="medium">Medium (Standard)</option>
+                                  <option value="hard">Hard (Advanced Depth)</option>
+                                </select>
                               </div>
                               <div>
                                 <label className="text-[11px] font-medium text-ink-soft block mb-1">Passing Score (%)</label>
@@ -2953,11 +3002,161 @@ export default function CreateJobPage() {
                                   type="number"
                                   min={30}
                                   max={100}
-                                  value={assessmentAiPassScore}
-                                  onChange={(e) => setAssessmentAiPassScore(Math.max(30, parseInt(e.target.value) || 30))}
+                                  value={assessmentAiChatPassScore}
+                                  onChange={(e) => setAssessmentAiChatPassScore(Math.max(30, parseInt(e.target.value) || 30))}
                                   className="input-base text-xs py-1.5"
                                 />
                               </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2.5 border-t border-border/60">
+                              <div className="flex items-center gap-1.5 text-[11px] text-ink-soft">
+                                <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+                                <span>Chat Topics / Questions:</span>
+                                <strong className="text-ink">
+                                  {roundQuestionsMap["round_ai_chat"]?.length > 0
+                                    ? `${roundQuestionsMap["round_ai_chat"].length} configured`
+                                    : "AI auto-generated software engineering topics"}
+                                </strong>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenRoundQuestionConfig(
+                                    "round_ai_chat",
+                                    "ai_chat",
+                                    "AI Chat Assessment",
+                                    assessmentAiChatDuration,
+                                    assessmentAiChatPassScore
+                                  )
+                                }
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition cursor-pointer"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Configure &amp; Review Chat Questions</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2. AI Voice Assessment Round */}
+                      <div
+                        className={`rounded-xl border transition ${
+                          assessmentAiVoiceEnabled ? "border-emerald-500/40 bg-emerald-500/5 p-4 shadow-xs" : "border-border bg-surface-alt/40 p-4"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <label className="flex items-start gap-3 cursor-pointer select-none flex-1 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={assessmentAiVoiceEnabled}
+                              onChange={(e) => setAssessmentAiVoiceEnabled(e.target.checked)}
+                              className="mt-1 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500/30 cursor-pointer"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <Mic className="w-4 h-4 text-emerald-500" />
+                                  <span className="text-sm font-bold text-ink">AI Voice Assessment</span>
+                                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                                    Voice-to-Voice Round
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-bold text-primary-glow bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
+                                  10 credits
+                                </span>
+                              </div>
+                              <p className="text-xs text-ink-soft mt-0.5">
+                                Dedicated real-time voice-to-voice interview evaluating spoken technical communication, conceptual articulation, and verbal reasoning.
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+
+                        {assessmentAiVoiceEnabled && (
+                          <div className="mt-4 pt-3 border-t border-border/70 space-y-3.5">
+                            <RoundScheduleSelector
+                              label="AI Voice Assessment Schedule & Timing"
+                              schedule={assessmentAiVoiceSchedule}
+                              onChange={setAssessmentAiVoiceSchedule}
+                              onDurationChange={(mins) => setAssessmentAiVoiceDuration(mins)}
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <div>
+                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Duration (mins)</label>
+                                <input
+                                  type="number"
+                                  min={10}
+                                  max={120}
+                                  value={assessmentAiVoiceDuration}
+                                  onChange={(e) => setAssessmentAiVoiceDuration(Math.max(10, parseInt(e.target.value) || 10))}
+                                  className="input-base text-xs py-1.5"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Questions / Topics</label>
+                                <input
+                                  type="number"
+                                  min={3}
+                                  max={20}
+                                  value={assessmentAiVoiceQuestionCount}
+                                  onChange={(e) => setAssessmentAiVoiceQuestionCount(Math.max(3, parseInt(e.target.value) || 3))}
+                                  className="input-base text-xs py-1.5"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Difficulty</label>
+                                <select
+                                  value={assessmentAiVoiceDifficulty}
+                                  onChange={(e) => setAssessmentAiVoiceDifficulty(e.target.value as any)}
+                                  className="input-base text-xs py-1.5"
+                                >
+                                  <option value="easy">Easy (Foundations)</option>
+                                  <option value="medium">Medium (Standard)</option>
+                                  <option value="hard">Hard (Advanced Depth)</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-ink-soft block mb-1">Passing Score (%)</label>
+                                <input
+                                  type="number"
+                                  min={30}
+                                  max={100}
+                                  value={assessmentAiVoicePassScore}
+                                  onChange={(e) => setAssessmentAiVoicePassScore(Math.max(30, parseInt(e.target.value) || 30))}
+                                  className="input-base text-xs py-1.5"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2.5 border-t border-border/60">
+                              <div className="flex items-center gap-1.5 text-[11px] text-ink-soft">
+                                <Mic className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>Spoken Topics / Questions:</span>
+                                <strong className="text-ink">
+                                  {roundQuestionsMap["round_ai_voice"]?.length > 0
+                                    ? `${roundQuestionsMap["round_ai_voice"].length} configured`
+                                    : "AI auto-generated verbal communication scenarios"}
+                                </strong>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenRoundQuestionConfig(
+                                    "round_ai_voice",
+                                    "ai_voice",
+                                    "AI Voice Assessment",
+                                    assessmentAiVoiceDuration,
+                                    assessmentAiVoicePassScore
+                                  )
+                                }
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition cursor-pointer"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Configure &amp; Review Voice Questions</span>
+                              </button>
                             </div>
                           </div>
                         )}
