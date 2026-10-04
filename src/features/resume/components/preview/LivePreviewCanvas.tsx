@@ -6,10 +6,13 @@ import { ZoomControls } from './ZoomControls';
 import { getTemplateComponent } from '../../../templates/registry';
 import { IResume } from '../../types';
 
+import { IResume } from '../../types';
+
 export interface LivePreviewCanvasProps {
   headerActions?: React.ReactNode;
   resume?: IResume;
   initialZoom?: number;
+  className?: string;
 }
 
 export const LivePreviewCanvas: React.FC<LivePreviewCanvasProps> = ({
@@ -19,6 +22,12 @@ export const LivePreviewCanvas: React.FC<LivePreviewCanvasProps> = ({
 }) => {
   const { resume: storeResume } = useResumeStore();
   const resume = propResume || storeResume;
+  resume: passedResume,
+  initialZoom = 85,
+  className = '',
+}) => {
+  const { resume: storeResume } = useResumeStore();
+  const resume = passedResume || storeResume;
   const [zoom, setZoom] = useState<number>(initialZoom);
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 10, 150));
@@ -26,7 +35,7 @@ export const LivePreviewCanvas: React.FC<LivePreviewCanvasProps> = ({
   const handleReset = () => setZoom(100);
   const handleFitWidth = () => setZoom(85);
 
-  const TemplateComponent = getTemplateComponent(resume.templateId || 'modern-sleek');
+  const TemplateComponent = getTemplateComponent(resume?.templateId || 'modern-sleek');
 
   return (
     <div className="relative w-full h-full bg-surface-alt/30 border border-border/60 flex flex-col items-center justify-start overflow-auto p-6 scrollbar-thin scrollbar-thumb-border print:p-0 print:bg-transparent print:overflow-visible rounded-2xl">
