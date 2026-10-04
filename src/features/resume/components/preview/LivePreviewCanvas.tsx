@@ -1,7 +1,10 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useResumeStore } from '../../store/useResumeStore';
 import { ZoomControls } from './ZoomControls';
 import { getTemplateComponent } from '../../../templates/registry';
+import { IResume } from '../../types';
 
 import { IResume } from '../../types';
 
@@ -14,6 +17,11 @@ export interface LivePreviewCanvasProps {
 
 export const LivePreviewCanvas: React.FC<LivePreviewCanvasProps> = ({
   headerActions,
+  resume: propResume,
+  initialZoom = 85,
+}) => {
+  const { resume: storeResume } = useResumeStore();
+  const resume = propResume || storeResume;
   resume: passedResume,
   initialZoom = 85,
   className = '',
