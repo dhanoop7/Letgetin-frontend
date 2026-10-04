@@ -477,7 +477,20 @@ function InterviewScheduleContent() {
         meetingLink: created.meetingLink || `/recruiter/video-interview?room=${created.roomCode || created._id}`,
       };
 
-      setInterviews((prev) => [mapped, ...prev]);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("letgetin_interviews_sync", Date.now().toString());
+          window.dispatchEvent(new CustomEvent("letgetin_interview_scheduled", { detail: { candidateEmail: email } }));
+        } catch {
+          // ignore storage error
+        }
+      }
+
+      setIsScheduleModalOpen(false);
+      setFormCandidateName("");
+      setFormCandidateEmail("");
+      setFormPosition("");
+      setFormInterviewerName("");
     } catch {
       // Fallback local addition
       const localItem: ScheduledInterview = {
@@ -496,13 +509,22 @@ function InterviewScheduleContent() {
         meetingLink: `/recruiter/video-interview?room=lgi-${Date.now()}`,
       };
       setInterviews((prev) => [localItem, ...prev]);
-    }
 
-    setIsScheduleModalOpen(false);
-    setFormCandidateName("");
-    setFormCandidateEmail("");
-    setFormPosition("");
-    setFormInterviewerName("");
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("letgetin_interviews_sync", Date.now().toString());
+          window.dispatchEvent(new CustomEvent("letgetin_interview_scheduled", { detail: { candidateEmail: email } }));
+        } catch {
+          // ignore storage error
+        }
+      }
+
+      setIsScheduleModalOpen(false);
+      setFormCandidateName("");
+      setFormCandidateEmail("");
+      setFormPosition("");
+      setFormInterviewerName("");
+    }
   };
 
   const handleSaveFeedback = async (id: string) => {
