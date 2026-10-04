@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Briefcase,
@@ -28,11 +28,20 @@ import {
   Tag,
   AlertCircle,
   X,
+  LayoutGrid,
+  Columns3,
+  CalendarDays,
+  ArrowUpRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { applicationService } from '../services/applicationService';
 import { ApplicationItem, ApplicationStats, ApplicationStatus } from '../types';
 import { resolveCandidateStatus } from '../utils/candidateStatusResolver';
 import { ApplicationTrackingModal } from './ApplicationTrackingModal';
+import { ApplicationsOverviewView } from './ApplicationsOverviewView';
+import { ApplicationsKanbanView } from './ApplicationsKanbanView';
+import { ApplicationsCalendarView } from './ApplicationsCalendarView';
+import { ApplicationsTimelineView } from './ApplicationsTimelineView';
 
 const STATUS_CONFIG: Record<
   ApplicationStatus,
@@ -89,7 +98,10 @@ const STATUS_CONFIG: Record<
   },
 };
 
+type ActiveApplicationsTab = 'overview' | 'kanban' | 'calendar' | 'timeline';
+
 export function ApplicationsPage() {
+  const [activeTab, setActiveTab] = useState<ActiveApplicationsTab>('overview');
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [stats, setStats] = useState<ApplicationStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,17 +156,17 @@ export function ApplicationsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
+      {/* 1. Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-black text-ink tracking-tight">Applied Job Status</h1>
+            <h1 className="text-2xl font-black text-ink tracking-tight">My Applications</h1>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
               {totalCount} Applied
             </span>
           </div>
           <p className="text-xs text-ink-soft mt-1">
-            Real-time status tracking for all your automated AI & direct job applications.
+            Track your job applications, interview milestones, and hiring progress in real-time.
           </p>
         </div>
 
@@ -169,335 +181,199 @@ export function ApplicationsPage() {
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* 2. Candidate Status KPI Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* TOTAL APPLIED */}
         <div className="p-4 rounded-2xl bg-surface border border-border space-y-1 shadow-xs">
           <div className="flex items-center justify-between text-ink-soft">
             <span className="text-[11px] font-bold uppercase tracking-wider">Total Applied</span>
             <Briefcase className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-2xl font-black text-ink">{stats?.total || 0}</div>
-          <div className="text-[11px] text-ink-soft">
-            {stats?.appliedThisWeek || 0} applications this week
-          </div>
+          <div className="text-2xl font-black text-ink">{stats?.total || totalCount || 0}</div>
+          <div className="text-[11px] text-ink-soft">All submitted jobs</div>
         </div>
 
+        {/* UNDER REVIEW */}
         <div className="p-4 rounded-2xl bg-surface border border-border space-y-1 shadow-xs">
           <div className="flex items-center justify-between text-ink-soft">
-            <span className="text-[11px] font-bold uppercase tracking-wider">AI Auto-Applied</span>
-            <Sparkles className="w-4 h-4 text-primary-glow" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Under Review</span>
+            <MessageSquare className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-black text-primary-glow">{stats?.aiApplied || 0}</div>
-          <div className="text-[11px] text-ink-soft">Smart automated batches</div>
+          <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
+            {stats?.reviewing || 0}
+          </div>
+          <div className="text-[11px] text-ink-soft">Screening in progress</div>
         </div>
 
+        {/* SHORTLISTED */}
         <div className="p-4 rounded-2xl bg-surface border border-border space-y-1 shadow-xs">
           <div className="flex items-center justify-between text-ink-soft">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Avg Match Score</span>
-            <Layers className="w-4 h-4 text-emerald-600" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Shortlisted</span>
+            <CheckCircle2 className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="text-2xl font-black text-emerald-600">
-            {stats?.avgMatchScore || 0}%
+          <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+            {stats?.shortlisted || 0}
           </div>
-          <div className="text-[11px] text-ink-soft">Profile alignment match</div>
+          <div className="text-[11px] text-ink-soft">Qualified for next round</div>
         </div>
 
+        {/* INTERVIEWING */}
         <div className="p-4 rounded-2xl bg-surface border border-border space-y-1 shadow-xs">
           <div className="flex items-center justify-between text-ink-soft">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Interviewing / Offers</span>
-            <Award className="w-4 h-4 text-purple-600" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Interviewing</span>
+            <Calendar className="w-4 h-4 text-purple-500" />
           </div>
-          <div className="text-2xl font-black text-purple-600">
-            {(stats?.interviewing || 0) + (stats?.offered || 0)}
+          <div className="text-2xl font-black text-purple-600 dark:text-purple-400">
+            {stats?.interviewing || 0}
           </div>
-          <div className="text-[11px] text-ink-soft">Managed by hiring teams</div>
+          <div className="text-[11px] text-ink-soft">Active interview stages</div>
+        </div>
+
+        {/* OFFERED */}
+        <div className="p-4 rounded-2xl bg-surface border border-border space-y-1 shadow-xs col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between text-ink-soft">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Offered</span>
+            <Award className="w-4 h-4 text-emerald-500" />
+          </div>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+            {stats?.offered || 0}
+          </div>
+          <div className="text-[11px] text-ink-soft">Job offers received</div>
         </div>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="bg-surface border border-border rounded-2xl p-4 space-y-3 shadow-xs">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by job title, company, or location..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-surface-alt/50 text-xs font-medium text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-glow"
-            />
-          </div>
+      {/* 3. Tab Navigation Switcher (Overview, Kanban Board, Calendar, Timeline) */}
+      <div className="bg-surface border border-border rounded-2xl p-1.5 shadow-xs flex items-center gap-1.5 w-fit select-none flex-wrap">
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'overview'
+              ? 'bg-gradient-brand text-white shadow-sm'
+              : 'text-ink-soft hover:text-ink hover:bg-surface-alt'
+          }`}
+        >
+          <LayoutGrid className="w-4 h-4" />
+          <span>Overview</span>
+        </button>
 
-          {/* Source Filter */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <select
-              value={sourceFilter}
-              onChange={(e) => {
-                setSourceFilter(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 rounded-xl border border-border bg-surface text-xs font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="all">All Sources</option>
-              <option value="ai_apply">🤖 AI Auto-Apply</option>
-              <option value="manual">Manual Application</option>
-            </select>
+        <button
+          type="button"
+          onClick={() => setActiveTab('kanban')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'kanban'
+              ? 'bg-gradient-brand text-white shadow-sm'
+              : 'text-ink-soft hover:text-ink hover:bg-surface-alt'
+          }`}
+        >
+          <Columns3 className="w-4 h-4" />
+          <span>Kanban Board</span>
+        </button>
 
-            {/* Sort Filter */}
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value as any)}
-              className="px-3 py-2 rounded-xl border border-border bg-surface text-xs font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="recent">Newest Applied</option>
-              <option value="matchScore">Highest Match Score</option>
-            </select>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('calendar')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'calendar'
+              ? 'bg-gradient-brand text-white shadow-sm'
+              : 'text-ink-soft hover:text-ink hover:bg-surface-alt'
+          }`}
+        >
+          <CalendarDays className="w-4 h-4" />
+          <span>Calendar</span>
+        </button>
 
-        {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold scrollbar-none pt-1 border-t border-border/60">
-          {[
-            { id: 'all', label: 'All Applications', count: stats?.total },
-            { id: 'submitted', label: 'Submitted', count: stats?.submitted },
-            { id: 'reviewing', label: 'Under Review', count: stats?.reviewing },
-            { id: 'shortlisted', label: 'Shortlisted', count: stats?.shortlisted },
-            { id: 'interviewing', label: 'Interviewing', count: stats?.interviewing },
-            { id: 'offered', label: 'Offered', count: stats?.offered },
-            { id: 'rejected', label: 'Not Selected', count: stats?.rejected },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setStatusFilter(tab.id);
-                setPage(1);
-              }}
-              className={`px-3 py-1.5 rounded-xl transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                statusFilter === tab.id
-                  ? 'bg-primary text-white font-bold shadow-xs'
-                  : 'bg-surface-alt/70 text-ink-soft hover:text-ink hover:bg-surface-alt'
-              }`}
-            >
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    statusFilter === tab.id
-                      ? 'bg-white/20 text-white font-bold'
-                      : 'bg-surface border border-border text-ink-soft font-semibold'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('timeline')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'timeline'
+              ? 'bg-gradient-brand text-white shadow-sm'
+              : 'text-ink-soft hover:text-ink hover:bg-surface-alt'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Timeline</span>
+        </button>
       </div>
 
-      {/* Applications List */}
-      {loading ? (
-        <div className="py-20 text-center space-y-3 bg-surface border border-border rounded-2xl">
-          <Loader2 className="w-8 h-8 text-primary-glow animate-spin mx-auto" />
-          <p className="text-xs font-medium text-ink-soft">Loading applied job statuses...</p>
-        </div>
-      ) : applications.length === 0 ? (
-        <div className="py-16 text-center space-y-4 bg-surface border border-border rounded-2xl p-6">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
-            <Briefcase className="w-6 h-6" />
-          </div>
-          <div className="space-y-1 max-w-sm mx-auto">
-            <h3 className="text-base font-bold text-ink">No applied jobs found</h3>
-            <p className="text-xs text-ink-soft">
-              {searchQuery || statusFilter !== 'all'
-                ? 'No applications match your active filter criteria.'
-                : 'You have not submitted any job applications yet. Use AI Apply to auto-match and apply in batches of 10!'}
-            </p>
-          </div>
-          <Link
-            href="/ai-apply"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-brand text-white font-bold text-xs shadow-elegant hover:shadow-glow transition cursor-pointer"
-          >
-            <Zap className="w-4 h-4 fill-white" />
-            <span>Start AI Auto-Apply</span>
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {applications.map((app) => {
-            const candidateStatus = resolveCandidateStatus(app);
-            const formattedDate = new Date(app.appliedAt || app.createdAt).toLocaleDateString(
-              undefined,
-              {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              }
-            );
+      {/* 4. TAB 1: OVERVIEW */}
+      {activeTab === 'overview' && (
+        <ApplicationsOverviewView
+          applications={applications}
+          stats={stats}
+          totalCount={totalCount}
+          loading={loading}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          sourceFilter={sourceFilter}
+          setSourceFilter={setSourceFilter}
+          sortOption={sortOption}
+          setSortOption={setSortOption}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          page={page}
+          setPage={setPage}
+          totalPages={totalPages}
+          onSelectApp={(app) => setSelectedApp(app)}
+          onTrackApp={(app) => setTrackingModalApp(app)}
+          onDeleteApp={handleDelete}
+          onSwitchTab={setActiveTab}
+        />
+      )}
 
-            return (
-              <div
-                key={app._id}
-                className="p-4 sm:p-5 rounded-2xl bg-surface border border-border hover:border-primary-glow/30 transition-all shadow-xs space-y-3"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  <div className="flex items-start gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-surface-alt border border-border flex items-center justify-center text-ink font-bold text-sm shrink-0">
-                      {app.job?.company?.name?.charAt(0) || 'C'}
-                    </div>
-
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm sm:text-base font-bold text-ink hover:text-primary transition truncate">
-                          {app.job?.title || 'Job Position'}
-                        </h3>
-                        {app.source === 'ai_apply' ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
-                            <Sparkles className="w-2.5 h-2.5" />
-                            AI Auto-Apply
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-surface-alt text-ink-soft border border-border">
-                            Manual
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft font-medium">
-                        <span className="flex items-center gap-1 text-ink font-semibold">
-                          <Building2 className="w-3.5 h-3.5 text-ink-soft" />
-                          {app.job?.company?.name || 'Company'}
-                        </span>
-                        {app.job?.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-ink-soft" />
-                            {app.job.location.city
-                              ? `${app.job.location.city}, ${app.job.location.country}`
-                              : app.job.location.country || 'Remote Eligible'}
-                          </span>
-                        )}
-                        {app.job?.salary?.max ? (
-                          <span className="flex items-center gap-1 text-ink font-semibold">
-                            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                            {app.job.salary.currency || 'INR'}{' '}
-                            {app.job.salary.min ? `${app.job.salary.min.toLocaleString()} - ` : ''}
-                            {app.job.salary.max.toLocaleString()}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Read-Only Status Badge & Match Score */}
-                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                    {app.matchScore > 0 && (
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        {app.matchScore}% Match
-                      </span>
-                    )}
-
-                    {/* Dynamic Candidate Status Badge */}
-                    <span
-                      className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 shadow-2xs ${candidateStatus.badgeClass}`}
-                    >
-                      <span>{candidateStatus.label}</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Footer details */}
-                <div className="pt-2 border-t border-border/70 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-soft">
-                  <div className="flex flex-wrap items-center gap-4">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      Applied on {formattedDate}
-                    </span>
-                    {app.resume && (
-                      <span className="flex items-center gap-1 text-ink font-medium">
-                        <FileText className="w-3.5 h-3.5 text-primary" />
-                        {app.resume.title || 'Attached Resume'}
-                      </span>
-                    )}
-                    {app.stageDeadline && (app.stageStatus === 'invited' || app.stageStatus === 'started') && (
-                      <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                        <Clock className="w-3.5 h-3.5" />
-                        Deadline: {new Date(app.stageDeadline).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {candidateStatus.actionRequired && (
-                      <button
-                        type="button"
-                        onClick={() => setTrackingModalApp(app)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shadow-xs transition cursor-pointer animate-pulse"
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>{candidateStatus.actionLabel || 'Action Required'}</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setTrackingModalApp(app)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary hover:text-white text-primary font-bold text-xs border border-primary/20 transition cursor-pointer"
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Track Application</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedApp(app)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-surface-alt/80 text-ink font-bold text-xs border border-border transition cursor-pointer"
-                    >
-                      <span>Details</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(app._id)}
-                      className="p-1.5 rounded-xl text-ink-soft hover:text-destructive hover:bg-destructive/10 transition cursor-pointer"
-                      title="Withdraw application record"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pt-4 flex items-center justify-between text-xs text-ink-soft">
-              <span>
-                Page {page} of {totalPages}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-alt disabled:opacity-40 disabled:cursor-not-allowed text-ink font-semibold cursor-pointer"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-alt disabled:opacity-40 disabled:cursor-not-allowed text-ink font-semibold cursor-pointer"
-                >
-                  Next
-                </button>
-              </div>
+      {/* 5. TAB 2: KANBAN BOARD */}
+      {activeTab === 'kanban' && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="py-20 text-center space-y-3 bg-surface border border-border rounded-2xl">
+              <Loader2 className="w-8 h-8 text-primary-glow animate-spin mx-auto" />
+              <p className="text-xs font-medium text-ink-soft">Loading Kanban board...</p>
             </div>
+          ) : (
+            <ApplicationsKanbanView
+              applications={applications}
+              onSelectApp={(app) => setSelectedApp(app)}
+              onTrackApp={(app) => setTrackingModalApp(app)}
+              onDeleteApp={handleDelete}
+            />
+          )}
+        </div>
+      )}
+
+      {/* 6. TAB 3: CALENDAR */}
+      {activeTab === 'calendar' && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="py-20 text-center space-y-3 bg-surface border border-border rounded-2xl">
+              <Loader2 className="w-8 h-8 text-primary-glow animate-spin mx-auto" />
+              <p className="text-xs font-medium text-ink-soft">Loading application calendar...</p>
+            </div>
+          ) : (
+            <ApplicationsCalendarView
+              applications={applications}
+              onSelectApp={(app) => setSelectedApp(app)}
+              onTrackApp={(app) => setTrackingModalApp(app)}
+            />
+          )}
+        </div>
+      )}
+
+      {/* 7. TAB 4: TIMELINE */}
+      {activeTab === 'timeline' && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="py-20 text-center space-y-3 bg-surface border border-border rounded-2xl">
+              <Loader2 className="w-8 h-8 text-primary-glow animate-spin mx-auto" />
+              <p className="text-xs font-medium text-ink-soft">Loading application timeline...</p>
+            </div>
+          ) : (
+            <ApplicationsTimelineView
+              applications={applications}
+              onSelectApp={(app) => setSelectedApp(app)}
+              onTrackApp={(app) => setTrackingModalApp(app)}
+              onDeleteApp={handleDelete}
+            />
           )}
         </div>
       )}
@@ -597,13 +473,17 @@ export function ApplicationsPage() {
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Launch AI Interview Practice</span>
                   </Link>
-                  <Link
-                    href="/calendar"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedApp(null);
+                      setActiveTab('calendar');
+                    }}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface border border-border hover:bg-surface-alt text-ink font-semibold text-xs transition cursor-pointer"
                   >
                     <Calendar className="w-3.5 h-3.5 text-ink-soft" />
-                    <span>View Calendar</span>
-                  </Link>
+                    <span>View In Calendar Tab</span>
+                  </button>
                 </div>
               </div>
             )}
