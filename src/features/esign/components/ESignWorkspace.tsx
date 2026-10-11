@@ -7,22 +7,24 @@ import { ESignService } from '../services/eSignService';
 import { ESignStatusBadge } from './ESignStatusBadge';
 import { ConsentTermsCard } from './ConsentTermsCard';
 import { ConsentPdfUploader } from './ConsentPdfUploader';
-import { SignatureCanvasPad } from './SignatureCanvasPad';
 import { ConsentConfirmationCheckbox } from './ConsentConfirmationCheckbox';
 import { ESignSubmittedView } from './ESignSubmittedView';
 import {
   FileSignature,
   CheckCircle2,
-  AlertCircle,
   Loader2,
-  ShieldCheck,
   Send,
-  FileCheck,
   Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export const ESignWorkspace: React.FC = () => {
+interface ESignWorkspaceProps {
+  headerVariant?: 'blue' | 'surface' | 'none';
+}
+
+export const ESignWorkspace: React.FC<ESignWorkspaceProps> = ({
+  headerVariant = 'blue',
+}) => {
   const { user } = useAuthStore();
   const [existingConsent, setExistingConsent] = useState<ESignConsent | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
@@ -84,27 +86,12 @@ export const ESignWorkspace: React.FC = () => {
     return existingConsent?.status || 'PENDING';
   }, [existingConsent, isResubmitting]);
 
-  const handleSignatureChange = (
-    dataUrl: string,
-    type: SignatureType,
-    fileInfo?: { name: string; size: number }
-  ) => {
-    setSignatureDataUrl(dataUrl);
-    setSignatureType(type);
-    setSignatureFileName(fileInfo?.name);
-    setSignatureFileSize(fileInfo?.size);
-  };
-
   // Validation conditions
   const isPdfValid = !!selectedFile;
-  const isSignatureValid = !!signatureDataUrl && signatureDataUrl.trim().length > 0;
-  const isNameValid = fullName.trim().length >= 2;
   const isCheckboxValid = isConsentChecked;
 
   const canSubmit =
     isPdfValid &&
-    isSignatureValid &&
-    isNameValid &&
     isCheckboxValid &&
     !isSubmitting;
 
@@ -113,16 +100,6 @@ export const ESignWorkspace: React.FC = () => {
 
     if (!selectedFile) {
       toast.error('Please upload your PDF consent document before submitting.');
-      return;
-    }
-
-    if (!signatureDataUrl) {
-      toast.error('Please provide your electronic signature (draw or upload).');
-      return;
-    }
-
-    if (!fullName.trim() || fullName.trim().length < 2) {
-      toast.error('Please enter your full legal name.');
       return;
     }
 
@@ -136,8 +113,11 @@ export const ESignWorkspace: React.FC = () => {
     try {
       const consent = await ESignService.submitConsent({
         candidateId,
-        signedBy: fullName.trim(),
-        signatureDataUrl,
+        signedBy: fullName.trim() || candidateDefaultName || 'Authorized Candidate',
+        signatureDataUrl:
+          signatureDataUrl ||
+          existingConsent?.signatureDataUrl ||
+          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><text x="10" y="25" font-family="sans-serif" font-size="14" fill="%230066cc">Consent Approved</text></svg>',
         signatureType,
         signatureFileName,
         signatureFileSize,
@@ -183,42 +163,72 @@ export const ESignWorkspace: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Page Header */}
-      <div className="bg-surface border border-border rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
-        {/* Subtle decorative glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+      {headerVariant === 'blue' && (
+        <div className="bg-gradient-brand rounded-3xl p-6 sm:p-8 border border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-elegant relative overflow-hidden text-white">
+          {/* Decorative background blurs */}
+          <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--primary-glow)_0%,_transparent_70%)] pointer-events-none" />
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary-glow bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-                <FileSignature className="w-3 h-3" /> E-SIGN
-              </span>
-              <span className="text-[10px] font-semibold text-ink-soft">
-                Candidate Authorization Suite
-              </span>
+          <div className="relative space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2 text-xs font-semibold text-primary-glow bg-white/10 backdrop-blur-xs px-3 py-1 rounded-full w-fit border border-white/15">
+              <Sparkles className="w-3.5 h-3.5 text-primary-glow" />
+              <span>E-SIGN</span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Electronic Consent & Authorization
             </h1>
 
-            <p className="text-xs sm:text-sm text-ink-soft leading-relaxed">
-              Provide your consent to allow LetGetIn and the authorized company
-              to verify your submitted certificates and process your information
-              according to applicable company policies.
+            <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
+              Review and manage your electronic consent, authorization, and document verification preferences.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
-            <div className="flex flex-col items-start sm:items-end">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
-                Consent Status
-              </span>
-              <ESignStatusBadge status={currentStatus} size="lg" />
+          <div className="relative flex flex-col items-start sm:items-end gap-1.5 shrink-0">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/80">
+              Consent Status
+            </span>
+            <ESignStatusBadge status={currentStatus} size="lg" />
+          </div>
+        </div>
+      )}
+
+      {headerVariant === 'surface' && (
+        <div className="bg-surface border border-border rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary-glow bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <FileSignature className="w-3 h-3" /> E-SIGN
+                </span>
+                <span className="text-[10px] font-semibold text-ink-soft">
+                  Candidate Authorization Suite
+                </span>
+              </div>
+
+              <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight">
+                Electronic Consent & Authorization
+              </h1>
+
+              <p className="text-xs sm:text-sm text-ink-soft leading-relaxed">
+                Provide your consent to allow LetGetIn and the authorized company
+                to verify your submitted certificates and process your information
+                according to applicable company policies.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+              <div className="flex flex-col items-start sm:items-end">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
+                  Consent Status
+                </span>
+                <ESignStatusBadge status={currentStatus} size="lg" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content Area */}
       {existingConsent && !isResubmitting ? (
@@ -238,26 +248,14 @@ export const ESignWorkspace: React.FC = () => {
             disabled={isSubmitting}
           />
 
-          {/* Step 3: Electronic Signature (Draw or Upload) */}
-          <SignatureCanvasPad
-            fullName={fullName}
-            onFullNameChange={setFullName}
-            signatureDataUrl={signatureDataUrl}
-            signatureType={signatureType}
-            signatureFileName={signatureFileName}
-            signatureFileSize={signatureFileSize}
-            onSignatureChange={handleSignatureChange}
-            disabled={isSubmitting}
-          />
-
-          {/* Step 4: Explicit Consent Checkbox */}
+          {/* Step 3: Explicit Consent Checkbox */}
           <ConsentConfirmationCheckbox
             checked={isConsentChecked}
             onChange={setIsConsentChecked}
             disabled={isSubmitting}
           />
 
-          {/* Step 5: Submission Bar with Requirements Checklist */}
+          {/* Step 4: Submission Bar with Requirements Checklist */}
           <div className="bg-surface border border-border rounded-3xl p-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="text-xs font-bold text-ink">Required steps:</div>
@@ -273,19 +271,6 @@ export const ESignWorkspace: React.FC = () => {
                     }`}
                   />
                   PDF uploaded
-                </span>
-
-                <span
-                  className={`inline-flex items-center gap-1.5 font-medium ${
-                    isSignatureValid ? 'text-emerald-600' : 'text-ink-soft'
-                  }`}
-                >
-                  <CheckCircle2
-                    className={`w-4 h-4 ${
-                      isSignatureValid ? 'text-emerald-500' : 'text-ink-soft/40'
-                    }`}
-                  />
-                  Signature provided
                 </span>
 
                 <span

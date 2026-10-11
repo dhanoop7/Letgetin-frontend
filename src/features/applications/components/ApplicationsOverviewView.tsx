@@ -52,7 +52,7 @@ interface ApplicationsOverviewViewProps {
   onSelectApp: (app: ApplicationItem) => void;
   onTrackApp: (app: ApplicationItem) => void;
   onDeleteApp: (appId: string) => void;
-  onSwitchTab: (tab: 'overview' | 'kanban' | 'calendar' | 'timeline') => void;
+  onSwitchTab: (tab: 'overview' | 'kanban' | 'calendar' | 'timeline' | 'notifications' | 'onboarding') => void;
 }
 
 export function ApplicationsOverviewView({

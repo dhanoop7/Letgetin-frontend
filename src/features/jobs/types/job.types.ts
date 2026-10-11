@@ -13,7 +13,7 @@ export interface IJob {
   description: string;
   responsibilities: string[];
   requirements: string[];
-  preferredQualifications: string[];
+  preferredQualifications?: string[];
   skills: string[];
   experienceLevel: ExperienceLevel;
   minimumExperience: number;
@@ -37,6 +37,7 @@ export interface IJob {
   applicationUrl: string;
   source: string;
   publishedAt: string;
+  relativeTime?: string;
   eligibilityMinPercent?: number;
   expiresAt?: string;
   matchScore: number;

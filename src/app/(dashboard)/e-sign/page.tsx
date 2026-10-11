@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { ESignWorkspace } from '@/features/esign/components/ESignWorkspace';
+import { ESignPageContainer } from '@/features/esign/components/ESignPageContainer';
 
 export default function ESignPage() {
   return (
@@ -12,7 +12,7 @@ export default function ESignPage() {
             <div className="h-[600px] bg-surface/50 rounded-3xl animate-pulse" />
           }
         >
-          <ESignWorkspace />
+          <ESignPageContainer />
         </Suspense>
       </main>
     </div>

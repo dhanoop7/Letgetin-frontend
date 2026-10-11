@@ -1,8 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { ApplicationsPage } from "@/features/applications/components/ApplicationsPage";
 
 export default function AppliedJobsPage() {
-  return <ApplicationsPage />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ApplicationsPage />
+    </Suspense>
+  );
 }

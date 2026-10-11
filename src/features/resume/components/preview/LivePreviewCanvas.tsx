@@ -6,8 +6,6 @@ import { ZoomControls } from './ZoomControls';
 import { getTemplateComponent } from '../../../templates/registry';
 import { IResume } from '../../types';
 
-import { IResume } from '../../types';
-
 export interface LivePreviewCanvasProps {
   headerActions?: React.ReactNode;
   resume?: IResume;
@@ -17,28 +15,39 @@ export interface LivePreviewCanvasProps {
 
 export const LivePreviewCanvas: React.FC<LivePreviewCanvasProps> = ({
   headerActions,
-  resume: propResume,
-  initialZoom = 85,
-}) => {
-  const { resume: storeResume } = useResumeStore();
-  const resume = propResume || storeResume;
   resume: passedResume,
   initialZoom = 85,
   className = '',
 }) => {
   const { resume: storeResume } = useResumeStore();
   const resume = passedResume || storeResume;
+
   const [zoom, setZoom] = useState<number>(initialZoom);
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 10, 150));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 10, 50));
-  const handleReset = () => setZoom(100);
-  const handleFitWidth = () => setZoom(85);
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(prev + 10, 150));
+  };
 
-  const TemplateComponent = getTemplateComponent(resume?.templateId || 'modern-sleek');
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(prev - 10, 50));
+  };
+
+  const handleReset = () => {
+    setZoom(100);
+  };
+
+  const handleFitWidth = () => {
+    setZoom(85);
+  };
+
+  const TemplateComponent = getTemplateComponent(
+    resume?.templateId || 'modern-sleek'
+  );
 
   return (
-    <div className="relative w-full h-full bg-surface-alt/30 border border-border/60 flex flex-col items-center justify-start overflow-auto p-6 scrollbar-thin scrollbar-thumb-border print:p-0 print:bg-transparent print:overflow-visible rounded-2xl">
+    <div
+      className={`relative w-full h-full bg-surface-alt/30 border border-border/60 flex flex-col items-center justify-start overflow-auto p-6 scrollbar-thin scrollbar-thumb-border print:p-0 print:bg-transparent print:overflow-visible rounded-2xl ${className}`}
+    >
       {/* Zoom Toolbar overlay */}
       <div className="sticky top-2 z-20 mb-4 flex flex-col items-center gap-2 no-print">
         <ZoomControls
@@ -48,6 +57,7 @@ export const LivePreviewCanvas: React.FC<LivePreviewCanvasProps> = ({
           onReset={handleReset}
           onFitWidth={handleFitWidth}
         />
+
         {headerActions}
       </div>
 

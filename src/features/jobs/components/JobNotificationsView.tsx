@@ -37,24 +37,33 @@ interface NotificationItem {
 }
 
 interface JobNotificationsViewProps {
+  applications?: ApplicationItem[];
+  selectedApp?: ApplicationItem | null;
   onSwitchTab?: (tab: string, stage?: string) => void;
 }
 
-export function JobNotificationsView({ onSwitchTab }: JobNotificationsViewProps) {
-  const [applications, setApplications] = useState<ApplicationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'interviews' | 'applications'>('all');
+export function JobNotificationsView({
+  applications: externalApplications,
+  selectedApp,
+  onSwitchTab,
+}: JobNotificationsViewProps) {
+  const [internalApplications, setInternalApplications] = useState<ApplicationItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'this_job' | 'interviews' | 'applications'>('all');
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
+  const applications = externalApplications || internalApplications;
+
   useEffect(() => {
+    if (externalApplications && externalApplications.length > 0) return;
     let isMounted = true;
     const loadData = async () => {
       setLoading(true);
       try {
         const res = await applicationService.getApplications({ page: 1, limit: 50 });
         if (isMounted) {
-          setApplications(res.applications || []);
+          setInternalApplications(res.applications || []);
         }
       } catch (err) {
         console.warn('Failed to fetch applications for notifications:', err);
@@ -66,7 +75,7 @@ export function JobNotificationsView({ onSwitchTab }: JobNotificationsViewProps)
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [externalApplications]);
 
   // Generate notifications from real application events
   const notifications: NotificationItem[] = useMemo(() => {
@@ -147,11 +156,14 @@ export function JobNotificationsView({ onSwitchTab }: JobNotificationsViewProps)
   const filteredNotifications = useMemo(() => {
     return notifications.filter((item) => {
       if (activeFilter === 'unread') return !item.read;
+      if (activeFilter === 'this_job' && selectedApp) {
+        return item.jobTitle === selectedApp.job?.title || item.companyName === selectedApp.job?.company?.name;
+      }
       if (activeFilter === 'interviews') return item.type === 'interview' || item.type === 'offer';
       if (activeFilter === 'applications') return item.type === 'application' || item.type === 'deadline';
       return true;
     });
-  }, [notifications, activeFilter]);
+  }, [notifications, activeFilter, selectedApp]);
 
   const unreadCount = useMemo(() => {
     return notifications.filter((n) => !n.read).length;
@@ -195,6 +207,27 @@ export function JobNotificationsView({ onSwitchTab }: JobNotificationsViewProps)
 
   return (
     <div className="space-y-6">
+      {/* Selected Application Focus Header */}
+      {selectedApp && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-surface border border-border shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+              {selectedApp.job?.company?.name?.charAt(0) || 'C'}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">Notifications for:</span>
+                <span className="text-xs font-black text-ink truncate">{selectedApp.job?.title || 'Job Position'}</span>
+              </div>
+              <p className="text-[11px] text-ink-soft truncate">
+                {selectedApp.job?.company?.name} • Stage:{' '}
+                <span className="font-semibold text-primary">{resolveCandidateStatus(selectedApp).label}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Header Card */}
       <div className="bg-surface border border-border rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -234,9 +267,30 @@ export function JobNotificationsView({ onSwitchTab }: JobNotificationsViewProps)
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold scrollbar-none">
         {[
           { id: 'all', label: 'All Notifications', count: notifications.length },
+          ...(selectedApp
+            ? [
+                {
+                  id: 'this_job',
+                  label: `Selected Job`,
+                  count: notifications.filter(
+                    (n) =>
+                      n.jobTitle === selectedApp.job?.title ||
+                      n.companyName === selectedApp.job?.company?.name
+                  ).length,
+                },
+              ]
+            : []),
           { id: 'unread', label: 'Unread', count: unreadCount },
-          { id: 'interviews', label: 'Interviews & Offers', count: notifications.filter((n) => n.type === 'interview' || n.type === 'offer').length },
-          { id: 'applications', label: 'Applications', count: notifications.filter((n) => n.type === 'application' || n.type === 'deadline').length },
+          {
+            id: 'interviews',
+            label: 'Interviews & Offers',
+            count: notifications.filter((n) => n.type === 'interview' || n.type === 'offer').length,
+          },
+          {
+            id: 'applications',
+            label: 'Applications',
+            count: notifications.filter((n) => n.type === 'application' || n.type === 'deadline').length,
+          },
         ].map((tab) => (
           <button
             key={tab.id}

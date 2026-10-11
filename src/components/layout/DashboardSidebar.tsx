@@ -47,6 +47,7 @@ import {
   Award,
   Video,
   FileText,
+  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 
@@ -168,9 +169,16 @@ export function DashboardSidebar({
         {
           name: "My Jobs",
           shortName: "Jobs",
-          href: "/resume",
+          href: "/jobs",
           icon: Briefcase,
-          description: "Jobs, resumes, cover letters & video profile",
+          description: "Jobs pipeline, kanban board & calendar schedule",
+        },
+        {
+          name: "Resume",
+          shortName: "Resume",
+          href: "/resume",
+          icon: FileText,
+          description: "Resumes, cover letters & video profile",
         },
         {
           name: "Verified Resume",
@@ -186,29 +194,43 @@ export function DashboardSidebar({
           icon: Languages,
           description: "Translate resumes for global opportunities",
         },
+        {
+          name: "E-Sign",
+          shortName: "E-Sign",
+          href: "/e-sign",
+          icon: FileSignature,
+          description: "Electronic signature & consent management",
+        },
+      ],
+    },
+    {
+      title: "MOCKUP",
+      items: [
+        {
+          name: "Mockup Test",
+          shortName: "Mockup Test",
+          href: "/interviews/mock",
+          icon: ClipboardCheck,
+          description: "Practice technical mock tests",
+        },
+        {
+          name: "Mockup Assessment",
+          shortName: "Assessment",
+          href: "/interviews/assessment",
+          icon: ClipboardCheck,
+          description: "Complete mock assessments",
+        },
+        {
+          name: "Interview Buddy",
+          shortName: "Buddy",
+          href: "/interviews/buddy",
+          icon: Bot,
+          description: "AI-powered interview preparation",
+        },
       ],
     },
     {
       title: "INTERVIEW",
-      items: [
-        {
-          name: "AI Assessment",
-          shortName: "Assessment",
-          href: "/interviews/assessment",
-          icon: ClipboardCheck,
-          description: "AI skill assessments & technical evaluations",
-        },
-        {
-          name: "AI Interview Practice",
-          shortName: "AI Practice",
-          href: "/interviews/ai-practice",
-          icon: Bot,
-          description: "AI-powered mock interview practice",
-        },
-      ],
-    },
-    {
-      title: "INTERVIEW BUDDY",
       items: [
         {
           name: "Interview Schedule",
@@ -216,6 +238,13 @@ export function DashboardSidebar({
           href: "/interviews/schedule",
           icon: Calendar,
           description: "Manage interview calendar & slots",
+        },
+        {
+          name: "Video Interview",
+          shortName: "Video Interview",
+          href: "/interviews/video-interview",
+          icon: Video,
+          description: "Live interactive video interview & AI studio",
         },
       ],
     },
@@ -300,6 +329,20 @@ export function DashboardSidebar({
     {
       title: "CAREER+",
       items: [
+        {
+          name: "Linguistic Test",
+          shortName: "Linguistic",
+          href: "/linguistic-test",
+          icon: Languages,
+          description: "Language proficiency & communication assessment",
+        },
+        {
+          name: "Psychometric Test",
+          shortName: "Psychometric",
+          href: "/psychometric-test",
+          icon: Brain,
+          description: "Personality & behavioral assessment",
+        },
         {
           name: "Genius Test",
           shortName: "G-Test",

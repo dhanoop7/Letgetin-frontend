@@ -7,6 +7,7 @@ import {
   EvaluateSessionInput,
   AiQuestion,
   AiScorecard,
+  JoinAccessResult,
 } from '../types';
 
 export const interviewService = {
@@ -80,4 +81,82 @@ export const interviewService = {
     const res: any = await apiClient.post('/interviews/ai/evaluate', input);
     return res.data;
   },
+
+  /**
+   * Validate join access and check 15-minute join window lock
+   */
+  async validateJoinAccess(id: string): Promise<JoinAccessResult> {
+    const res: any = await apiClient.get(`/interviews/${id}/join-access`);
+    return res.data;
+  },
+
+  /**
+   * Send WebRTC signaling message
+   */
+  async sendSignalingMessage(interviewId: string, clientId: string, payload: any): Promise<boolean> {
+    const res: any = await apiClient.post(`/interviews/${interviewId}/signal/message`, {
+      clientId,
+      payload,
+    });
+    return res.success;
+  },
+
+  /**
+   * Get the EventSource signaling URL
+   */
+  getSignalingStreamUrl(interviewId: string, role: 'candidate' | 'interviewer'): string {
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    return `${base}/interviews/${interviewId}/signal/stream?role=${role}`;
+  },
+
+  /**
+   * Generate tailored Interview Buddy questions via Gemini AI
+   */
+  async generateBuddyQuestions(params: {
+    mode: string;
+    jobDescription?: string;
+    customConfig?: {
+      role?: string;
+      seniority?: string;
+      scenario?: string;
+      interviewStyle?: string;
+      technicalScope?: string;
+    };
+  }): Promise<{
+    sessionId: string;
+    sessionTitle: string;
+    extractedSkills: string[];
+    questions: any[];
+  }> {
+    const res: any = await apiClient.post('/interviews/buddy/generate', params);
+    return res.data;
+  },
+
+  /**
+   * Evaluate a candidate's answer for Interview Buddy via Gemini AI
+   */
+  async evaluateBuddyAnswer(params: {
+    question: string;
+    answer: string;
+    category?: string;
+    mode?: string;
+    expectedAnswer?: string;
+    jobDescription?: string;
+  }): Promise<{
+    score: number;
+    isCorrect: boolean;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+    star?: {
+      situation?: string;
+      task?: string;
+      action?: string;
+      result?: string;
+    };
+  }> {
+    const res: any = await apiClient.post('/interviews/buddy/evaluate', params);
+    return res.data;
+  },
 };
+

@@ -287,4 +287,58 @@ export const hiringEngineService = {
     );
     return res;
   },
+
+  /**
+   * GET /api/recruiter/jobs/:jobId/hiring-engine/shortlist
+   * Retrieves stage-wise 5-stage Shortlist summary for a job.
+   */
+  async getShortlistSummary(jobId: string): Promise<any> {
+    const res = await apiClient.get<never, ApiResponse<any>>(
+      `/recruiter/jobs/${jobId}/hiring-engine/shortlist`
+    );
+    return res.data;
+  },
+
+  /**
+   * GET /api/recruiter/jobs/:jobId/hiring-engine/shortlist/:stageId/:status
+   * Retrieves strictly shortlisted OR eliminated candidates for a specific stage.
+   */
+  async getShortlistStageCandidates(
+    jobId: string,
+    stageId: string,
+    status: 'shortlisted' | 'eliminated' | string = 'shortlisted'
+  ): Promise<{
+    jobId: string;
+    stage: any;
+    status: string;
+    count: number;
+    candidates: any[];
+  }> {
+    const res = await apiClient.get<never, ApiResponse<any>>(
+      `/recruiter/jobs/${jobId}/hiring-engine/shortlist/${stageId}/${status}`
+    );
+    return res.data;
+  },
+
+  /**
+   * GET /api/recruiter/jobs/:jobId/hiring-engine/candidates/:applicationId
+   * Retrieves full candidate detail and stage transition history.
+   */
+  async getCandidateDetail(jobId: string, applicationId: string): Promise<any> {
+    const res = await apiClient.get<never, ApiResponse<any>>(
+      `/recruiter/jobs/${jobId}/hiring-engine/candidates/${applicationId}`
+    );
+    return res.data;
+  },
+
+  /**
+   * GET /api/recruiter/jobs/:jobId/hiring-engine/candidates/:applicationId/resume
+   * Retrieves candidate resume.
+   */
+  async getCandidateResume(jobId: string, applicationId: string): Promise<any> {
+    const res = await apiClient.get<never, ApiResponse<any>>(
+      `/recruiter/jobs/${jobId}/hiring-engine/candidates/${applicationId}/resume`
+    );
+    return res.data;
+  },
 };
