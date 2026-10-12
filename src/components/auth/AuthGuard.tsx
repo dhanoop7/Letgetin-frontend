@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { Loader2 } from "lucide-react";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isAuthenticated, isLoading, isInitialized, checkAuth } = useAuthStore();
 
   useEffect(() => {
@@ -20,10 +21,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!isAuthenticated) {
         router.replace("/auth");
       } else if (user?.role === "recruiter") {
-        router.replace("/recruiter");
+        if (pathname === "/e-sign") {
+          router.replace("/recruiter/e-sign");
+        } else if (pathname === "/interviews/translator") {
+          router.replace("/recruiter/resume-translator");
+        } else if (pathname === "/linguistic-test") {
+          router.replace("/recruiter/linguistic-test");
+        } else {
+          router.replace("/recruiter");
+        }
       }
     }
-  }, [isInitialized, isLoading, isAuthenticated, user, router]);
+  }, [isInitialized, isLoading, isAuthenticated, user, router, pathname]);
 
   if (isLoading || !isInitialized) {
     return (

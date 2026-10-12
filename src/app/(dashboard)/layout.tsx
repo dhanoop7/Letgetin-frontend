@@ -59,6 +59,7 @@ export default function DashboardLayout({
     "/performance": "Performance",
     "/promotions": "Promotions",
     "/mydive": "My Dive Analytics",
+    "/e-sign": "E-Sign",
   };
 
   const currentTitle = pageTitles[pathname] || "Dashboard Workspace";

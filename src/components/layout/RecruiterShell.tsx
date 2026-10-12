@@ -62,6 +62,8 @@ import {
   FlaskConical,
   GitBranch,
   GitCommit,
+  Languages,
+  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 
@@ -124,6 +126,78 @@ const TOP_ITEMS: NavItem[] = [
     href: "/recruiter/verified-resumes",
     icon: ShieldCheck,
     description: "Pre-screened candidates with 100% verified credentials",
+  },
+  {
+    name: "Talent Pool",
+    shortName: "Talent",
+    href: "/recruiter/talent-pool",
+    icon: Users,
+    description: "Talent pool, CV search & applicant tracking",
+    subItems: [
+      { name: "Talent Pool", shortName: "Overview", href: "/recruiter/talent-pool" },
+      { name: "CV Search", shortName: "CV Search", href: "/recruiter/cv-search" },
+      { name: "Candidate List", shortName: "Candidates", href: "/recruiter/candidates" },
+      { name: "Track Applicants", shortName: "Track", href: "/recruiter/track" },
+    ],
+  },
+];
+
+const STARTUP_TOP_ITEMS: NavItem[] = [
+  {
+    name: "Dashboard",
+    shortName: "Dashboard",
+    href: "/recruiter/dashboard",
+    icon: LayoutGrid,
+    description: "Recruiter command center & key metrics",
+  },
+  {
+    name: "AI Hire",
+    shortName: "AI Hire",
+    href: "/recruiter/ai-hire",
+    icon: Sparkles,
+    description: "Autonomous AI sourcing & screening engine",
+  },
+  {
+    name: "Profile",
+    shortName: "Profile",
+    href: "/recruiter/profile",
+    icon: Contact,
+    description: "Organization profile, team & settings",
+  },
+  {
+    name: "Calendar",
+    shortName: "Calendar",
+    href: "/recruiter/calendar",
+    icon: CalendarDays,
+    description: "Company events, workforce schedules & shifts",
+  },
+  {
+    name: "Taskmite",
+    shortName: "Taskmite",
+    href: "/recruiter/taskmite",
+    icon: ListChecks,
+    description: "Team task delegation, sprint tracking & productivity",
+  },
+  {
+    name: "Verified Resumes",
+    shortName: "Verified",
+    href: "/recruiter/verified-resumes",
+    icon: ShieldCheck,
+    description: "Pre-screened candidates with 100% verified credentials",
+  },
+  {
+    name: "Resume Translator",
+    shortName: "Translator",
+    href: "/recruiter/resume-translator",
+    icon: Languages,
+    description: "Translate resumes for global opportunities",
+  },
+  {
+    name: "E Sign",
+    shortName: "E-Sign",
+    href: "/recruiter/e-sign",
+    icon: FileSignature,
+    description: "Electronic signature & consent management",
   },
   {
     name: "Talent Pool",
@@ -294,6 +368,14 @@ const RECRUITMENT_MARKETING_ITEMS: NavItem[] = [
 ];
 
 const CAREER_GUIDANCE_ITEMS: NavItem[] = [
+  {
+    name: "Linguistic Test",
+    shortName: "Linguistic",
+    href: "/recruiter/linguistic-test",
+    icon: Languages,
+    soon: true,
+    description: "Language proficiency & communication assessment",
+  },
   {
     name: "Psychometric Test",
     shortName: "Psychometric",
@@ -926,8 +1008,8 @@ export function RecruiterShell({
   const EntityIcon = orgProfile
     ? ENTITY_ICON[orgProfile.entity] || Building2
     : Building2;
-  const isInstitution = orgProfile?.entity === "institution";
-  const isStartup = orgProfile?.entity === "startup";
+  const isInstitution = orgProfile?.entity === "institution" || user?.entityType === "institution";
+  const isStartup = orgProfile?.entity === "startup" || user?.entityType === "startup";
 
   const allItems = [
     ...(isInstitution
@@ -946,7 +1028,7 @@ export function RecruiterShell({
         ]
       : isStartup
       ? [
-          ...TOP_ITEMS,
+          ...STARTUP_TOP_ITEMS,
           ...HIRING_ITEMS,
           ...HIRING_FUNNEL_ITEMS,
           ...RECRUITMENT_MARKETING_ITEMS,
@@ -1370,7 +1452,7 @@ export function RecruiterShell({
           isCollapsed ? "p-2 space-y-3" : "p-3 space-y-5"
         } scrollbar-thin`}
       >
-        {renderNavGroup("", isInstitution ? INSTITUTION_TOP_ITEMS : TOP_ITEMS)}
+        {renderNavGroup("", isInstitution ? INSTITUTION_TOP_ITEMS : isStartup ? STARTUP_TOP_ITEMS : TOP_ITEMS)}
         {isInstitution ? (
           <>
             {renderNavGroup("Records", INSTITUTION_RECORDS_ITEMS)}
