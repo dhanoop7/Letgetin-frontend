@@ -17,10 +17,15 @@ import {
   Phone,
   Globe,
   Briefcase,
+  Building2,
+  GraduationCap,
+  Rocket,
+  Check,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { StorageProviderFactory } from "@/features/resume/storage/factory";
-import type { UserProfile } from "@/features/auth/services/authService";
+import type { UserProfile, EntityType } from "@/features/auth/services/authService";
+import { recruiterService } from "@/features/recruiter/services/recruiterService";
 import { UrlAutoSuggestInput } from "@/components/common/UrlAutoSuggestInput";
 
 type Mode = "signin" | "signup";
@@ -71,7 +76,16 @@ export default function AuthPage() {
     if (!currentUser) return;
 
     if (currentUser.role === "recruiter") {
-      router.replace("/recruiter");
+      try {
+        const profile = await recruiterService.getOrgProfile();
+        if (profile && profile.name) {
+          router.replace("/recruiter/dashboard");
+        } else {
+          router.replace("/recruiter/setup");
+        }
+      } catch {
+        router.replace("/recruiter/setup");
+      }
       return;
     }
 
@@ -108,6 +122,7 @@ export default function AuthPage() {
 
   // Form fields
   const [accountRole, setAccountRole] = useState<AccountRole>("user");
+  const [entityType, setEntityType] = useState<EntityType | null>(null);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+1");
@@ -122,6 +137,32 @@ export default function AuthPage() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   const displayError = localError || error;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get("mode");
+      if (urlMode === "signin" || urlMode === "signup") {
+        setMode(urlMode);
+      }
+      const urlRole = params.get("role");
+      if (urlRole === "recruiter" || urlRole === "user") {
+        setAccountRole(urlRole);
+      }
+
+      const savedEntity = sessionStorage.getItem("recruiter_entity_type") as EntityType | null;
+      if (savedEntity && ["company", "startup", "institution"].includes(savedEntity)) {
+        setEntityType(savedEntity);
+      }
+
+      const savedUrl = sessionStorage.getItem("recruiter_initial_url");
+      if (savedUrl) {
+        setCompanyWebsiteUrl(savedUrl);
+      }
+
+      // Role and initial URL are persisted if present
+    }
+  }, []);
 
   const handleModeSwitch = (newMode: Mode) => {
     clearError();
@@ -176,6 +217,27 @@ export default function AuthPage() {
     if (password.length < 8) return "Password must be at least 8 characters long.";
     if (password !== confirmPassword) return "Passwords do not match.";
     return null;
+  };
+
+  // Resend OTP handler for verify screen
+  const handleResendOtp = async () => {
+    clearError();
+    setLocalError(null);
+    setIsSubmitting(true);
+    try {
+      if (verificationMethod === "email") {
+        await sendEmailOtp(email.trim());
+      } else {
+        await sendWhatsAppOtp({ countryCode, phone: phone.trim() });
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { message?: string })?.message ||
+        "Failed to resend verification code.";
+      setLocalError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Step 1: Send OTP for Email or WhatsApp Signup
@@ -248,17 +310,19 @@ export default function AuthPage() {
     setIsSubmitting(true);
 
     try {
+      let verifiedUser: UserProfile;
       if (verificationMethod === "email") {
-        await verifyEmailOtp({
+        verifiedUser = await verifyEmailOtp({
           email: email.trim(),
           username: trimmedUsername,
           password,
           confirmPassword,
           otp: otpCode,
           role: accountRole,
+          entityType: accountRole === "recruiter" ? (entityType || "company") : undefined,
         });
       } else {
-        await verifyWhatsAppOtp({
+        verifiedUser = await verifyWhatsAppOtp({
           username: trimmedUsername,
           countryCode,
           phone: phone.trim(),
@@ -266,9 +330,13 @@ export default function AuthPage() {
           confirmPassword,
           otp: otpCode,
           role: accountRole,
+          entityType: accountRole === "recruiter" ? (entityType || "company") : undefined,
         });
       }
-      setStep("done");
+      if (companyWebsiteUrl && typeof window !== "undefined") {
+        sessionStorage.setItem("recruiter_initial_url", companyWebsiteUrl);
+      }
+      await routeUserAfterAuth(verifiedUser);
     } catch (err: unknown) {
       const msg =
         (err as { message?: string })?.message || "Verification failed.";
@@ -349,11 +417,11 @@ export default function AuthPage() {
                   {mode === "signup" ? (
                     <>
                       Create your{" "}
-                      <span className="text-gradient-brand">Account</span>
+                      <span className="text-[#0062a8]">Account</span>
                     </>
                   ) : (
                     <>
-                      Welcome <span className="text-gradient-brand">Back</span>
+                      Welcome <span className="text-[#0062a8]">Back</span>
                     </>
                   )}
                 </h1>
@@ -581,7 +649,7 @@ export default function AuthPage() {
                           type="password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Min. 8 chars"
+                          placeholder="••••••••••"
                           className="input-base pl-10"
                           required
                         />
@@ -612,7 +680,7 @@ export default function AuthPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-brand text-primary-foreground font-semibold px-6 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2"
+                    className="w-full bg-[#0062a8] hover:bg-[#00528e] text-white font-semibold px-6 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
                       <>
@@ -670,7 +738,7 @@ export default function AuthPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-brand text-primary-foreground font-semibold px-6 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2"
+                    className="w-full bg-[#0062a8] hover:bg-[#00528e] text-white font-semibold px-6 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
                       <>
@@ -694,8 +762,8 @@ export default function AuthPage() {
               >
                 <ArrowLeft className="w-4 h-4" /> Back to details
               </button>
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-                <ShieldCheck className="w-7 h-7 text-primary-glow" />
+              <div className="w-12 h-12 rounded-xl bg-sky-50 flex items-center justify-center mb-5 text-[#0062a8]">
+                <ShieldCheck className="w-6 h-6" />
               </div>
               <h1 className="text-3xl font-extrabold text-ink tracking-tight">
                 {verificationMethod === "email"
@@ -704,7 +772,7 @@ export default function AuthPage() {
               </h1>
               <p className="text-ink-soft mt-2 text-sm">
                 We sent a 6-digit code to{" "}
-                <span className="font-medium text-ink">
+                <span className="font-semibold text-ink">
                   {verificationMethod === "email"
                     ? email
                     : `${countryCode}${phone}`}
@@ -730,7 +798,7 @@ export default function AuthPage() {
                           el?.focus();
                         }
                       }}
-                      className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold rounded-xl border border-border bg-white focus:border-primary-glow focus:ring-2 focus:ring-primary/20 outline-none transition"
+                      className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold rounded-xl border border-border bg-white focus:border-[#0062a8] focus:ring-2 focus:ring-[#0062a8]/20 outline-none transition"
                     />
                   ))}
                 </div>
@@ -744,7 +812,7 @@ export default function AuthPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-brand text-primary-foreground font-semibold px-6 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition-all disabled:opacity-70 flex items-center justify-center gap-2"
+                  className="w-full bg-[#0062a8] hover:bg-[#00528e] text-white font-semibold px-6 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition-all disabled:opacity-70 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -760,10 +828,23 @@ export default function AuthPage() {
                   Didn&apos;t receive the code?{" "}
                   <button
                     type="button"
-                    onClick={() => setStep("form")}
-                    className="text-primary-glow font-medium hover:underline"
+                    onClick={handleResendOtp}
+                    disabled={isSubmitting}
+                    className="text-[#0062a8] font-medium hover:underline"
                   >
-                    Resend or change details
+                    Resend
+                  </button>{" "}
+                  or{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearError();
+                      setLocalError(null);
+                      setStep("form");
+                    }}
+                    className="text-[#0062a8] font-medium hover:underline"
+                  >
+                    change details
                   </button>
                 </p>
               </form>
@@ -787,7 +868,7 @@ export default function AuthPage() {
                 onClick={() => routeUserAfterAuth(useAuthStore.getState().user || user)}
                 className="inline-flex mt-8 bg-gradient-brand text-primary-foreground font-semibold px-8 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition"
               >
-                {accountRole === "recruiter" || (useAuthStore.getState().user?.role || user?.role) === "recruiter" ? "Continue to Recruiter Dashboard" : "Continue to Resume Onboarding"}
+                {accountRole === "recruiter" || (useAuthStore.getState().user?.role || user?.role) === "recruiter" ? "Continue to Recruiter Onboarding" : "Continue to Resume Onboarding"}
               </button>
             </div>
           )}

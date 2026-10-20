@@ -3,16 +3,24 @@ import { Menu, X, Sparkles } from 'lucide-react';
 import { useScrolled } from '../hooks/useScrolled';
 import { LANDING_NAV_LINKS } from '../constants/landing.constants';
 import { Button } from './ui/Button';
+import type { PublishedCmsData } from '../services/cms.service';
 
 interface NavbarProps {
   onOpenDemo: () => void;
   onOpenSignIn: () => void;
   onNavigate?: (path: string) => void;
+  data?: PublishedCmsData['navbar'];
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo, onOpenSignIn, onNavigate }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo, onOpenSignIn, onNavigate, data }) => {
   const isScrolled = useScrolled(20);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const brandName = data?.brandName || 'LetGetIn';
+  const badge = data?.badge || 'BETA';
+  const navLinks = (data?.navLinks && data.navLinks.length > 0) ? data.navLinks : LANDING_NAV_LINKS;
+  const signInText = data?.signInText || 'Sign In';
+  const ctaButtonText = data?.ctaButtonText || 'Get In — Free';
 
   return (
     <header
@@ -41,17 +49,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo, onOpenSignIn, onNavi
             </div>
             <div className="flex items-center gap-2">
               <span className="font-display text-xl font-bold tracking-tight text-[#061f3d]">
-                Let<span className="text-gradient-blue">Get</span>In
+                {brandName.includes('Get') ? (
+                  <>
+                    {brandName.split('Get')[0]}<span className="text-gradient-blue">Get</span>{brandName.split('Get')[1]}
+                  </>
+                ) : (
+                  brandName
+                )}
               </span>
               <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-pill-bg text-pill-text border border-pill-border tracking-wider">
-                BETA
+                {badge}
               </span>
             </div>
           </a>
 
           {/* Desktop Nav Links */}
           <nav className="hidden lg:flex items-center space-x-8 text-[13.5px] font-medium text-slate-600">
-            {LANDING_NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -68,14 +82,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo, onOpenSignIn, onNavi
               onClick={onOpenSignIn}
               className="text-[13.5px] font-semibold text-[#0a192f] hover:text-brand-600 transition-colors px-2 py-1.5 cursor-pointer"
             >
-              Sign In
+              {signInText}
             </button>
             <Button
               onClick={onOpenDemo}
               variant="gradient"
               size="md"
             >
-              <span>Get In — Free</span>
+              <span>{ctaButtonText}</span>
             </Button>
           </div>
 
@@ -96,37 +110,38 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenDemo, onOpenSignIn, onNavi
       {mobileMenuOpen && (
         <div className="lg:hidden border-b border-sky-100 bg-white px-6 pt-4 pb-6 space-y-4 shadow-xl animate-in slide-in-from-top duration-200">
           <nav className="space-y-3">
-            {LANDING_NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-base font-medium text-slate-700 hover:text-brand-600 py-1"
+                className="block text-sm font-medium text-slate-700 hover:text-brand-600 py-1.5"
               >
                 {link.label}
               </a>
             ))}
           </nav>
-          <div className="pt-4 border-t border-sky-100 flex flex-col space-y-3">
+          <div className="pt-4 border-t border-sky-100 flex flex-col gap-3">
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
                 onOpenSignIn();
               }}
-              className="w-full text-center py-2.5 text-sm font-semibold text-[#0a192f] border border-slate-200 rounded-xl hover:bg-sky-50"
+              className="w-full text-center py-2.5 text-sm font-semibold text-[#0a192f] hover:bg-sky-50 rounded-lg transition-colors"
             >
-              Sign In
+              {signInText}
             </button>
-            <button
+            <Button
               onClick={() => {
                 setMobileMenuOpen(false);
                 onOpenDemo();
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold text-white btn-gradient-blue rounded-xl shadow-xs"
+              variant="gradient"
+              size="md"
+              className="w-full"
             >
-              <Sparkles className="w-4 h-4 text-sky-300" />
-              <span>Get In — Free</span>
-            </button>
+              <span>{ctaButtonText}</span>
+            </Button>
           </div>
         </div>
       )}

@@ -449,7 +449,6 @@ const MANAGEMENT_ITEMS: NavItem[] = [
     shortName: "Huremaso",
     href: "/recruiter/huremaso",
     icon: Briefcase,
-    soon: true,
     description: "Enterprise workforce operations platform",
   },
   {
@@ -630,7 +629,6 @@ const STARTUP_MANAGEMENT_ITEMS: NavItem[] = [
     shortName: "Huremaso",
     href: "/recruiter/huremaso",
     icon: Briefcase,
-    soon: true,
     description: "Enterprise workforce operations platform",
   },
   {

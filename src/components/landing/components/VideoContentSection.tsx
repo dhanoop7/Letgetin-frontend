@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { Play, Sparkles, Video, CheckCircle2 } from 'lucide-react';
 import { VIDEO_SHOWCASE_LIST } from '../constants/landing.constants';
+import type { PublishedCmsData } from '../services/cms.service';
 
 interface VideoContentSectionProps {
   onOpenVideoDemo: () => void;
+  data?: PublishedCmsData['videoContent'];
 }
 
-export const VideoContentSection: React.FC<VideoContentSectionProps> = ({ onOpenVideoDemo }) => {
+export const VideoContentSection: React.FC<VideoContentSectionProps> = ({ onOpenVideoDemo, data }) => {
   const [selectedVideo, setSelectedVideo] = useState(0);
 
-  const currentVideo = VIDEO_SHOWCASE_LIST[selectedVideo] || VIDEO_SHOWCASE_LIST[0];
+  const sectionTag = data?.sectionTag || "VIDEO & CONTENT SHOWCASE";
+  const title = data?.title || "See the Platform in Action";
+  const subtitle = data?.subtitle || "Watch how verified assessments, candidate scoring, and autonomous bidding function in real time.";
+  const videoList = (data?.videoList && data.videoList.length > 0) ? data.videoList : VIDEO_SHOWCASE_LIST;
+  const currentVideo = videoList[selectedVideo] || videoList[0] || VIDEO_SHOWCASE_LIST[0];
 
   return (
     <section id="video-showcase" className="py-20 md:py-28 bg-white border-b border-navy-200/60">
@@ -19,13 +25,13 @@ export const VideoContentSection: React.FC<VideoContentSectionProps> = ({ onOpen
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-50 border border-brand-200/80 text-brand-700 text-xs font-semibold uppercase tracking-wider mb-4">
             <Video className="w-3.5 h-3.5 text-brand-700" />
-            <span>VIDEO & CONTENT SHOWCASE</span>
+            <span>{sectionTag}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-navy-900 tracking-tight leading-tight mb-4">
-            See the Platform in Action
+            {title}
           </h2>
           <p className="text-base sm:text-lg text-navy-700 leading-relaxed">
-            Watch how verified assessments, candidate scoring, and autonomous bidding function in real time.
+            {subtitle}
           </p>
         </div>
 

@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
 import { ArrowUpRight, Sparkles, BookOpen, Clock } from 'lucide-react';
 import { BLOG_ARTICLES_LIST } from '../constants/landing.constants';
+import type { PublishedCmsData } from '../services/cms.service';
 
-export const BlogMatrix: React.FC = () => {
+interface BlogMatrixProps {
+  data?: PublishedCmsData['blogMatrix'];
+}
+
+export const BlogMatrix: React.FC<BlogMatrixProps> = ({ data }) => {
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const categories = ['All', 'Proof of Work', 'Autonomous Bidding', 'Talent Economy', '6 Dimensions'];
+  const sectionTag = data?.sectionTag || "EDITORIAL & RESEARCH MATRIX";
+  const title = data?.title || "Insights on Verified Talent & Merit Hiring";
+  const categories = (data?.categories && data.categories.length > 0)
+    ? ['All', ...data.categories.filter(c => c !== 'All')]
+    : ['All', 'Proof of Work', 'Autonomous Bidding', 'Talent Economy', '6 Dimensions'];
 
-  const filtered = activeFilter === 'All' 
-    ? BLOG_ARTICLES_LIST 
-    : BLOG_ARTICLES_LIST.filter(a => a.category === activeFilter);
+  const articles = (data?.articles && data.articles.length > 0) ? data.articles : BLOG_ARTICLES_LIST;
+  const filtered = activeFilter === 'All'
+    ? articles
+    : articles.filter(a => a.category === activeFilter);
 
   const featuredArticle = filtered.find(a => a.featured) || filtered[0];
   const gridArticles = filtered.filter(a => a.id !== featuredArticle?.id);
@@ -17,16 +27,16 @@ export const BlogMatrix: React.FC = () => {
   return (
     <section id="blog-matrix" className="py-20 md:py-28 bg-[#f8fbfe] border-b border-sky-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-6 border-b border-sky-100">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-pill-bg text-pill-text border border-pill-border text-xs font-semibold uppercase tracking-wider mb-3">
               <BookOpen className="w-3.5 h-3.5 text-brand-500" />
-              <span>EDITORIAL & RESEARCH MATRIX</span>
+              <span>{sectionTag}</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a192f] tracking-tight">
-              Insights on Verified Talent & Merit Hiring
+              {title}
             </h2>
           </div>
 
@@ -51,16 +61,16 @@ export const BlogMatrix: React.FC = () => {
 
         {/* Magazine Editorial Matrix */}
         <div className="space-y-6">
-          
+
           {/* Featured Large Card */}
           {featuredArticle && (
             <div className="bg-white rounded-[2rem] border border-sky-100 overflow-hidden hover:border-brand-400 transition-all group shadow-sm">
               <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
-                
+
                 {/* Left Visual Area */}
-                <div className={`lg:col-span-6 bg-gradient-to-br ${featuredArticle.imageGradient} p-8 sm:p-12 text-white flex flex-col justify-between min-h-[280px] relative overflow-hidden`}>
+                <div className={`lg:col-span-6 bg-gradient-to-br ${(featuredArticle as any).imageGradient || 'from-[#062b63] via-[#07498c] to-[#087bc1]'} p-8 sm:p-12 text-white flex flex-col justify-between min-h-[280px] relative overflow-hidden`}>
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.2),transparent_60%)] pointer-events-none" />
-                  
+
                   <div className="relative flex items-center justify-between">
                     <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-white border border-white/30">
                       {featuredArticle.badge}

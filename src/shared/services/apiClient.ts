@@ -1,6 +1,12 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-const resolveApiBaseUrl = (rawUrl?: string): string => {
+export const resolveApiBaseUrl = (rawUrl?: string): string => {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:5001/api';
+  }
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:5001/api';
+  }
   const url = (rawUrl || 'http://localhost:5001/api').trim();
   const trimmed = url.replace(/\/+$/, '');
   return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;

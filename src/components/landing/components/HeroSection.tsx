@@ -3,15 +3,29 @@ import { Play, Sparkles, Building2 } from 'lucide-react';
 import { HERO_PROFILES } from '../constants/landing.constants';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
+import type { PublishedCmsData } from '../services/cms.service';
 
 interface HeroSectionProps {
   onOpenDemo: () => void;
   onOpenVideoDemo: () => void;
+  data?: PublishedCmsData['hero'];
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, onOpenVideoDemo }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, onOpenVideoDemo, data }) => {
   const [activeProfileIndex, setActiveProfileIndex] = useState(0);
-  const activeProfile = HERO_PROFILES[activeProfileIndex] || HERO_PROFILES[0];
+  const profiles = (data?.profiles && data.profiles.length > 0) ? data.profiles : HERO_PROFILES;
+  const activeProfile = profiles[activeProfileIndex] || profiles[0] || HERO_PROFILES[0];
+
+  const tagBadge = data?.tagBadge || "The future of professional identity";
+  const headlineLine1 = data?.headlineLine1 || "Stop Claiming.";
+  const headlineLine2Gradient = data?.headlineLine2Gradient || "Proving.";
+  const subtitle = data?.subtitle || "The professional network where verified skills, not CVs, get you hired.";
+  const subtitleHighlight = data?.subtitleHighlight || "Companies bid for talent — not the other way around.";
+  const primaryCtaText = data?.primaryCtaText || "Get In — It's Free";
+  const secondaryCtaText = data?.secondaryCtaText || "Watch Demo";
+  const proofBadges = (data?.proofBadges && data.proofBadges.length > 0)
+    ? data.proofBadges
+    : ["Al-verified skills", "Zero bias hiring", "Global talent pool"];
 
   return (
     <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden screenshot-ambient-glow">
@@ -27,21 +41,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, onOpenVide
                 variant="pill"
                 icon={<Sparkles className="w-3.5 h-3.5 text-brand-500" />}
               >
-                <span>The future of professional identity</span>
+                <span>{tagBadge}</span>
               </Badge>
             </div>
 
             {/* Main Headline */}
             <h1 className="font-display text-4xl sm:text-6xl md:text-[68px] font-extrabold text-[#06284f] tracking-[-0.04em] leading-[1.08] mb-6">
-              Stop Claiming.<br />
-              Start <span className="text-gradient-blue">Proving.</span>
+              {headlineLine1}<br />
+              Start <span className="text-gradient-blue">{headlineLine2Gradient}</span>
             </h1>
 
             {/* Subtitle */}
             <p className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-xl mb-9 font-normal">
-              The professional network where verified skills, not CVs, get you hired.{' '}
+              {subtitle}{' '}
               <strong className="text-[#0a192f] font-bold">
-                Companies bid for talent — not the other way around.
+                {subtitleHighlight}
               </strong>
             </p>
 
@@ -52,7 +66,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, onOpenVide
                 variant="gradient"
                 size="lg"
               >
-                <span>Get In — It's Free</span>
+                <span>{primaryCtaText}</span>
               </Button>
 
               <Button
@@ -65,30 +79,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, onOpenVide
                   </div>
                 }
               >
-                <span>Watch Demo</span>
+                <span>{secondaryCtaText}</span>
               </Button>
             </div>
 
             {/* Bottom Proof Badges with cyan circle outline */}
             <div className="flex flex-wrap items-center gap-y-3 gap-x-8 text-xs sm:text-sm font-medium text-slate-600">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full border-[1.5px] border-[#0284c7] flex items-center justify-center text-[#0284c7]">
-                  <span className="text-[9px] font-bold">✓</span>
+              {proofBadges.map((badge, bIdx) => (
+                <div key={bIdx} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-[1.5px] border-[#0284c7] flex items-center justify-center text-[#0284c7]">
+                    <span className="text-[9px] font-bold">✓</span>
+                  </div>
+                  <span>{badge}</span>
                 </div>
-                <span>Al-verified skills</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full border-[1.5px] border-[#0284c7] flex items-center justify-center text-[#0284c7]">
-                  <span className="text-[9px] font-bold">✓</span>
-                </div>
-                <span>Zero bias hiring</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full border-[1.5px] border-[#0284c7] flex items-center justify-center text-[#0284c7]">
-                  <span className="text-[9px] font-bold">✓</span>
-                </div>
-                <span>Global talent pool</span>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -176,28 +180,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, onOpenVide
 
             {/* Profile Switcher Controls */}
             <div className="mt-10 flex items-center gap-2 z-10">
-              <button
-                type="button"
-                onClick={() => setActiveProfileIndex(0)}
-                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
-                  activeProfileIndex === 0
-                    ? 'btn-gradient-blue text-white shadow-xs'
-                    : 'bg-white border border-sky-200 text-slate-600 hover:bg-sky-50'
-                }`}
-              >
-                Aisha (Designer)
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveProfileIndex(1)}
-                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
-                  activeProfileIndex === 1
-                    ? 'btn-gradient-blue text-white shadow-xs'
-                    : 'bg-white border border-sky-200 text-slate-600 hover:bg-sky-50'
-                }`}
-              >
-                Marcus (Staff ML)
-              </button>
+              {profiles.map((p, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveProfileIndex(idx)}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+                    activeProfileIndex === idx
+                      ? 'btn-gradient-blue text-white shadow-xs'
+                      : 'bg-white border border-sky-200 text-slate-600 hover:bg-sky-50'
+                  }`}
+                >
+                  {p.name ? `${p.name.split(' ')[0]} (${p.role ? p.role.split('·')[0].trim() : ''})` : `Profile ${idx + 1}`}
+                </button>
+              ))}
             </div>
 
           </div>

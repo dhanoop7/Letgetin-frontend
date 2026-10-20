@@ -8,7 +8,7 @@ interface RecruiterState {
   orgFormMeta: Partial<Record<EntityType, OrgFormMeta>>;
   error: string | null;
 
-  loadOrgProfile: () => Promise<OrgProfile | null>;
+  loadOrgProfile: (force?: boolean) => Promise<OrgProfile | null>;
   saveOrgProfile: (
     data: Omit<OrgProfile, '_id' | 'ownerUserId' | 'createdAt' | 'updatedAt'>
   ) => Promise<OrgProfile>;
@@ -22,7 +22,10 @@ export const useRecruiterStore = create<RecruiterState>((set, get) => ({
   orgFormMeta: {},
   error: null,
 
-  loadOrgProfile: async () => {
+  loadOrgProfile: async (force: boolean = false) => {
+    if (!force && get().orgProfileStatus === 'loaded') {
+      return get().orgProfile;
+    }
     set({ orgProfileStatus: 'loading', error: null });
     try {
       const profile = await recruiterService.getOrgProfile();

@@ -1,22 +1,35 @@
 import React, { useState } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import { PLATFORM_STATS, LIVE_OPPORTUNITIES } from '../constants/landing.constants';
+import type { PublishedCmsData } from '../services/cms.service';
 
-export const StatsAndShift: React.FC = () => {
+interface StatsAndShiftProps {
+  data?: PublishedCmsData['statsAndShift'];
+}
+
+export const StatsAndShift: React.FC<StatsAndShiftProps> = ({ data }) => {
   const [activeRoleFilter, setActiveRoleFilter] = useState('All');
 
-  const filteredRoles = activeRoleFilter === 'All' 
-    ? LIVE_OPPORTUNITIES 
-    : LIVE_OPPORTUNITIES.filter(r => r.field === activeRoleFilter || activeRoleFilter === 'All');
+  const stats = (data?.stats && data.stats.length > 0) ? data.stats : PLATFORM_STATS;
+  const sectionTag = data?.sectionTag || 'THE SHIFT';
+  const headingLine1 = data?.headingLine1 || 'CVs are broken.';
+  const headingLine2Gradient = data?.headingLine2Gradient || 'broken.';
+  const subtitle = data?.subtitle || 'Companies waste 80% of time on unqualified candidates. Great talent gets lost in the noise.';
+  const subtitleHighlight = data?.subtitleHighlight || 'LetGetIn fixes this.';
+
+  const opportunities = (data?.liveRoles && data.liveRoles.length > 0) ? data.liveRoles : LIVE_OPPORTUNITIES;
+  const filteredRoles = activeRoleFilter === 'All'
+    ? opportunities
+    : opportunities.filter(r => r.field === activeRoleFilter || activeRoleFilter === 'All');
 
   return (
     <section id="shift" className="py-20 md:py-28 bg-white border-b border-sky-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Top Numbers Row - Royal Blue Numbers matching screenshot */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-16 border-b border-sky-100">
-          {PLATFORM_STATS.map((stat) => (
-            <div key={stat.id} className="flex flex-col">
+          {stats.map((stat, sIdx) => (
+            <div key={(stat as any).id || sIdx} className="flex flex-col">
               <span className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter text-gradient-blue font-display">
                 {stat.value}
               </span>
@@ -33,21 +46,21 @@ export const StatsAndShift: React.FC = () => {
         {/* Section Header: The Shift */}
         <div className="pt-20 pb-12 text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-pill-bg border border-pill-border text-pill-text text-xs font-semibold uppercase tracking-wider mb-4">
-            <span>THE SHIFT</span>
+            <span>{sectionTag}</span>
           </div>
           <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-[#06284f] tracking-[-0.035em] leading-tight mb-4">
-            CVs are broken.<br />
-            Trust is <span className="text-gradient-blue">broken.</span>
+            {headingLine1}<br />
+            Trust is <span className="text-gradient-blue">{headingLine2Gradient}</span>
           </h2>
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
-            Companies waste 80% of time on unqualified candidates. Great talent gets lost in the noise. <br className="hidden sm:inline" />
-            <strong className="text-[#06284f] font-bold">LetGetIn fixes this.</strong>
+            {subtitle} <br className="hidden sm:inline" />
+            <strong className="text-[#06284f] font-bold">{subtitleHighlight}</strong>
           </p>
         </div>
 
         {/* The Old Way vs The LetGetIn Way */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-4">
-          
+
           {/* Card 1: The Old Way (Soft rose card from PDF Page 2) */}
           <div className="lg:col-span-6 bg-[#fff7f7] border border-rose-200/80 rounded-[2rem] p-7 sm:p-9 flex flex-col justify-between shadow-2xs">
             <div>
@@ -175,9 +188,9 @@ export const StatsAndShift: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
-            {filteredRoles.map((role) => (
-              <div 
-                key={role.id} 
+            {filteredRoles.map((role, rIdx) => (
+              <div
+                key={(role as any).id || role.title || rIdx}
                 className="bg-white p-4 rounded-2xl border border-sky-100 hover:border-brand-400 transition-all hover:shadow-xs flex flex-col justify-between"
               >
                 <div>

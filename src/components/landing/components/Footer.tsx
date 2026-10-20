@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield } from 'lucide-react';
+import type { PublishedCmsData } from '../services/cms.service';
 
 const XIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -49,9 +50,10 @@ interface FooterProps {
   onOpenSignIn?: () => void;
   onOpenSignUp?: () => void;
   onNavigate?: (path: string) => void;
+  data?: PublishedCmsData['footer'];
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenSignIn: _onOpenSignIn, onOpenSignUp: _onOpenSignUp, onNavigate }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenSignIn: _onOpenSignIn, onOpenSignUp: _onOpenSignUp, onNavigate, data }) => {
   const footerSections: { title: string; links: FooterLink[] }[] = [
     {
       title: 'PLATFORM',
@@ -150,13 +152,13 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSignIn: _onOpenSignIn, onO
               </div>
 
               <p className="text-sm text-slate-300 leading-relaxed max-w-sm mb-6 font-normal">
-                The professional identity layer where verified skills, not CVs, get you hired.
+                {data?.brandDescription || "The professional identity layer where verified skills, not CVs, get you hired."}
               </p>
 
               {/* Status Indicator */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs font-mono text-sky-200 mb-4">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Verification Engine: Live (120k+ members)</span>
+                <span>{data?.statusText || "Verification Engine: Live (120k+ members)"}</span>
               </div>
 
               {/* App Download Badges */}
@@ -282,12 +284,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSignIn: _onOpenSignIn, onO
         {/* Bottom bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400 font-mono">
           <div>
-            © 2026 LetGetIn, Inc. All rights reserved.
+            {data?.copyright || "© 2026 LetGetIn, Inc. All rights reserved."}
           </div>
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1.5 text-slate-300">
               <Shield className="w-3.5 h-3.5 text-brand-400" />
-              <span>SOC2 Certified · Zero Bias Verified</span>
+              <span>{data?.complianceText || "SOC2 Certified · Zero Bias Verified"}</span>
             </span>
           </div>
         </div>
