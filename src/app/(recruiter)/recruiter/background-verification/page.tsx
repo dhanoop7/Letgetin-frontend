@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { creditService } from "@/features/credits/services/creditService";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -449,11 +451,13 @@ const INITIAL_BGV_CANDIDATES: BGVCandidate[] = [
 ];
 
 export default function BackgroundVerificationPage() {
+  const router = useRouter();
   const [candidates, setCandidates] = useState<BGVCandidate[]>(INITIAL_BGV_CANDIDATES);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedCandidate, setSelectedCandidate] = useState<BGVCandidate | null>(null);
   const [isInitiateModalOpen, setIsInitiateModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -515,10 +519,36 @@ export default function BackgroundVerificationPage() {
     }, 900);
   };
 
-  const handleInitiateSubmit = (e: React.FormEvent) => {
+  const handleInitiateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCandidateName.trim() || !newCandidateEmail.trim() || !newCandidateRole.trim()) {
       toast.error("Please fill in candidate name, email, and role.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Server-verified platform credit deduction: 30 credits (₹300)
+      await creditService.chargeFeature({
+        featureKey: "bg_verification",
+        reasonOverride: `Background Verification Screening for ${newCandidateName.trim()} (${newCandidateRole.trim()})`,
+      });
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const isInsufficient = creditService.isInsufficientCreditsError(err);
+      if (isInsufficient.isInsufficient) {
+        toast.error(
+          `Insufficient credits. Background verification requires 30 platform credits, but your balance is ${isInsufficient.availableBalance}.`
+        );
+        setIsInitiateModalOpen(false);
+        router.push(
+          `/credits?required=30&shortfall=${isInsufficient.shortfall}&feature=bg_verification&returnUrl=${encodeURIComponent(
+            window.location.pathname
+          )}`
+        );
+        return;
+      }
+      toast.error(err?.message || "Failed to process background verification charge");
       return;
     }
 
@@ -568,10 +598,11 @@ export default function BackgroundVerificationPage() {
 
     setCandidates([newEntry, ...candidates]);
     setIsInitiateModalOpen(false);
+    setIsSubmitting(false);
     setNewCandidateName("");
     setNewCandidateEmail("");
     setNewCandidateRole("");
-    toast.success(`BGV screening initiated for ${newEntry.name}!`, {
+    toast.success(`BGV screening initiated for ${newEntry.name} (-30 credits)!`, {
       description: `Verification tracking ID: ${newEntry.id}`,
     });
   };
@@ -1424,9 +1455,21 @@ export default function BackgroundVerificationPage() {
                 </div>
               </div>
 
+              <div className="p-3.5 rounded-xl bg-surface-alt/70 border border-border/80 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-ink-soft">Platform Charge:</span>
+                  <span className="font-bold text-primary-glow">30 Credits (₹300)</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-ink-soft">
+                  <span>External Provider Fee:</span>
+                  <span className="font-medium text-ink">Billed separately per provider (if applicable)</span>
+                </div>
+              </div>
+
               <div className="pt-3 border-t border-border flex items-center justify-end gap-2.5">
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => setIsInitiateModalOpen(false)}
                   className="px-4 py-2.5 text-xs font-semibold text-ink-soft hover:text-ink rounded-xl transition cursor-pointer"
                 >
@@ -1434,9 +1477,10 @@ export default function BackgroundVerificationPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2.5 bg-gradient-brand text-primary-foreground text-xs font-bold rounded-xl shadow-glow hover:scale-[1.02] active:scale-[0.98] transition cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-4 py-2.5 bg-gradient-brand text-primary-foreground text-xs font-bold rounded-xl shadow-glow hover:scale-[1.02] active:scale-[0.98] transition cursor-pointer flex items-center gap-1.5"
                 >
-                  Initiate Screening
+                  {isSubmitting ? "Processing..." : "Initiate Screening (30 Credits)"}
                 </button>
               </div>
             </form>
