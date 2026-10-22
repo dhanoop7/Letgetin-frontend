@@ -1,32 +1,44 @@
 import React from 'react';
 import { CORE_FEATURES_LIST } from '../constants/landing.constants';
 import { SectionHeader } from './ui/SectionHeader';
+import type { PublishedCmsData } from '../services/cms.service';
 
 interface CorePlatformOSProps {
   onOpenDemo?: () => void;
+  data?: PublishedCmsData['corePlatformOS'];
 }
 
-export const CorePlatformOS: React.FC<CorePlatformOSProps> = () => {
+export const CorePlatformOS: React.FC<CorePlatformOSProps> = ({ data }) => {
+  const sectionTag = data?.sectionTag || "CORE FEATURES";
+  const title = data?.title || "The Intelligent Professional OS";
+  const subtitle = data?.subtitle || "Everything you need to prove, connect, and get hired — all in one platform.";
+  const features = (data?.features && data.features.length > 0) ? data.features : CORE_FEATURES_LIST;
+
   return (
     <section id="features" className="py-20 md:py-28 bg-[#f8fbfe] border-b border-sky-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <SectionHeader
-          badge="CORE FEATURES"
+          badge={sectionTag}
           title={
-            <>
-              The <span className="text-gradient-blue">Intelligent</span> Professional OS
-            </>
+            title.includes('Intelligent') ? (
+              <>
+                The <span className="text-gradient-blue">Intelligent</span> Professional OS
+              </>
+            ) : (
+              title
+            )
           }
-          subtitle="Everything you need to prove, connect, and get hired — all in one platform."
+          subtitle={subtitle}
           className="mb-16"
         />
 
         {/* 6 Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {CORE_FEATURES_LIST.map((item) => {
-            const Icon = item.icon;
+          {features.map((item, fIdx) => {
+            const fallbackIcon = CORE_FEATURES_LIST[fIdx % CORE_FEATURES_LIST.length]?.icon || CORE_FEATURES_LIST[0].icon;
+            const Icon = (item as any).icon || fallbackIcon;
             return (
               <div
                 key={item.id}

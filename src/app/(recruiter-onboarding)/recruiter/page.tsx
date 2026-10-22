@@ -4,20 +4,32 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 export default function RecruiterIndexPage() {
   const router = useRouter();
   const { loadOrgProfile } = useRecruiterStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
 
   useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      router.replace("/auth?mode=signin");
+      return;
+    }
+
     loadOrgProfile()
       .then((profile) => {
-        router.replace(profile ? "/recruiter/dashboard" : "/recruiter/setup");
+        if (profile && profile.name) {
+          router.replace("/recruiter/dashboard");
+        } else {
+          router.replace("/recruiter/setup");
+        }
       })
       .catch(() => {
         router.replace("/recruiter/setup");
       });
-  }, [loadOrgProfile, router]);
+  }, [router, isAuthenticated, isLoading, loadOrgProfile]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center text-ink-soft">

@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(process.cwd()),
+  },
   reactCompiler: true,
   async redirects() {
     return [
@@ -11,13 +15,28 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/login",
-        destination: "/auth",
+        destination: "/auth?mode=signin",
+        permanent: true,
+      },
+      {
+        source: "/signin",
+        destination: "/auth?mode=signin",
         permanent: true,
       },
       {
         source: "/register",
-        destination: "/auth",
+        destination: "/auth?mode=signup",
         permanent: true,
+      },
+      {
+        source: "/signup",
+        destination: "/auth?mode=signup",
+        permanent: true,
+      },
+      {
+        source: "/recruiter",
+        destination: "/recruiter/dashboard",
+        permanent: false,
       },
       {
         source: "/recruiter/create-job",

@@ -6,7 +6,7 @@ import { Building2, GraduationCap, Rocket, Loader2, Sparkles, type LucideIcon } 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
-import { EntityType, OrgAutofillFields } from "@/features/recruiter/types";
+import { EntityType, OrgAutofillFields, OrgFormMeta } from "@/features/recruiter/types";
 import { AIWritingAssistant } from "@/features/aiWriting/components/AIWritingAssistant";
 import { AIWritingContext } from "@/features/aiWriting/types";
 import { UrlAutoSuggestInput } from "@/components/common/UrlAutoSuggestInput";
@@ -41,6 +41,85 @@ const ENTITY_OPTIONS: { value: EntityType; label: string; icon: LucideIcon }[] =
   { value: "institution", label: "Institution", icon: GraduationCap },
   { value: "startup", label: "Startup", icon: Rocket },
 ];
+
+const DEFAULT_ORG_FORM_META: Record<EntityType, OrgFormMeta> = {
+  company: {
+    entity: "company",
+    label: "Company",
+    regLabel: "Company registration / CIN",
+    typeLabel: "Type of company",
+    typeOptions: [
+      "Private Limited",
+      "Public Limited",
+      "LLP",
+      "Sole Proprietorship",
+      "MNC subsidiary",
+      "Non-Profit / NGO",
+      "Partnership",
+      "Government / PSU",
+      "Other",
+    ],
+    sizeLabel: "Number of employees",
+    sizeOptions: [
+      "1–10",
+      "11–50",
+      "51–200",
+      "201–500",
+      "501–1,000",
+      "1,001–5,000",
+      "5,001–10,000",
+      "10,000+",
+    ],
+    valuationLabel: "Revenue / Valuation",
+    leaderLabel: "CEO / Founder",
+    urlPlaceholder: "https://your-company.com",
+  },
+  institution: {
+    entity: "institution",
+    label: "Institution",
+    regLabel: "Institution / UGC / AICTE ID",
+    typeLabel: "Type of institution",
+    typeOptions: [
+      "Private University",
+      "Deemed University",
+      "Government College",
+      "Autonomous College",
+      "Training Institute",
+      "Vocational School",
+      "Research Institution",
+      "Other",
+    ],
+    sizeLabel: "Students / faculty",
+    sizeOptions: ["<500", "500–2000", "2000–5000", "5000–10000", "10000+"],
+    valuationLabel: "Budget / endowment",
+    leaderLabel: "Head / Chancellor / VC",
+    urlPlaceholder: "https://your-institution.edu",
+  },
+  startup: {
+    entity: "startup",
+    label: "Startup",
+    regLabel: "DPIIT / Startup registration ID",
+    typeLabel: "Sector / stage",
+    typeOptions: [
+      "SaaS · Seed",
+      "SaaS · Series A",
+      "SaaS · Series B",
+      "Fintech · Seed",
+      "D2C · Series A",
+      "Deep tech · Pre-seed",
+      "Pre-Seed",
+      "Seed",
+      "Series A / Early Stage",
+      "Series B+ / Growth",
+      "Bootstrapped",
+    ],
+    sizeLabel: "Number of employees",
+    sizeOptions: ["1–10", "11–50", "51–200", "201–500", "500+"],
+    valuationLabel: "Valuation",
+    leaderLabel: "CEO / Founder",
+    urlPlaceholder: "https://your-startup.com",
+  },
+};
 
 export default function RecruiterSetupPage() {
   const router = useRouter();
@@ -130,7 +209,7 @@ export default function RecruiterSetupPage() {
     fundraiser,
   };
 
-  const meta = orgFormMeta[entity];
+  const meta = orgFormMeta[entity] || DEFAULT_ORG_FORM_META[entity];
 
   const handleAutofill = async () => {
     clearError();
@@ -184,6 +263,14 @@ export default function RecruiterSetupPage() {
         setAutofillUrl((prev) => prev || savedUrl);
         setWebsite((prev) => prev || savedUrl);
       }
+      const savedEntity = sessionStorage.getItem("recruiter_entity_type") as EntityType | null;
+      if (savedEntity && ["company", "startup", "institution"].includes(savedEntity)) {
+        setEntity(savedEntity);
+      }
+    }
+
+    if (user?.entityType) {
+      setEntity(user.entityType);
     }
 
     loadOrgProfile()
@@ -228,6 +315,7 @@ export default function RecruiterSetupPage() {
       setLocalError(`${meta?.label || "Organization"} name is required.`);
       return;
     }
+
     if (ceoEmail.trim() && !/^\S+@\S+\.\S+$/.test(ceoEmail.trim())) {
       setLocalError("Enter a valid contact email address.");
       return;
@@ -278,50 +366,52 @@ export default function RecruiterSetupPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-4 py-10">
+    <main className="min-h-screen bg-slate-50/60 dark:bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight">
-            Set up your <span className="text-gradient-brand">{meta?.label || "Organization"}</span>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Set up your <span className="text-[#0062a8] dark:text-primary-glow">{meta.label}</span>
           </h1>
-          <p className="text-ink-soft mt-2 text-sm">
-            Tell us about your {meta?.label.toLowerCase() || "organization"} so candidates know who is hiring.
+          <p className="text-slate-500 dark:text-ink-soft mt-1.5 text-sm">
+            Tell us about your {meta.label.toLowerCase()} so candidates know who is hiring.
           </p>
         </div>
 
-        <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6 sm:p-8">
+        <div className="bg-white dark:bg-surface border border-slate-200/80 dark:border-border rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none p-6 sm:p-8">
           {/* Entity Selector */}
           <div className="mb-6">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-soft mb-2">
-              Organization Type
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-ink-soft mb-2">
+              ORGANIZATION TYPE
             </label>
-            <div className="grid grid-cols-3 gap-2 p-1 bg-background rounded-xl border border-border">
+            <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-50 dark:bg-background rounded-2xl border border-slate-200/80 dark:border-border">
               {ENTITY_OPTIONS.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setEntity(value)}
-                  className={`py-2 text-xs font-semibold rounded-lg transition flex flex-col items-center justify-center gap-1 ${
+                  className={`py-2 text-xs font-semibold rounded-xl transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
                     entity === value
-                      ? "bg-white text-ink shadow-sm border border-border font-bold"
-                      : "text-ink-soft hover:text-ink"
+                      ? "bg-white dark:bg-surface text-slate-900 dark:text-white shadow-sm border border-slate-200/80 dark:border-border font-bold"
+                      : "text-slate-500 dark:text-ink-soft hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
+                  <Icon className="w-4 h-4" />
+                  <span>{label}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Autofill with AI */}
-          <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-primary-glow" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Autofill with AI</span>
+          <div className="mb-6 p-4 sm:p-5 rounded-2xl border border-blue-200/70 dark:border-primary/20 bg-blue-50/40 dark:bg-primary/5">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#0062a8] dark:text-primary-glow" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#0062a8] dark:text-primary-glow">
+                AUTOFILL WITH AI
+              </span>
             </div>
-            <p className="text-xs text-ink-soft mb-3">
-              Paste your {meta?.label.toLowerCase() || "organization"}&apos;s website or about page URL and we&apos;ll
+            <p className="text-xs text-slate-600 dark:text-ink-soft mb-3 leading-relaxed">
+              Paste your {meta.label.toLowerCase()}&apos;s website or about page URL and we&apos;ll
               suggest values for the fields below. You can review and edit everything before saving.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 items-center">
@@ -329,7 +419,7 @@ export default function RecruiterSetupPage() {
                 <UrlAutoSuggestInput
                   value={autofillUrl}
                   onChange={setAutofillUrl}
-                  placeholder={meta?.urlPlaceholder || "https://example.com/about"}
+                  placeholder={meta.urlPlaceholder}
                   disabled={isAutofilling}
                 />
               </div>
@@ -337,7 +427,7 @@ export default function RecruiterSetupPage() {
                 type="button"
                 onClick={handleAutofill}
                 disabled={isAutofilling || !autofillUrl.trim()}
-                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-xs font-semibold border border-primary/30 text-primary-glow bg-white hover:bg-primary/10 px-4 py-2.5 rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-semibold border border-[#0062a8]/30 text-[#0062a8] dark:text-primary-glow bg-white hover:bg-blue-50 px-4 py-2.5 rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
               >
                 {isAutofilling ? (
                   <>
@@ -490,9 +580,9 @@ export default function RecruiterSetupPage() {
 
             {/* Startup Specific Fields */}
             {entity === "startup" && (
-              <div className="p-4 sm:p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-primary-glow flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> Startup Venture & Product Details
+              <div className="p-4 sm:p-5 rounded-2xl border border-blue-200/70 bg-blue-50/40 space-y-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#0062a8] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" /> STARTUP VENTURE & PRODUCT DETAILS
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Field label="Founders & Co-Founders">
@@ -509,7 +599,7 @@ export default function RecruiterSetupPage() {
                       type="text"
                       value={sector}
                       onChange={(e) => setSector(e.target.value)}
-                      placeholder="e.g. Edtech, Healthtech, AI"
+                      placeholder="e.g. Edtech, Healthtec"
                       className="input-base"
                     />
                   </Field>
@@ -518,7 +608,7 @@ export default function RecruiterSetupPage() {
                       type="text"
                       value={fundraiser}
                       onChange={(e) => setFundraiser(e.target.value)}
-                      placeholder="e.g. Pre-Seed, Seed, Series A, Bootstrapped"
+                      placeholder="e.g. Pre-Seed, Seed, S"
                       className="input-base"
                     />
                   </Field>
@@ -560,7 +650,7 @@ export default function RecruiterSetupPage() {
                 ref={bioRef}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder={`A comprehensive description of your ${meta?.label.toLowerCase() || "organization"}`}
+                placeholder={`A comprehensive description of your ${meta.label.toLowerCase()}`}
                 className="input-base min-h-[96px] resize-y"
               />
               {bio.trim().length > 0 && (
@@ -608,7 +698,7 @@ export default function RecruiterSetupPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-gradient-brand text-primary-foreground font-semibold px-6 py-3.5 rounded-xl shadow-elegant hover:shadow-glow transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 flex items-center justify-center gap-2"
+              className="w-full bg-[#0062a8] hover:bg-[#00528e] text-white font-semibold px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

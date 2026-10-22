@@ -1,8 +1,22 @@
 import React from 'react';
 import { Star, Sparkles, X } from 'lucide-react';
 import { TESTIMONIALS_DATA } from '../constants/landing.constants';
+import type { PublishedCmsData } from '../services/cms.service';
 
-export const NewsUpdatesSection: React.FC = () => {
+interface NewsUpdatesSectionProps {
+  data?: PublishedCmsData['whyAndTestimonials'];
+}
+
+export const NewsUpdatesSection: React.FC<NewsUpdatesSectionProps> = ({ data }) => {
+  const whyTag = data?.whyTag || 'WHY LETGETIN';
+  const whyTitle = data?.whyTitle || '"BEYOND A RESUME"';
+  const whySubtitle = data?.whySubtitle || "It's a professional identity layer where your actions, verified skills, and community participation are your credentials.";
+  const testimonialsTag = data?.testimonialsTag || 'TESTIMONIALS';
+  const testimonialsTitle = data?.testimonialsTitle || 'Trusted by Professionals Worldwide';
+  const testimonials = (data?.testimonialsList && data.testimonialsList.length > 0)
+    ? data.testimonialsList
+    : TESTIMONIALS_DATA;
+
   return (
     <section id="compare" className="py-20 md:py-28 bg-[#f8fbfe] border-b border-sky-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -10,13 +24,13 @@ export const NewsUpdatesSection: React.FC = () => {
         {/* "BEYOND A RESUME" Section from Screenshot 5 */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#f0f8ff] border border-[#dbeafe] text-[#0066cc] text-xs font-semibold uppercase tracking-wider mb-4 shadow-2xs">
-            <span>WHY LETGETIN</span>
+            <span>{whyTag}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-[#061f3d] tracking-tight leading-tight mb-4">
-            "BEYOND A RESUME"
+            {whyTitle}
           </h2>
           <p className="text-base sm:text-lg text-slate-500 leading-relaxed max-w-2xl mx-auto">
-            It's a professional identity layer where your actions, verified skills, and community participation are your credentials.
+            {whySubtitle}
           </p>
         </div>
 

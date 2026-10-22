@@ -7,13 +7,15 @@ import {
   Maximize2
 } from 'lucide-react';
 import { useVideoPlayer } from '../hooks/useVideoPlayer';
+import type { PublishedCmsData } from '../services/cms.service';
 
 interface CinematicVideoShowcaseProps {
   onOpenDemo: () => void;
   onViewRoles?: () => void;
+  data?: PublishedCmsData['cinematicVideoShowcase'];
 }
 
-export const CinematicVideoShowcase: React.FC<CinematicVideoShowcaseProps> = ({ onOpenDemo, onViewRoles }) => {
+export const CinematicVideoShowcase: React.FC<CinematicVideoShowcaseProps> = ({ onOpenDemo, onViewRoles, data }) => {
   const {
     videoRef,
     isPlaying,
@@ -23,6 +25,21 @@ export const CinematicVideoShowcase: React.FC<CinematicVideoShowcaseProps> = ({ 
     toggleMute,
     handleTimeUpdate
   } = useVideoPlayer(true, true);
+
+  const topHeading = data?.topHeading || 'Experts';
+  const topBadge = data?.topBadge || 'Live Adaptive Assessment Sandbox';
+  const poster = data?.posterImage || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1600&auto=format&fit=crop";
+  const videoUrls = (data?.videoUrls && data.videoUrls.length > 0)
+    ? data.videoUrls
+    : [
+        "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-41315-large.mp4",
+        "https://assets.mixkit.co/videos/preview/mixkit-young-woman-working-on-a-laptop-42171-large.mp4"
+      ];
+  const stats = data?.stats || {
+    matchRate: '98.4%',
+    assessmentVolume: '14.2k',
+    averageSalary: '$165k'
+  };
 
   return (
     <section 
@@ -38,16 +55,11 @@ export const CinematicVideoShowcase: React.FC<CinematicVideoShowcaseProps> = ({ 
         loop
         playsInline
         onTimeUpdate={handleTimeUpdate}
-        poster="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1600&auto=format&fit=crop"
+        poster={poster}
       >
-        <source
-          src="https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-41315-large.mp4"
-          type="video/mp4"
-        />
-        <source
-          src="https://assets.mixkit.co/videos/preview/mixkit-young-woman-working-on-a-laptop-42171-large.mp4"
-          type="video/mp4"
-        />
+        {videoUrls.map((url, uIdx) => (
+          <source key={uIdx} src={url} type="video/mp4" />
+        ))}
       </video>
 
       {/* 2. Cinematic Contrast Vignette Overlays */}
@@ -58,11 +70,11 @@ export const CinematicVideoShowcase: React.FC<CinematicVideoShowcaseProps> = ({ 
       <div className="relative z-20 w-full px-6 sm:px-12 md:px-16 pt-4 sm:pt-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-base sm:text-lg font-semibold text-white/95 tracking-tight font-display">
-            Experts
+            {topHeading}
           </span>
           <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs text-sky-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Live Adaptive Assessment Sandbox</span>
+            <span>{topBadge}</span>
           </div>
         </div>
 

@@ -1,13 +1,24 @@
 import React from 'react';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button } from './ui/Button';
+import type { PublishedCmsData } from '../services/cms.service';
 
 interface FinalCTAProps {
   onOpenDemo: () => void;
   onOpenEnterprise: () => void;
+  data?: PublishedCmsData['finalCTA'];
 }
 
-export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenDemo, onOpenEnterprise }) => {
+export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenDemo, onOpenEnterprise, data }) => {
+  const badge = data?.badge || 'Join 120,000+ professionals';
+  const headline = data?.headline || 'Ready to Get In?';
+  const subtitle = data?.subtitle || 'Stop claiming. Start proving. Join the network where your verified skills, not your CV, define your future.';
+  const primaryButtonText = data?.primaryButtonText || 'Get In — Free';
+  const secondaryButtonText = data?.secondaryButtonText || 'Learn More';
+  const microAssurances = (data?.microAssurances && data.microAssurances.length > 0)
+    ? data.microAssurances
+    : ['No credit card required', 'Free forever for individuals', 'Instant 10-minute AI skill evaluation'];
+
   return (
     <section className="py-24 md:py-32 bg-gradient-to-r from-[#062b63] via-[#07498c] to-[#087bc1] text-white relative overflow-hidden">
       {/* Subtle atmospheric center glow from PDF Page 6 */}
@@ -18,17 +29,17 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenDemo, onOpenEnterprise
         {/* Badge from PDF Page 6 */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-xs font-semibold uppercase tracking-wider mb-8 backdrop-blur-md shadow-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Join 120,000+ professionals</span>
+          <span>{badge}</span>
         </div>
 
         {/* Big Headline from PDF Page 6 */}
         <h2 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tighter leading-tight mb-6 text-white font-display">
-          Ready to Get In?
+          {headline}
         </h2>
 
         {/* Subtitle from PDF Page 6 */}
         <p className="text-base sm:text-xl text-sky-100 max-w-2xl mx-auto leading-relaxed mb-10 font-normal">
-          Stop claiming. Start proving. Join the network where your verified skills, not your CV, define your future.
+          {subtitle}
         </p>
 
         {/* CTA Buttons from PDF Page 6 */}
@@ -39,7 +50,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenDemo, onOpenEnterprise
             size="lg"
             className="group"
           >
-            <span>Get In — Free</span>
+            <span>{primaryButtonText}</span>
             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform text-[#0066cc]" />
           </Button>
 
@@ -49,17 +60,18 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onOpenDemo, onOpenEnterprise
             size="lg"
             icon={<ShieldCheck className="w-4 h-4 text-sky-200" />}
           >
-            <span>Learn More</span>
+            <span>{secondaryButtonText}</span>
           </Button>
         </div>
 
         {/* Micro-assurances from PDF Page 6 */}
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-sky-200 font-mono">
-          <span>No credit card required</span>
-          <span>•</span>
-          <span>Free forever for individuals</span>
-          <span>•</span>
-          <span>Instant 10-minute AI skill evaluation</span>
+          {microAssurances.map((item, idx) => (
+            <React.Fragment key={idx}>
+              {idx > 0 && <span>•</span>}
+              <span>{item}</span>
+            </React.Fragment>
+          ))}
         </div>
 
       </div>

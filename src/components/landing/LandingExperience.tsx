@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { StatsAndShift } from './components/StatsAndShift';
@@ -16,6 +17,7 @@ import { DemoModal } from './components/DemoModal';
 import { CookieConsent } from './components/CookieConsent';
 import { ToastProvider } from './hooks/useToast';
 import { ViewType } from './types/navigation.types';
+import { publicCmsService, PublishedCmsData } from './services/cms.service';
 
 // Lazy-load secondary view pages to optimize initial landing page bundle
 const ExploreRolesPage = lazy(() => import('./components/ExploreRolesPage').then(m => ({ default: m.ExploreRolesPage })));
@@ -119,6 +121,7 @@ interface LandingExperienceProps {
 }
 
 export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPath }) => {
+  const router = useRouter();
   const [currentView, setCurrentView] = useState<ViewType>(() => {
     if (initialPath) {
       return getViewFromPath(initialPath);
@@ -131,6 +134,19 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'signup' | 'video' | 'enterprise' | 'signin'>('signup');
+  const [cmsData, setCmsData] = useState<PublishedCmsData | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    publicCmsService.getPublishedContent().then((data) => {
+      if (isMounted && data) {
+        setCmsData(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -180,7 +196,11 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
 
   const handleOpenSignIn = () => {
     if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+      try {
+        router.push('/auth?mode=signin');
+      } catch {
+        window.location.href = '/auth?mode=signin';
+      }
     }
   };
 
@@ -243,44 +263,75 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
         return (
           <>
             {/* 2. Hero Section */}
-            <HeroSection 
-              onOpenDemo={handleOpenDemo}
-              onOpenVideoDemo={handleOpenVideoDemo}
-            />
+            {cmsData?.sectionVisibility?.hero !== false && (
+              <HeroSection
+                onOpenDemo={handleOpenDemo}
+                onOpenVideoDemo={handleOpenVideoDemo}
+                data={cmsData?.hero}
+              />
+            )}
 
             {/* 3. Cinematic Video Showcase Section */}
-            <CinematicVideoShowcase 
-              onOpenDemo={handleOpenDemo}
-              onViewRoles={handleOpenRoles}
-            />
+            {cmsData?.sectionVisibility?.cinematicShowcase !== false && (
+              <CinematicVideoShowcase
+                onOpenDemo={handleOpenDemo}
+                onViewRoles={handleOpenRoles}
+                data={cmsData?.cinematicVideoShowcase}
+              />
+            )}
 
             {/* 4. Stats & The Shift */}
-            <StatsAndShift />
+            {cmsData?.sectionVisibility?.statsAndShift !== false && (
+              <StatsAndShift
+                data={cmsData?.statsAndShift}
+              />
+            )}
 
             {/* 5. Core Features OS & APEX Benchmarks */}
-            <CorePlatformOS 
-              onOpenDemo={handleOpenDemo}
-            />
+            {cmsData?.sectionVisibility?.coreFeatures !== false && (
+              <CorePlatformOS
+                onOpenDemo={handleOpenDemo}
+                data={cmsData?.corePlatformOS}
+              />
+            )}
 
             {/* 6. The 6 Dimensions of Talent */}
-            <DimensionsOfTalent />
+            {cmsData?.sectionVisibility?.dimensions !== false && (
+              <DimensionsOfTalent
+                data={cmsData?.dimensionsOfTalent}
+              />
+            )}
 
             {/* 7. Blog & Research Matrix */}
-            <BlogMatrix />
+            {cmsData?.sectionVisibility?.blogMatrix !== false && (
+              <BlogMatrix
+                data={cmsData?.blogMatrix}
+              />
+            )}
 
             {/* 8. Video Walkthrough Hub */}
-            <VideoContentSection 
-              onOpenVideoDemo={handleOpenVideoDemo}
-            />
+            {cmsData?.sectionVisibility?.videoHub !== false && (
+              <VideoContentSection
+                onOpenVideoDemo={handleOpenVideoDemo}
+                data={cmsData?.videoContent}
+              />
+            )}
 
             {/* 9. News, Updates & Testimonials */}
-            <NewsUpdatesSection />
+            {cmsData?.sectionVisibility?.whyAndTestimonials !== false && (
+              <NewsUpdatesSection
+                data={cmsData?.whyAndTestimonials}
+              />
+            )}
 
             {/* 10. Final CTA Banner */}
-            <FinalCTA 
-              onOpenDemo={handleOpenDemo}
-              onOpenEnterprise={handleOpenEnterprise}
-            />
+            {cmsData?.sectionVisibility?.finalCTA !== false && (
+              <FinalCTA
+                onOpenDemo={handleOpenDemo}
+                onOpenEnterprise={handleOpenEnterprise}
+                data={cmsData?.finalCTA}
+              />
+            )}
           </>
         );
     }
@@ -292,13 +343,13 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
       <ToastProvider>
         <div className="min-h-screen bg-[#f8fafc]">
           <Suspense fallback={<PageFallbackLoader />}>
-            <ExploreRolesPage 
+            <ExploreRolesPage
               onBackToHome={handleBackToHome}
               onOpenDemo={handleOpenDemo}
             />
           </Suspense>
 
-          <DemoModal 
+          <DemoModal
             isOpen={modalOpen}
             onClose={() => setModalOpen(false)}
             mode={modalMode}
@@ -314,10 +365,11 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
     <ToastProvider>
       <div className="min-h-screen bg-[#f8fbfe] text-slate-800 selection:bg-[#0066cc] selection:text-white flex flex-col font-sans">
         {/* 1. Header / Navigation */}
-        <Navbar 
+        <Navbar
           onOpenDemo={handleOpenDemo}
           onOpenSignIn={handleOpenSignIn}
           onNavigate={handleNavigate}
+          data={cmsData?.navbar}
         />
 
         {/* Main Route Content */}
@@ -328,14 +380,15 @@ export const LandingExperience: React.FC<LandingExperienceProps> = ({ initialPat
         </main>
 
         {/* 11. Footer */}
-        <Footer 
+        <Footer
           onOpenSignIn={handleOpenSignIn}
           onOpenSignUp={handleOpenDemo}
           onNavigate={handleNavigate}
+          data={cmsData?.footer}
         />
 
         {/* Interactive Modal Dialog */}
-        <DemoModal 
+        <DemoModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           mode={modalMode}

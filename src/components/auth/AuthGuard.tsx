@@ -28,7 +28,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         } else if (pathname === "/linguistic-test") {
           router.replace("/recruiter/linguistic-test");
         } else {
-          router.replace("/recruiter");
+          router.replace("/recruiter/dashboard");
         }
       }
     }
