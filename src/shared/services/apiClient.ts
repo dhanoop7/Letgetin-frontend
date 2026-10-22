@@ -1,6 +1,12 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const resolveApiBaseUrl = (rawUrl?: string): string => {
+  const url = (rawUrl || 'http://localhost:5001/api').trim();
+  const trimmed = url.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
+
+const NEXT_PUBLIC_API_URL = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: NEXT_PUBLIC_API_URL,
