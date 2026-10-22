@@ -49,6 +49,8 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 import { AuthService } from "@/features/auth/services/authService";
 import {
@@ -3001,6 +3003,27 @@ export default function ProfilePage() {
   ];
   const isPersonalDetailsActive = PERSONAL_DETAILS_CHILDREN.some((c) => c.id === activeSection);
 
+  const [isTabRailOpen, setIsTabRailOpen] = useState(false);
+
+  const renderRailTab = (sec: { id: SectionId; label: string; icon: typeof Compass }) => {
+    const Icon = sec.icon;
+    const isActive = activeSection === sec.id;
+    return (
+      <button
+        key={sec.id}
+        onClick={() => handleNavigate(sec.id)}
+        className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          isActive
+            ? "bg-gradient-brand text-white shadow-elegant"
+            : "text-ink-soft hover:text-ink hover:bg-secondary/60"
+        }`}
+      >
+        <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-primary-glow"}`} />
+        <span className="truncate">{sec.label}</span>
+      </button>
+    );
+  };
+
   const renderPlainTab = (sec: { id: SectionId; label: string; icon: typeof Compass }) => {
     const Icon = sec.icon;
     const isActive = activeSection === sec.id;
@@ -3060,9 +3083,28 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+    <div className={`p-4 sm:p-6 lg:p-8 ${isTabRailOpen ? "max-w-7xl" : "max-w-6xl"} mx-auto space-y-6 transition-all duration-200`}>
       {/* Top Header Navigation Tabs with Live Auto-Save Status */}
       <div className="bg-surface border border-border rounded-2xl p-2 shadow-xs flex items-center gap-2 select-none">
+        {/* Profile Tab Rail Toggle Arrow Button */}
+        <button
+          type="button"
+          onClick={() => setIsTabRailOpen((prev) => !prev)}
+          aria-label={isTabRailOpen ? "Collapse profile tab rail" : "Expand profile tab rail"}
+          title={isTabRailOpen ? "Collapse profile tab rail" : "Expand profile tab rail"}
+          className={`shrink-0 p-2.5 rounded-xl text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${
+            isTabRailOpen
+              ? "bg-gradient-brand text-white shadow-elegant"
+              : "text-ink-soft hover:text-ink hover:bg-secondary/60"
+          }`}
+        >
+          <ArrowRight
+            className={`w-4 h-4 transition-transform duration-200 ${
+              isTabRailOpen ? "text-white rotate-180" : "text-primary-glow"
+            }`}
+          />
+        </button>
+
         {/* Scroll Left */}
         <button
           type="button"
@@ -3131,91 +3173,177 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Personal Details Sub-Navigation - shown only while a Personal Details option is active */}
-      {isPersonalDetailsActive && (
-        <div className="bg-surface-alt/40 border border-border rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar -mt-3">
-          {PERSONAL_DETAILS_CHILDREN.map((child) => renderSubTab(child))}
+      {/* Main Content Layout: Two-Column with Left Tab Rail when expanded, standard full-width when collapsed */}
+      <div className={isTabRailOpen ? "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" : "space-y-6"}>
+        {/* Collapsible Profile Tab Rail (Left Column when expanded) */}
+        {isTabRailOpen && (
+          <aside className="lg:col-span-3 xl:col-span-3 bg-surface border border-border rounded-3xl p-3.5 shadow-xs space-y-3 sticky top-6 animate-in slide-in-from-left duration-200">
+            <div className="px-3 py-2 flex items-center justify-between border-b border-border/60">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary" />
+                <h3 className="text-xs font-bold text-ink uppercase tracking-wider">Profile Sections</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTabRailOpen(false)}
+                className="p-1 rounded-lg text-ink-soft hover:text-ink hover:bg-surface-alt transition cursor-pointer"
+                aria-label="Collapse tab rail"
+                title="Collapse tab rail"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              {/* Overview */}
+              {renderRailTab(OVERVIEW_SECTION)}
+
+              {/* Personal Details */}
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => handleNavigate("personal")}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isPersonalDetailsActive
+                      ? "bg-gradient-brand text-white shadow-elegant"
+                      : "text-ink-soft hover:text-ink hover:bg-secondary/60"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <User className={`w-4 h-4 shrink-0 ${isPersonalDetailsActive ? "text-white" : "text-primary-glow"}`} />
+                    <span className="truncate">Personal Details</span>
+                  </div>
+                </button>
+
+                {/* Sub-items if Personal Details is active */}
+                {isPersonalDetailsActive && (
+                  <div className="pl-3 py-1 space-y-0.5 border-l-2 border-primary/20 ml-4 my-1">
+                    {PERSONAL_DETAILS_CHILDREN.map((child) => {
+                      const ChildIcon = child.icon;
+                      const isChildActive = activeSection === child.id;
+                      const childStatus = getSectionStatus(child.id as SectionType);
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => handleNavigate(child.id)}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                            isChildActive
+                              ? "bg-primary/15 text-primary border border-primary/30"
+                              : "text-ink-soft hover:text-ink hover:bg-surface-alt/60"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <ChildIcon className={`w-3.5 h-3.5 shrink-0 ${isChildActive ? "text-primary" : "text-primary-glow"}`} />
+                            <span className="truncate">{child.label}</span>
+                          </div>
+                          {childStatus !== "unsubmitted" && (
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                childStatus === "verified" ? "bg-emerald-400" : childStatus === "pending" ? "bg-amber-400" : "bg-rose-400"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Other Top-Level Sections */}
+              {NEW_TOP_LEVEL_SECTIONS.map((sec) => renderRailTab(sec))}
+            </div>
+          </aside>
+        )}
+
+        {/* Main Content Area (Right Column when expanded, full width when collapsed) */}
+        <div className={isTabRailOpen ? "lg:col-span-9 xl:col-span-9 min-w-0 space-y-6" : "space-y-6"}>
+          {/* Personal Details Sub-Navigation - shown if Personal Details is active and rail is collapsed */}
+          {!isTabRailOpen && isPersonalDetailsActive && (
+            <div className="bg-surface-alt/40 border border-border rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar -mt-3">
+              {PERSONAL_DETAILS_CHILDREN.map((child) => renderSubTab(child))}
+            </div>
+          )}
+
+          {/* Main Section Render Area */}
+          <div>
+            {activeSection === "overview" && (
+              <Overview
+                profile={profile}
+                verificationData={verificationData}
+                onNavigate={handleNavigate}
+                onCompleteProfile={() => handleNavigate("contacts")}
+                onViewDoc={(doc) => setPreviewDoc(doc)}
+              />
+            )}
+
+            {activeSection === "personal" && (
+              <PersonalSection
+                profile={profile}
+                verificationDocs={getSectionDocs("personal")}
+                verificationStatus={getSectionStatus("personal")}
+                onUpdate={setProfile}
+                onSave={handleSave}
+                isSaving={isSaving}
+                onRefreshVerifications={fetchVerifications}
+              />
+            )}
+
+            {activeSection === "contacts" && (
+              <ContactsSection
+                profile={profile}
+                verificationDocs={getSectionDocs("contacts")}
+                verificationStatus={getSectionStatus("contacts")}
+                onUpdate={setProfile}
+                onSave={handleSave}
+                isSaving={isSaving}
+                onRefreshVerifications={fetchVerifications}
+              />
+            )}
+
+            {activeSection === "education" && (
+              <EducationSection
+                profile={profile}
+                verificationDocs={getSectionDocs("education")}
+                verificationStatus={getSectionStatus("education")}
+                onUpdate={setProfile}
+                onSave={handleSave}
+                isSaving={isSaving}
+                onRefreshVerifications={fetchVerifications}
+              />
+            )}
+
+            {activeSection === "experience" && (
+              <ExperienceSection
+                profile={profile}
+                verificationDocs={getSectionDocs("experience")}
+                verificationStatus={getSectionStatus("experience")}
+                onUpdate={setProfile}
+                onSave={handleSave}
+                isSaving={isSaving}
+                onRefreshVerifications={fetchVerifications}
+              />
+            )}
+
+            {activeSection === "skills" && (
+              <SkillsSection
+                profile={profile}
+                verificationDocs={getSectionDocs("skills")}
+                verificationStatus={getSectionStatus("skills")}
+                onUpdate={setProfile}
+                onSave={handleSave}
+                isSaving={isSaving}
+                onRefreshVerifications={fetchVerifications}
+              />
+            )}
+
+            {activeSection === "neuroCareer360" && <NeuroCareer360 />}
+            {activeSection === "talentPulse360" && <TalentPulse360 />}
+
+            {NEW_TOP_LEVEL_SECTIONS.filter((sec) => sec.id !== "neuroCareer360" && sec.id !== "talentPulse360").map((sec) =>
+              activeSection === sec.id ? <ComingSoon key={sec.id} title={sec.label} icon={sec.icon} /> : null
+            )}
+          </div>
         </div>
-      )}
-
-      {/* Main Section Render Area */}
-      <div>
-        {activeSection === "overview" && (
-          <Overview
-            profile={profile}
-            verificationData={verificationData}
-            onNavigate={handleNavigate}
-            onCompleteProfile={() => handleNavigate("contacts")}
-            onViewDoc={(doc) => setPreviewDoc(doc)}
-          />
-        )}
-
-        {activeSection === "personal" && (
-          <PersonalSection
-            profile={profile}
-            verificationDocs={getSectionDocs("personal")}
-            verificationStatus={getSectionStatus("personal")}
-            onUpdate={setProfile}
-            onSave={handleSave}
-            isSaving={isSaving}
-            onRefreshVerifications={fetchVerifications}
-          />
-        )}
-
-        {activeSection === "contacts" && (
-          <ContactsSection
-            profile={profile}
-            verificationDocs={getSectionDocs("contacts")}
-            verificationStatus={getSectionStatus("contacts")}
-            onUpdate={setProfile}
-            onSave={handleSave}
-            isSaving={isSaving}
-            onRefreshVerifications={fetchVerifications}
-          />
-        )}
-
-        {activeSection === "education" && (
-          <EducationSection
-            profile={profile}
-            verificationDocs={getSectionDocs("education")}
-            verificationStatus={getSectionStatus("education")}
-            onUpdate={setProfile}
-            onSave={handleSave}
-            isSaving={isSaving}
-            onRefreshVerifications={fetchVerifications}
-          />
-        )}
-
-        {activeSection === "experience" && (
-          <ExperienceSection
-            profile={profile}
-            verificationDocs={getSectionDocs("experience")}
-            verificationStatus={getSectionStatus("experience")}
-            onUpdate={setProfile}
-            onSave={handleSave}
-            isSaving={isSaving}
-            onRefreshVerifications={fetchVerifications}
-          />
-        )}
-
-        {activeSection === "skills" && (
-          <SkillsSection
-            profile={profile}
-            verificationDocs={getSectionDocs("skills")}
-            verificationStatus={getSectionStatus("skills")}
-            onUpdate={setProfile}
-            onSave={handleSave}
-            isSaving={isSaving}
-            onRefreshVerifications={fetchVerifications}
-          />
-        )}
-
-        {activeSection === "neuroCareer360" && <NeuroCareer360 />}
-        {activeSection === "talentPulse360" && <TalentPulse360 />}
-
-        {NEW_TOP_LEVEL_SECTIONS.filter((sec) => sec.id !== "neuroCareer360" && sec.id !== "talentPulse360").map((sec) =>
-          activeSection === sec.id ? <ComingSoon key={sec.id} title={sec.label} icon={sec.icon} /> : null
-        )}
       </div>
 
       {/* Global Document Viewer Modal */}

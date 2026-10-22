@@ -19,6 +19,7 @@ import {
   SourcedCandidate,
   WorkplaceType,
 } from '../types';
+import { VerifiedResumeCandidate } from '@/features/hiringPipeline/types/pipeline.types';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -104,6 +105,13 @@ export const recruiterService = {
 
   async getAllApplicants(): Promise<AllApplicant[]> {
     const res = await apiClient.get<never, ApiResponse<AllApplicant[]>>('/applications/recruiter/all');
+    return res.data;
+  },
+
+  async getVerifiedResumes(jobId?: string): Promise<VerifiedResumeCandidate[]> {
+    const res = await apiClient.get<never, ApiResponse<VerifiedResumeCandidate[]>>('/applications/recruiter/verified-resumes', {
+      params: jobId ? { jobId } : undefined,
+    });
     return res.data;
   },
 

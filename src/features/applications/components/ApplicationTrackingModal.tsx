@@ -294,9 +294,17 @@ export function ApplicationTrackingModal({ application, onClose }: ApplicationTr
                                     <span>Join Interview</span>
                                     <ArrowUpRight className="w-3.5 h-3.5" />
                                   </Link>
+                                ) : stg.stageType === 'assessment' || stg.stageType === 'custom' ? (
+                                  <Link
+                                    href={`/assessment/take?applicationId=${app._id}&stageId=${encodeURIComponent(stg.stageId)}&jobId=${encodeURIComponent(app.job?._id || '')}`}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-brand hover:opacity-95 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                                  >
+                                    <span>Take Assessment</span>
+                                    <ArrowUpRight className="w-3.5 h-3.5" />
+                                  </Link>
                                 ) : (
                                   <Link
-                                    href={`/interviews/ai-practice?role=${encodeURIComponent(app.job?.title || '')}`}
+                                    href={`/assessment/take?applicationId=${app._id}&stageId=${encodeURIComponent(stg.stageId)}&jobId=${encodeURIComponent(app.job?._id || '')}`}
                                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-xs transition cursor-pointer"
                                   >
                                     <span>Begin Stage</span>

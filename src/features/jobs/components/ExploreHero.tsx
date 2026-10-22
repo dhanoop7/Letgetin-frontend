@@ -42,7 +42,7 @@ export const ExploreHero: React.FC<ExploreHeroProps> = ({
 
           {/* Heading */}
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            Opportunities matched to your skills
+            Explore Opportunities
           </h1>
 
           <p className="text-white/85 text-xs sm:text-sm leading-relaxed">

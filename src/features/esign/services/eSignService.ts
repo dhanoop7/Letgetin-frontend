@@ -198,6 +198,68 @@ export class ESignService {
   }
 
   /**
+   * Submit or update candidate's active electronic signature
+   */
+  static async submitSignature(params: {
+    candidateId: string;
+    signedBy: string;
+    signatureDataUrl: string;
+    signatureType?: SignatureType;
+    signatureFileName?: string;
+    signatureFileSize?: number;
+  }): Promise<ESignConsent> {
+    const {
+      candidateId,
+      signedBy,
+      signatureDataUrl,
+      signatureType = 'drawn',
+      signatureFileName,
+      signatureFileSize,
+    } = params;
+
+    if (!signedBy || signedBy.trim().length < 2) {
+      throw new Error('Please enter your full legal name for the signature.');
+    }
+
+    if (!signatureDataUrl || signatureDataUrl.trim().length === 0) {
+      throw new Error('Please provide an electronic signature (draw or upload).');
+    }
+
+    // Simulate safe network latency
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    const existing = await this.getConsentStatus(candidateId);
+    const now = new Date().toISOString();
+
+    const consentRecord: ESignConsent = {
+      id: existing?.id || `esign_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      candidateId: candidateId || 'default_candidate',
+      documentName: existing?.documentName || 'Electronic_Signature_Declaration.pdf',
+      documentSize: existing?.documentSize || 1024 * 45,
+      documentType: existing?.documentType || 'application/pdf',
+      status: existing?.status || 'SUBMITTED',
+      signedBy: signedBy.trim(),
+      signedAt: now,
+      submittedAt: existing?.submittedAt || now,
+      signatureDataUrl: signatureDataUrl,
+      signatureType: signatureType,
+      signatureFileName: signatureFileName,
+      signatureFileSize: signatureFileSize,
+    };
+
+    try {
+      if (typeof window !== 'undefined') {
+        const key = `${STORAGE_PREFIX}${consentRecord.candidateId}`;
+        localStorage.setItem(key, JSON.stringify(consentRecord));
+      }
+    } catch (err) {
+      console.warn('LocalStorage save failed:', err);
+    }
+
+    return consentRecord;
+  }
+
+  /**
    * Reset consent (for re-submission if rejected or testing new consent submission)
    */
   static async resetConsent(candidateId: string = 'default_candidate'): Promise<void> {

@@ -21,12 +21,14 @@ import {
   Play,
   ArrowRight,
   ShieldAlert,
+  Sliders,
 } from "lucide-react";
 import { toast } from "sonner";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
 import { Applicant, RecruiterJob, CollectionStatusReport } from "@/features/recruiter/types";
 import { ApplicantResumeModal } from "@/features/recruiter/components/ApplicantResumeModal";
 import { CandidateProfileModal } from "@/features/recruiter/components/CandidateProfileModal";
+import { JobsSidebar } from "@/features/recruiter/components/JobsSidebar";
 
 const STATUS_OPTIONS = ["submitted", "reviewing", "shortlisted", "interviewing", "offered", "rejected"];
 
@@ -154,7 +156,13 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div className="p-6 sm:p-10 max-w-5xl mx-auto">
+    <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row bg-background">
+      <JobsSidebar
+        selectedJobId={jobId}
+        onSelectJob={(id) => router.push(`/recruiter/jobs/${id}`)}
+      />
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="max-w-5xl mx-auto">
       {/* Breadcrumbs & Quick Pipeline Links */}
       <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
@@ -171,7 +179,7 @@ export default function JobDetailPage() {
         {/* Action Bridges into the rest of the Recruiter Suite */}
         <div className="flex items-center gap-2 flex-wrap">
           <Link
-            href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
+            href={`/recruiter/jobs?tab=timeline&jobId=${jobId}`}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-glow bg-primary/10 border border-primary/20 hover:bg-primary/20 px-3 py-1.5 rounded-xl transition"
           >
             <Sparkles className="w-3.5 h-3.5 text-primary" />
@@ -229,7 +237,54 @@ export default function JobDetailPage() {
             Source Matching CVs
           </Link>
         </div>
-        {job.skills && job.skills.length > 0 && (
+        {job.structuredRequirements?.requiredSkills && job.structuredRequirements.requiredSkills.length > 0 ? (
+          <div className="mt-4 space-y-2.5">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft block mb-1.5">
+                Required Skills
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {job.structuredRequirements.requiredSkills.map((sk: any, i: number) => {
+                  const name = typeof sk === "string" ? sk : sk.name;
+                  const prof = typeof sk === "string" ? null : sk.proficiency;
+                  return (
+                    <span
+                      key={name || i}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-glow bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg"
+                    >
+                      <span>{name}</span>
+                      {prof && (
+                        <span className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface/80 text-ink-soft border border-border">
+                          {prof}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            {job.structuredRequirements.preferredSkills && job.structuredRequirements.preferredSkills.length > 0 && (
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft block mb-1.5">
+                  Preferred Skills
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {job.structuredRequirements.preferredSkills.map((sk: any, i: number) => {
+                    const name = typeof sk === "string" ? sk : sk.name;
+                    return (
+                      <span
+                        key={name || i}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-ink bg-surface-alt border border-border px-2.5 py-1 rounded-lg"
+                      >
+                        <span>{name}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : job.skills && job.skills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5 mt-4">
             {job.skills.map((s) => (
               <span
@@ -239,6 +294,34 @@ export default function JobDetailPage() {
                 {s}
               </span>
             ))}
+          </div>
+        ) : null}
+
+        {job.assessment?.enabled && job.assessment.rounds && job.assessment.rounds.length > 0 && (
+          <div className="mt-4 pt-3.5 border-t border-border/70">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-soft block mb-1.5">
+              Assessment Pipeline ({job.assessment.rounds.length} {job.assessment.rounds.length === 1 ? 'Round' : 'Rounds'})
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {job.assessment.rounds.map((round, idx) => (
+                <React.Fragment key={round.id || round.type}>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-primary/10 border border-primary/20 text-primary-glow px-2.5 py-1 rounded-lg">
+                    <span className="text-[10px] font-bold opacity-75">{idx + 1}.</span>
+                    <span>
+                      {round.name}
+                      {round.type === "general" && Array.isArray((round.config as any)?.questionTypes) && (
+                        <span className="text-[10px] font-normal opacity-80 ml-1">
+                          ({((round.config as any).questionTypes as string[]).map((t) => t.replace("_", " ")).join(", ")})
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  {idx < (job.assessment?.rounds?.length ?? 0) - 1 && (
+                    <span className="text-xs text-ink-soft/60 font-medium">→</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -461,13 +544,13 @@ export default function JobDetailPage() {
                 </span>
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/recruiter/hiring-pipeline/kanban?jobId=${jobId}`}
+                    href={`/recruiter/jobs?tab=kanban&jobId=${jobId}`}
                     className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-surface border border-border text-ink hover:bg-surface-alt transition shadow-xs flex items-center gap-1.5"
                   >
                     <span>Kanban Board</span>
                   </Link>
                   <Link
-                    href={`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`}
+                    href={`/recruiter/jobs?tab=timeline&jobId=${jobId}`}
                     className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-brand text-primary-foreground hover:shadow-glow transition shadow-xs flex items-center gap-1.5"
                   >
                     <span>Funnel Timeline</span>
@@ -506,6 +589,208 @@ export default function JobDetailPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Assessment Rounds & Pipeline Stages Section */}
+      {job.assessment?.rounds && job.assessment.rounds.length > 0 && (
+        <div className="bg-surface border border-border rounded-2xl shadow-elegant p-6 mb-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-border/80 pb-3 flex-wrap gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary-glow" />
+                <span>Candidate Assessment Rounds ({job.assessment.rounds.length})</span>
+              </h2>
+              <p className="text-xs text-ink-soft mt-0.5">
+                Review and configure questions, passing marks, and schedules for each assessment stage before or during candidate progression.
+              </p>
+            </div>
+            <Link
+              href={`/recruiter/jobs?tab=timeline&jobId=${jobId}`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-glow bg-primary/10 border border-primary/20 hover:bg-primary/20 px-3 py-1.5 rounded-xl transition"
+            >
+              <span>View in Hiring Timeline</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {job.assessment.rounds.map((round: any, idx: number) => {
+              const roundStageId = round.id || round.roundId || `round_${round.type}`;
+              const roundType = (round.type || round.roundType || "").toLowerCase();
+              const roundId = (roundStageId || "").toLowerCase();
+              const roundName = (round.name || "").toLowerCase();
+
+              const isAiChat =
+                roundType === "ai_chat" ||
+                roundId.includes("ai_chat") ||
+                roundName.includes("ai chat") ||
+                (roundName.includes("chat") && (roundType.includes("ai") || roundName.includes("ai")));
+
+              const isAiVoice =
+                roundType === "ai_voice" ||
+                roundId.includes("ai_voice") ||
+                roundName.includes("ai voice") ||
+                (roundName.includes("voice") && (roundType.includes("ai") || roundName.includes("ai")));
+
+              const isAiAssessment =
+                isAiChat ||
+                isAiVoice ||
+                roundType === "ai_assessment" ||
+                roundType === "ai_interview" ||
+                roundId.includes("ai_assessment") ||
+                roundName.includes("ai assessment") ||
+                roundName.includes("ai interview");
+
+              const isOnlineTest =
+                !isAiAssessment &&
+                (roundType === "general_aptitude" ||
+                  roundType === "technical_test" ||
+                  roundType === "rapid_round" ||
+                  roundId.includes("general_aptitude") ||
+                  roundId.includes("technical_test") ||
+                  roundId.includes("rapid_round") ||
+                  roundName.includes("aptitude") ||
+                  roundName.includes("technical test") ||
+                  roundName.includes("rapid round") ||
+                  roundName.includes("online test"));
+
+              const isInterview =
+                !isAiAssessment &&
+                (roundType.includes("interview") ||
+                  roundId.includes("interview") ||
+                  roundName.includes("interview"));
+
+              const isConfigured = Boolean(
+                round.config?.isConfigured ||
+                  (Array.isArray(round.config?.customQuestions) && round.config.customQuestions.length > 0)
+              );
+              const isAiConfigured = Boolean(
+                round.config?.isConfigured ||
+                  (Array.isArray(round.config?.modalities) && round.config.modalities.length > 0)
+              );
+              const qCount = round.config?.customQuestions?.length || round.config?.totalQuestions || 0;
+
+              return (
+                <div
+                  key={roundStageId || idx}
+                  className="p-4 rounded-xl border border-border bg-surface-alt/40 hover:bg-surface-alt/70 transition flex items-center justify-between gap-4 flex-wrap"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-bold text-ink">{round.name || round.type}</h3>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-glow border border-primary/20 capitalize">
+                          {round.type?.replace(/_/g, " ")}
+                        </span>
+                        {isAiAssessment ? (
+                          isAiConfigured ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-600 border border-violet-500/20 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-violet-600" />
+                              <span>Configured ({isAiChat ? "Chat" : isAiVoice ? "Voice" : ((round.config?.modalities as string[]) || ["chat", "voice"]).join(" + ")})</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                              <span>{isAiChat ? "Chat Settings Pending" : isAiVoice ? "Voice Settings Pending" : "AI Settings Pending"}</span>
+                            </span>
+                          )
+                        ) : isOnlineTest ? (
+                          isConfigured ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Configured ({qCount} Qs)</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                              <span>Questions Not Configured Yet</span>
+                            </span>
+                          )
+                        ) : isInterview ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-blue-600" />
+                            <span>Live Interview Session</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-alt text-ink-soft border border-border flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            <span>Automated Evaluation</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-ink-soft mt-1">
+                        Duration: <strong>{round.config?.durationMinutes || 30} mins</strong> · Passing Threshold:{" "}
+                        <strong>{round.config?.passingScore || 70}%</strong>
+                        {round.config?.schedule?.date && (
+                          <span> · Scheduled: {round.config.schedule.date}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isAiAssessment ? (
+                    <Link
+                      href={`/recruiter/jobs/${jobId}/stages/${roundStageId}/configure`}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+                        isAiConfigured
+                          ? "bg-surface border border-violet-500/30 hover:bg-violet-500/10 text-violet-700"
+                          : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-95 text-white shadow-md animate-pulse"
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>
+                        {isAiConfigured
+                          ? isAiChat
+                            ? "Edit AI Chat"
+                            : isAiVoice
+                            ? "Edit AI Voice"
+                            : "Edit AI Assessment"
+                          : isAiChat
+                          ? "Configure AI Chat"
+                          : isAiVoice
+                          ? "Configure AI Voice"
+                          : "Configure AI Assessment"}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : isOnlineTest ? (
+                    <Link
+                      href={`/recruiter/jobs/${jobId}/stages/${roundStageId}/configure`}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+                        isConfigured
+                          ? "bg-surface border border-border hover:bg-surface-alt text-ink"
+                          : "bg-amber-500 hover:bg-amber-600 text-black shadow-md animate-pulse"
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>{isConfigured ? "Edit Questions & Rules" : "Configure Round"}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : isInterview ? (
+                    <Link
+                      href="/recruiter/interview-schedule"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border border-blue-500/25 transition shadow-xs cursor-pointer"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Interview Schedule</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/recruiter/domain-assessments"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-border hover:bg-surface-alt text-ink transition shadow-xs cursor-pointer"
+                    >
+                      <span>Domain Studio</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -663,6 +948,8 @@ export default function JobDetailPage() {
         onStatusChange={handleStatusChange}
         isUpdatingStatus={updatingId === selectedApplicantForResume?._id}
       />
+        </div>
+      </div>
     </div>
   );
 }

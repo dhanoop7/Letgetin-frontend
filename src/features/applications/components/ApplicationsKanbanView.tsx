@@ -22,6 +22,7 @@ import { resolveCandidateStatus } from '../utils/candidateStatusResolver';
 
 interface ApplicationsKanbanViewProps {
   applications: ApplicationItem[];
+  selectedApp?: ApplicationItem | null;
   onSelectApp: (app: ApplicationItem) => void;
   onTrackApp: (app: ApplicationItem) => void;
   onDeleteApp: (appId: string) => void;
@@ -82,14 +83,47 @@ const KANBAN_COLUMNS: KanbanColumnDef[] = [
 
 export function ApplicationsKanbanView({
   applications,
+  selectedApp,
   onSelectApp,
   onTrackApp,
   onDeleteApp,
 }: ApplicationsKanbanViewProps) {
+  const selectedCandidateStatus = selectedApp ? resolveCandidateStatus(selectedApp) : null;
+
   return (
     <div className="space-y-4">
+      {/* Selected Application Focus Header */}
+      {selectedApp && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-surface border border-border shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+              {selectedApp.job?.company?.name?.charAt(0) || 'C'}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">Selected Application:</span>
+                <span className="text-xs font-black text-ink truncate">{selectedApp.job?.title || 'Job Position'}</span>
+              </div>
+              <p className="text-[11px] text-ink-soft truncate">
+                {selectedApp.job?.company?.name} • Stage:{' '}
+                <span className="font-semibold text-primary">{selectedCandidateStatus?.label}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onTrackApp(selectedApp)}
+              className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-glow transition cursor-pointer"
+            >
+              Track Funnel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Kanban Columns Grid (Always rendered to display full board structure) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-start overflow-x-auto pb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-3.5 items-start overflow-x-auto pb-4">
         {KANBAN_COLUMNS.map((col) => {
           const columnApps = applications.filter((app) => col.statuses.includes(app.status));
           const count = columnApps.length;
@@ -127,6 +161,7 @@ export function ApplicationsKanbanView({
                   ) : (
                     columnApps.map((app) => {
                       const candidateStatus = resolveCandidateStatus(app);
+                      const isSelected = selectedApp?._id === app._id;
                       const formattedDate = new Date(app.appliedAt || app.createdAt).toLocaleDateString(
                         undefined,
                         {
@@ -139,7 +174,11 @@ export function ApplicationsKanbanView({
                         <div
                           key={app._id}
                           onClick={() => onSelectApp(app)}
-                          className="bg-surface border border-border/80 rounded-2xl p-3.5 shadow-2xs hover:shadow-md hover:border-primary-glow/40 transition-all space-y-2.5 cursor-pointer group"
+                          className={`bg-surface border rounded-2xl p-3.5 shadow-2xs hover:shadow-md transition-all space-y-2.5 cursor-pointer group ${
+                            isSelected
+                              ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-sm'
+                              : 'border-border/80 hover:border-primary-glow/40'
+                          }`}
                         >
                           {/* Top: Company Initial + Job Title */}
                           <div className="flex items-start gap-2.5">

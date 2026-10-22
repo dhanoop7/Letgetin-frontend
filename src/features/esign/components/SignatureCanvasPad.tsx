@@ -13,6 +13,8 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { ESignService } from '../services/eSignService';
 import { SignatureType } from '../types';
@@ -30,6 +32,9 @@ interface SignatureCanvasPadProps {
     fileInfo?: { name: string; size: number }
   ) => void;
   disabled?: boolean;
+  onSubmit?: () => void;
+  isSubmitting?: boolean;
+  submitButtonText?: string;
 }
 
 export const SignatureCanvasPad: React.FC<SignatureCanvasPadProps> = ({
@@ -41,6 +46,9 @@ export const SignatureCanvasPad: React.FC<SignatureCanvasPadProps> = ({
   signatureFileSize,
   onSignatureChange,
   disabled = false,
+  onSubmit,
+  isSubmitting = false,
+  submitButtonText = 'Submit E-Sign',
 }) => {
   const [activeMethod, setActiveMethod] = useState<'draw' | 'upload'>(
     signatureType === 'uploaded' ? 'upload' : 'draw'
@@ -285,9 +293,9 @@ export const SignatureCanvasPad: React.FC<SignatureCanvasPadProps> = ({
   return (
     <div className="bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary-glow flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary-glow flex items-center justify-center shrink-0">
             <PenLine className="w-4 h-4" />
           </div>
           <div>
@@ -299,15 +307,18 @@ export const SignatureCanvasPad: React.FC<SignatureCanvasPadProps> = ({
             </p>
           </div>
         </div>
-        {hasValidSignature ? (
-          <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1">
-            <Check className="w-3 h-3 text-emerald-600" /> Signature Provided
-          </span>
-        ) : (
-          <span className="text-[11px] font-semibold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
-            Action Required
-          </span>
-        )}
+
+        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+          {hasValidSignature ? (
+            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <Check className="w-3 h-3 text-emerald-600" /> Signature Provided
+            </span>
+          ) : (
+            <span className="text-[11px] font-semibold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
+              Action Required
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Name and Date Inputs */}
@@ -575,6 +586,30 @@ export const SignatureCanvasPad: React.FC<SignatureCanvasPadProps> = ({
               <span>{uploadError}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Bottom Action Bar */}
+      {onSubmit && (
+        <div className="flex items-center justify-end pt-3 border-t border-border">
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={disabled || isSubmitting || !hasValidSignature}
+            className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:opacity-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Submitting...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span>{submitButtonText}</span>
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>

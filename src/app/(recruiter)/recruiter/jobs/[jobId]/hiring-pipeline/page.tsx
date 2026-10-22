@@ -6,5 +6,5 @@ export default async function JobHiringPipelineRedirect({
   params: Promise<{ jobId: string }>;
 }) {
   const { jobId } = await params;
-  redirect(`/recruiter/hiring-pipeline/timeline?jobId=${jobId}`);
+  redirect(`/recruiter/jobs?tab=timeline&jobId=${jobId}`);
 }

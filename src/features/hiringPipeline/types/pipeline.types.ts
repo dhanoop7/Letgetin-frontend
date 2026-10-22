@@ -79,11 +79,15 @@ export interface VerificationCheck {
 
 export interface VerifiedResumeCandidate {
   id: string;
+  applicationId?: string;
+  candidateId?: string;
   name: string;
   email: string;
   phone: string;
   location: string;
   appliedRole: string;
+  jobId?: string;
+  jobTitle?: string;
   currentCompany: string;
   experience: string;
   matchScore: number;
@@ -91,7 +95,9 @@ export interface VerifiedResumeCandidate {
   verificationTier: "Platinum" | "Gold" | "Silver";
   verificationHash: string;
   verificationDate: string;
+  isVerified?: boolean;
   skills: string[];
+  resumeId?: string;
   resumeFileName: string;
   fileSize: string;
   checks: {

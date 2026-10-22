@@ -22,6 +22,7 @@ import { resolveCandidateStatus } from '../utils/candidateStatusResolver';
 
 interface ApplicationsCalendarViewProps {
   applications: ApplicationItem[];
+  selectedApp?: ApplicationItem | null;
   onSelectApp: (app: ApplicationItem) => void;
   onTrackApp: (app: ApplicationItem) => void;
 }
@@ -58,6 +59,7 @@ function extractDateStr(val?: string | null): string | null {
 
 export function ApplicationsCalendarView({
   applications,
+  selectedApp,
   onSelectApp,
   onTrackApp,
 }: ApplicationsCalendarViewProps) {
@@ -248,11 +250,43 @@ export function ApplicationsCalendarView({
     return [...allEvents].sort((a, b) => b.dateStr.localeCompare(a.dateStr)).slice(0, 10);
   }, [allEvents]);
 
+  const selectedCandidateStatus = selectedApp ? resolveCandidateStatus(selectedApp) : null;
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Selected Application Focus Header */}
+      {selectedApp && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-surface border border-border shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+              {selectedApp.job?.company?.name?.charAt(0) || 'C'}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider">Calendar Focus:</span>
+                <span className="text-xs font-black text-ink truncate">{selectedApp.job?.title || 'Job Position'}</span>
+              </div>
+              <p className="text-[11px] text-ink-soft truncate">
+                {selectedApp.job?.company?.name} • Stage:{' '}
+                <span className="font-semibold text-primary">{selectedCandidateStatus?.label}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onTrackApp(selectedApp)}
+              className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-glow transition cursor-pointer"
+            >
+              Track Funnel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left 2 Cols: Monthly Calendar */}
-        <div className="lg:col-span-2 bg-surface border border-border rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
+        <div className="xl:col-span-2 bg-surface border border-border rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
           {/* Month Header Navigation */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -393,10 +427,16 @@ export function ApplicationsCalendarView({
               ) : (
                 selectedDayEvents.map((ev, i) => {
                   const candidateStatus = resolveCandidateStatus(ev.application);
+                  const isSelected = selectedApp?._id === ev.application._id;
                   return (
                     <div
                       key={i}
-                      className="p-3.5 rounded-2xl bg-surface-alt/60 border border-border/80 space-y-2.5 hover:border-primary-glow/40 transition"
+                      onClick={() => onSelectApp(ev.application)}
+                      className={`p-3.5 rounded-2xl border space-y-2.5 transition cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary/5 border-primary ring-2 ring-primary/20 shadow-sm'
+                          : 'bg-surface-alt/60 border-border/80 hover:border-primary-glow/40'
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-0.5 min-w-0">

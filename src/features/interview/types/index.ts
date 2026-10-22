@@ -39,6 +39,13 @@ export interface AiScorecard {
   evaluationDate?: string;
 }
 
+export interface TranscriptEntry {
+  speaker: string;
+  role?: 'candidate' | 'interviewer' | 'ai';
+  text: string;
+  timestamp: string;
+}
+
 export interface Interview {
   _id: string;
   id?: string;
@@ -47,6 +54,7 @@ export interface Interview {
   candidateEmail: string;
   candidateAvatar?: string;
   position: string;
+  companyName?: string;
   department: string;
   roundName: string;
   stage: InterviewStage;
@@ -57,6 +65,11 @@ export interface Interview {
   platform: 'LetGetIn Room' | 'Google Meet' | 'Zoom' | 'Microsoft Teams' | 'On-Site';
   meetingLink: string;
   roomCode?: string;
+  meetingProvider?: 'google_meet' | 'letgetin' | 'zoom' | 'teams';
+  meetingUrl?: string;
+  meetingId?: string;
+  transcript?: TranscriptEntry[];
+  completedAt?: string;
   interviewers: Interviewer[];
   aiQuestions?: AiQuestion[];
   score?: number; // 1-5
@@ -65,6 +78,17 @@ export interface Interview {
   linkedTaskId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JoinAccessResult {
+  allowed: boolean;
+  isLocked: boolean;
+  isRecruiter?: boolean;
+  isCandidate?: boolean;
+  reason?: string;
+  allowedJoinAt?: string;
+  minutesUntilAllowed?: number;
+  interview: Interview;
 }
 
 export interface CreateInterviewInput {
@@ -82,6 +106,10 @@ export interface CreateInterviewInput {
   platform?: 'LetGetIn Room' | 'Google Meet' | 'Zoom' | 'Microsoft Teams' | 'On-Site';
   meetingLink?: string;
   roomCode?: string;
+  meetingProvider?: 'google_meet' | 'letgetin' | 'zoom' | 'teams';
+  meetingUrl?: string;
+  meetingId?: string;
+  transcript?: TranscriptEntry[];
   interviewers?: Interviewer[];
 }
 

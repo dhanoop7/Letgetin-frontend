@@ -39,6 +39,7 @@ import { jobService } from "../services/jobService";
 import { IJob } from "../types/job.types";
 import { JobApplyModal } from "./JobApplyModal";
 import { useRouter } from "next/navigation";
+import { DEMO_ACTIVE_APPLICATIONS } from "@/features/applications/data/mockApplications";
 
 interface JobsBoardProps {
   onSwitchTab?: (
@@ -107,8 +108,7 @@ export function JobsBoard({
         limit: 100,
         sort: "recent",
       });
-      const apps = appRes.applications || [];
-      setApplications(apps);
+      let apps = appRes.applications || [];
 
       // B. Fetch jobs catalog / recommendations to resolve saved jobs
       let recJobs: IJob[] = [];
@@ -121,13 +121,14 @@ export function JobsBoard({
       }
 
       // C. Resolve saved jobs from localStorage
+      let resolvedSaved: KanbanJobItem[] = [];
       if (typeof window !== "undefined") {
         try {
           const savedStr = localStorage.getItem("resumebuildai_saved_jobs");
           const savedIds: string[] = savedStr ? JSON.parse(savedStr) : [];
 
           // Map saved IDs to full job objects
-          const savedItems: KanbanJobItem[] = savedIds.map((id) => {
+          resolvedSaved = savedIds.map((id) => {
             const matchedJob = recJobs.find((j) => j._id === id);
             return {
               _id: `saved_${id}`,
@@ -157,13 +158,20 @@ export function JobsBoard({
               description: matchedJob?.description || "",
             };
           });
-          setSavedJobs(savedItems);
         } catch {
-          setSavedJobs([]);
+          resolvedSaved = [];
         }
       }
+
+      if (apps.length === 0 && resolvedSaved.length === 0) {
+        apps = DEMO_ACTIVE_APPLICATIONS;
+      }
+
+      setApplications(apps);
+      setSavedJobs(resolvedSaved);
     } catch (err) {
       console.warn("Failed to fetch board data:", err);
+      setApplications(DEMO_ACTIVE_APPLICATIONS);
     } finally {
       setLoading(false);
     }
@@ -777,8 +785,8 @@ export function JobsBoard({
       </div>
 
       {/* Search / Filter Bar */}
-      {/* <div className="bg-surface border border-border rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shadow-2xs">
-     
+      <div className="bg-surface border border-border rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shadow-2xs">
+        {/* Search Input */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -799,6 +807,7 @@ export function JobsBoard({
           )}
         </div>
 
+        {/* Company Filter */}
         <select
           value={companyFilter}
           onChange={(e) => setCompanyFilter(e.target.value)}
@@ -813,7 +822,7 @@ export function JobsBoard({
           ))}
         </select>
 
-   
+        {/* Date Filter */}
         <select
           value={dateFilter}
           onChange={(e) => setDateFilter(e.target.value)}
@@ -826,6 +835,7 @@ export function JobsBoard({
           <option value="30d">Past 30 days</option>
         </select>
 
+        {/* Sort Filter */}
         <select
           value={sortOption}
           onChange={(e) => setSortOption(e.target.value as any)}
@@ -838,17 +848,16 @@ export function JobsBoard({
           <option value="company">Company (A-Z)</option>
         </select>
 
-    
         <div className="text-xs text-ink-soft font-bold whitespace-nowrap px-1 self-center">
           {totalFilteredCount} of {grandTotalCount}
         </div>
-      </div>  */}
+      </div>
 
       {/* Main Board View: Kanban or List */}
       {viewMode === "kanban" && activeStageTab === "all" ? (
         /* 5-Column Kanban Board */
         <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 -mx-1 px-1 sm:overflow-visible scrollbar-thin">
-          {/* {JOB_STATUS_COLUMNS.map((column) => (
+          {JOB_STATUS_COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}
               config={column}
@@ -858,7 +867,7 @@ export function JobsBoard({
               onDeleteJob={handleDeleteJob}
               onApplySavedJob={handleApplySavedJob}
             />
-          ))} */}
+          ))}
         </div>
       ) : (
         /* Single Stage Focus / Filtered Grid List View */
@@ -927,13 +936,13 @@ export function JobsBoard({
       )}
 
       {/* Job Details & Interview Notes Modal */}
-      {/* {selectedJob && (
+      {selectedJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
           <div
             className="bg-surface border border-border rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-thin"
             onClick={(e) => e.stopPropagation()}
           >
-       
+            {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 pb-4 border-b border-border">
               <div className="flex items-start gap-3.5 min-w-0">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-brand text-white flex items-center justify-center text-lg font-black shrink-0 shadow-glow">
@@ -971,6 +980,7 @@ export function JobsBoard({
               </button>
             </div>
 
+            {/* Quick Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="p-3 rounded-2xl bg-surface-alt/70 border border-border/80 space-y-0.5">
                 <span className="text-[10px] uppercase font-bold text-ink-soft block">
@@ -1018,7 +1028,7 @@ export function JobsBoard({
               </div>
             </div>
 
-
+            {/* Stage Selector */}
             <div className="p-3.5 rounded-2xl bg-surface-alt/40 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="text-xs font-bold text-ink">
                 Move to different stage:
@@ -1050,7 +1060,7 @@ export function JobsBoard({
               </div>
             </div>
 
-         
+            {/* Candidate & Interview Notes */}
             {selectedJob.stage !== "saved" && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -1076,7 +1086,7 @@ export function JobsBoard({
               </div>
             )}
 
-         
+            {/* Skills */}
             {selectedJob.skills && selectedJob.skills.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
@@ -1095,7 +1105,7 @@ export function JobsBoard({
               </div>
             )}
 
-       
+            {/* Job Description */}
             {selectedJob.description && (
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
@@ -1107,6 +1117,7 @@ export function JobsBoard({
               </div>
             )}
 
+            {/* Actions */}
             <div className="pt-4 border-t border-border flex items-center justify-between">
               <button
                 type="button"
@@ -1142,19 +1153,19 @@ export function JobsBoard({
             </div>
           </div>
         </div>
-      )} */}
+      )}
 
       {/* Apply Modal for Saved Job */}
-      {/* <JobApplyModal
+      <JobApplyModal
         isOpen={isApplyModalOpen}
         job={applyJobTarget}
         allJobs={allRecommendedJobs}
         onClose={() => setIsApplyModalOpen(false)}
-        onSuccess={async (jobId) => {
+        onSuccess={async () => {
           showToast("Application submitted successfully!");
           fetchBoardData();
         }}
-      /> */}
+      />
     </div>
   );
 }
