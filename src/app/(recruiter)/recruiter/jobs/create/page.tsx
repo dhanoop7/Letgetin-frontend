@@ -43,6 +43,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { recruiterService } from "@/features/recruiter/services/recruiterService";
+import { creditService } from "@/features/credits/services/creditService";
 import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
 import { BuyCreditsModal } from "@/features/recruiter/components/BuyCreditsModal";
 import { UpgradePlanModal } from "@/features/recruiter/components/UpgradePlanModal";
@@ -579,7 +580,65 @@ export default function CreateJobPage() {
 
   useEffect(() => {
     loadCredits();
+
+    // Restore draft if returning from Credit Purchase page
+    const pending = creditService.getAndClearPendingAction();
+    if (pending && pending.feature === "job_posting" && pending.state) {
+      const p = pending.state as any;
+      if (p.title) setTitle(p.title);
+      if (p.location) setLocation(p.location);
+      if (p.employmentType) setEmploymentType(p.employmentType);
+      if (p.workplaceType) setWorkplaceType(p.workplaceType);
+      if (p.salaryText) setSalaryText(p.salaryText);
+      if (p.description) setDescription(p.description);
+      if (p.responsibilitiesText) setResponsibilitiesText(p.responsibilitiesText);
+      if (p.requiredSkills) setRequiredSkills(p.requiredSkills);
+      if (p.preferredSkills) setPreferredSkills(p.preferredSkills);
+      if (p.minimumExperience) setMinimumExperience(p.minimumExperience);
+      if (p.maximumExperience) setMaximumExperience(p.maximumExperience);
+      if (p.educationLevel) setEducationLevel(p.educationLevel);
+      if (p.educationFieldsText) setEducationFieldsText(p.educationFieldsText);
+      if (p.listAsJob !== undefined) setListAsJob(p.listAsJob);
+      if (p.featuredJob !== undefined) setFeaturedJob(p.featuredJob);
+      if (p.listInLandingPage !== undefined) setListInLandingPage(p.listInLandingPage);
+      if (p.listInRecentlyPosted !== undefined) setListInRecentlyPosted(p.listInRecentlyPosted);
+      if (p.checkResumeVerification !== undefined) setCheckResumeVerification(p.checkResumeVerification);
+      if (p.step) setStep(p.step);
+      toast.success("Job details restored! You can now publish your job with your updated credits.");
+    }
   }, []);
+
+  const handleRedirectToCredits = () => {
+    const shortfall = Math.max(0, totalCost - (balance ?? 0));
+    creditService.savePendingAction(
+      "job_posting",
+      {
+        step,
+        title,
+        location,
+        employmentType,
+        workplaceType,
+        salaryText,
+        description,
+        responsibilitiesText,
+        requiredSkills,
+        preferredSkills,
+        minimumExperience,
+        maximumExperience,
+        educationLevel,
+        educationFieldsText,
+        listAsJob,
+        featuredJob,
+        listInLandingPage,
+        listInRecentlyPosted,
+        checkResumeVerification,
+      },
+      "/recruiter/jobs/create"
+    );
+    router.push(
+      `/recruiter/identity?tab=payments&subtab=topup&required=${totalCost}&available=${balance ?? 0}&shortfall=${shortfall}&feature=job_posting&returnUrl=/recruiter/jobs/create`
+    );
+  };
 
   const applyGeneratedContent = (content: GeneratedJobContent) => {
     setDescription(content.description);
@@ -1548,7 +1607,8 @@ export default function CreateJobPage() {
     }
 
     if (hasInsufficientCredits) {
-      setLocalError("Insufficient credits. Please buy more credits before publishing.");
+      toast.error(`Insufficient credits (${balance ?? 0}/${totalCost}). Redirecting to purchase...`);
+      handleRedirectToCredits();
       return;
     }
 
@@ -1641,6 +1701,11 @@ export default function CreateJobPage() {
       });
       router.push(`/recruiter/jobs/${job._id}`);
     } catch (err: unknown) {
+      if (creditService.isInsufficientCreditsError(err)) {
+        toast.error("Insufficient credit balance. Redirecting to credit purchase...");
+        handleRedirectToCredits();
+        return;
+      }
       setLocalError((err as { message?: string })?.message || "Failed to create job.");
     } finally {
       setIsSubmitting(false);
@@ -5146,12 +5211,12 @@ export default function CreateJobPage() {
                     type="button"
                     onClick={() => {
                       setPublishConfirmModalOpen(false);
-                      setBuyModalOpen(true);
+                      handleRedirectToCredits();
                     }}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-destructive hover:bg-destructive/90 shadow-md transition hover:scale-[1.02] active:scale-95 cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4" />
-                    Buy Credits Now
+                    Buy Credits & Subscriptions
                   </button>
                 </div>
               </div>

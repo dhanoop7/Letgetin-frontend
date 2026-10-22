@@ -21,6 +21,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!isAuthenticated) {
         router.replace("/auth");
       } else if (user?.role === "recruiter") {
+        const isProfile = pathname === "/profile" || pathname?.startsWith("/profile/");
+        if (isProfile) {
+          // Allow all account types (Candidate, Company, Startup, Institution) to view My Profile & Identity
+          return;
+        }
         if (pathname === "/e-sign") {
           router.replace("/recruiter/e-sign");
         } else if (pathname === "/interviews/translator") {
@@ -43,7 +48,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated || user?.role === "recruiter") {
+  const isProfileRoute = pathname === "/profile" || pathname?.startsWith("/profile/");
+  if (!isAuthenticated || (user?.role === "recruiter" && !isProfileRoute)) {
     return null;
   }
 

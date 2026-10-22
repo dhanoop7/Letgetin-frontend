@@ -18,17 +18,10 @@ export function BuyCreditsModal({ open, onClose, packs, onPurchased }: BuyCredit
 
   if (!open) return null;
 
-  const handlePurchase = async (packId: string) => {
-    setError(null);
-    setPurchasingId(packId);
-    try {
-      const { balance } = await recruiterService.purchaseCredits(packId);
-      onPurchased(balance);
-      onClose();
-    } catch (err: unknown) {
-      setError((err as { message?: string })?.message || "Purchase failed.");
-    } finally {
-      setPurchasingId(null);
+  const handlePurchase = (packId: string) => {
+    onClose();
+    if (typeof window !== "undefined") {
+      window.location.href = `/recruiter/identity?tab=payments&subtab=topup&pack=${encodeURIComponent(packId)}`;
     }
   };
 
@@ -89,6 +82,16 @@ export function BuyCreditsModal({ open, onClose, packs, onPurchased }: BuyCredit
             {error}
           </p>
         )}
+
+        <div className="mt-4 pt-3 border-t border-border/80 text-center">
+          <a
+            href="/recruiter/identity?tab=payments&subtab=topup"
+            onClick={onClose}
+            className="text-xs font-bold text-primary-glow hover:underline inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>View all top-up packages & subscription plans →</span>
+          </a>
+        </div>
       </div>
     </div>
   );

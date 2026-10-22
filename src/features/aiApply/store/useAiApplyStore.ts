@@ -3,6 +3,7 @@ import { MongoStorage } from '@/features/resume/storage/mongo';
 import { ProfileService, ProfileData } from '@/features/profile/services/profileService';
 import { aiApplyService } from '../services/aiApplyService';
 import { coverLetterService } from '../services/coverLetterService';
+import { creditService } from '@/features/credits/services/creditService';
 import { STEPS, TOTAL_STEPS } from '../config/steps.config';
 import {
   AiApplyPreferences,
@@ -351,6 +352,17 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
       // Start high-performance polling loop
       startBatchPollingLoop(response.sessionId, set, get);
     } catch (err: any) {
+      if (creditService.isInsufficientCreditsError(err)) {
+        const errorData = err?.response?.data?.error || err?.data?.error;
+        const required = errorData?.requiredCredits || 20;
+        const available = errorData?.availableBalance || 0;
+        const shortfall = errorData?.shortfall || Math.max(0, required - available);
+        creditService.savePendingAction('ai_apply', { selectedJobIds }, '/ai-apply');
+        if (typeof window !== 'undefined') {
+          window.location.href = `/credits?required=${required}&available=${available}&shortfall=${shortfall}&feature=ai_apply&returnUrl=/ai-apply`;
+        }
+        return;
+      }
       const apiError = err as { error?: { message?: string }; message?: string };
       set({
         batchActionLoading: false,

@@ -142,6 +142,28 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response && error.response.data) {
+      if (
+        error.response.status === 402 ||
+        error.response.data?.error?.code === 'INSUFFICIENT_CREDITS' ||
+        (typeof error.response.data?.error?.message === 'string' &&
+          error.response.data.error.message.toLowerCase().includes('insufficient credits'))
+      ) {
+        const errorData = error.response.data.error || {};
+        const details = errorData.details || {};
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('letgetin:insufficient_credits', {
+              detail: {
+                requiredCredits: details.requiredCredits || 20,
+                availableBalance: details.availableBalance ?? 0,
+                shortfall: details.shortfall || Math.max(0, (details.requiredCredits || 20) - (details.availableBalance ?? 0)),
+                feature: details.feature || 'Premium Service',
+                serviceName: details.featureName || details.feature || 'Premium Service',
+              },
+            })
+          );
+        }
+      }
       return Promise.reject(error.response.data);
     }
 
