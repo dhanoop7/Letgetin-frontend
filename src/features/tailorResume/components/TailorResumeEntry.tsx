@@ -6,6 +6,7 @@ import { Loader2, Sparkles, FileText, AlertCircle, CheckCircle2 } from "lucide-r
 import { StorageProviderFactory } from "@/features/resume/storage/factory";
 import { IResume } from "@/features/resume/types";
 import { useTailorResumeStore } from "../store/useTailorResumeStore";
+import { checkFeatureCredits } from "@/features/credits/utils/creditCheck";
 
 type Step = "jobDescription" | "resumeSelection" | "analyzing";
 
@@ -42,6 +43,11 @@ export function TailorResumeEntry() {
       const items = Array.isArray(list) ? list : [];
       setResumes(items);
       if (items.length === 1) {
+        const creditCheck = await checkFeatureCredits("ats_resume");
+        if (!creditCheck.allowed) {
+          setIsLoadingResumes(false);
+          return;
+        }
         setSelectedResumeId(items[0].id);
         setStep("analyzing");
       } else {
@@ -55,8 +61,12 @@ export function TailorResumeEntry() {
     }
   };
 
-  const handleSelectResumeAndContinue = () => {
+  const handleSelectResumeAndContinue = async () => {
     if (!selectedResumeId) return;
+    const creditCheck = await checkFeatureCredits("ats_resume");
+    if (!creditCheck.allowed) {
+      return;
+    }
     setStep("analyzing");
   };
 

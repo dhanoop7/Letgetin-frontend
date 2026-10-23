@@ -1,9 +1,14 @@
 import type { NextConfig } from "next";
 import path from "path";
+import fs from "fs";
+
+const projectRoot = typeof fs.realpathSync.native === "function"
+  ? fs.realpathSync.native(process.cwd())
+  : fs.realpathSync(process.cwd());
 
 const nextConfig: NextConfig = {
   turbopack: {
-    root: path.resolve(process.cwd()),
+    root: projectRoot,
   },
   reactCompiler: true,
   async redirects() {

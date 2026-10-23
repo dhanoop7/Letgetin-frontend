@@ -58,6 +58,8 @@ import {
   InstitutionCategoryGroup,
 } from "../services/creditService";
 import { InsufficientCreditsModal } from "@/components/common/InsufficientCreditsModal";
+import { useRecruiterStore } from "@/features/recruiter/store/useRecruiterStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 interface CreditPurchaseViewProps {
   role?: "recruiter" | "candidate" | "user" | "institution" | "startup";
@@ -419,6 +421,64 @@ const INSTITUTION_ACTION_ROUTES: Record<string, { route: string; label: string }
   inst_genius_test_campus: { route: "/recruiter/genius-test", label: "Schedule Tests" },
 };
 
+const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlanItem[] = [
+  {
+    id: "job_posting",
+    name: "Job Posting",
+    targetRole: "recruiter",
+    durations: {
+      monthly: { credits: 50, priceInr: 500, days: 30 },
+      six_months: { credits: 250, priceInr: 2500, days: 180 },
+      yearly: { credits: 500, priceInr: 5000, days: 365 },
+    },
+    features: ["Active Job Postings included", "Direct Applicant Pipeline", "Standard Candidate Messaging"],
+  },
+  {
+    id: "hrms",
+    name: "HRMS",
+    targetRole: "recruiter",
+    durations: {
+      monthly: { credits: 150, priceInr: 1500, days: 30 },
+      six_months: { credits: 750, priceInr: 7500, days: 180 },
+      yearly: { credits: 1500, priceInr: 15000, days: 365 },
+    },
+    features: ["Employee Management System", "Payroll & Compliance Tools", "Leave & Attendance Management"],
+  },
+  {
+    id: "recruitment_suite",
+    name: "Recruitment Suite",
+    targetRole: "recruiter",
+    durations: {
+      monthly: { credits: 250, priceInr: 2500, days: 30 },
+      six_months: { credits: 1250, priceInr: 12500, days: 180 },
+      yearly: { credits: 2500, priceInr: 25000, days: 365 },
+    },
+    features: ["AI Resume Shortlisting & Scoring", "Multi-round Automated Testing Suite", "AI Interview Suite & Video Proctoring"],
+  },
+  {
+    id: "institution",
+    name: "Institution",
+    targetRole: "institution",
+    durations: {
+      monthly: { credits: 100, priceInr: 1000, days: 30 },
+      six_months: { credits: 500, priceInr: 5000, days: 180 },
+      yearly: { credits: 1000, priceInr: 10000, days: 365 },
+    },
+    features: ["Mass Student Applications", "Campus Drive Scheduling", "Recruiter Network Direct Links"],
+  },
+  {
+    id: "startup",
+    name: "Startup",
+    targetRole: "startup",
+    durations: {
+      monthly: { credits: 50, priceInr: 500, days: 30 },
+      six_months: { credits: 250, priceInr: 2500, days: 180 },
+      yearly: { credits: 500, priceInr: 5000, days: 365 },
+    },
+    features: ["Business Plus Listing", "Documentations & Govt Schemes Support", "Investor Connect & Fundraising Pipeline"],
+  },
+];
+
 export function CreditPurchaseView({
   role = "candidate",
   embedded = false,
@@ -427,6 +487,8 @@ export function CreditPurchaseView({
 }: CreditPurchaseViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { orgProfile } = useRecruiterStore();
+  const { user } = useAuthStore();
 
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -439,6 +501,13 @@ export function CreditPurchaseView({
       role !== "startup" &&
       ((wallet?.pricingCatalog?.institutionPlans && wallet.pricingCatalog.institutionPlans.length > 0) ||
         (typeof window !== "undefined" && window.location.pathname.includes("/institution"))));
+  const isInstitutionAccount =
+    isInstitution ||
+    orgProfile?.entity === "institution" ||
+    user?.entityType === "institution" ||
+    (typeof window !== "undefined" &&
+      (window.location.pathname.includes("/institution") ||
+        window.location.search.toLowerCase().includes("institution")));
   const isStartup =
     !isInstitution &&
     (role === "startup" ||
@@ -447,6 +516,14 @@ export function CreditPurchaseView({
         role !== "recruiter" &&
         ((wallet?.pricingCatalog?.startupPlans && wallet.pricingCatalog.startupPlans.length > 0) ||
           (typeof window !== "undefined" && window.location.pathname.includes("/startup")))));
+  const isStartupAccount =
+    !isInstitutionAccount &&
+    (isStartup ||
+      orgProfile?.entity === "startup" ||
+      user?.entityType === "startup" ||
+      (typeof window !== "undefined" &&
+        (window.location.pathname.includes("/startup") ||
+          window.location.search.toLowerCase().includes("startup"))));
   const isCandidate = (role === "candidate" || role === "user") && !isStartup && !isInstitution;
   const isRecruiter = (role === "recruiter" || (!role && !isCandidate && !isStartup && !isInstitution)) && !isStartup && !isInstitution;
 
@@ -475,6 +552,17 @@ export function CreditPurchaseView({
       setActiveTab("topup");
     }
   }, [requiredParam]);
+
+  const handleTabClick = (
+    tab: "plans" | "company_plans" | "startup_plans" | "institution_plans" | "subscriptions" | "topup" | "history"
+  ) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      params.set("subtab", tab);
+      window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+    }
+  };
   const [billingCycle, setBillingCycle] = useState<"monthly" | "six_months" | "yearly">("monthly");
   const [customCredits, setCustomCredits] = useState<number>(shortfallCredits && shortfallCredits > 0 ? shortfallCredits : 50);
 
@@ -603,6 +691,10 @@ export function CreditPurchaseView({
   };
 
   const handleInitiateCreditPurchase = (pack: CreditTopupPack) => {
+    if (wallet?.paymentsCreditsEnabled === false) {
+      toast.error(wallet.paymentsCreditsDisabledReason || "Payments and credit operations are temporarily disabled platform-wide.");
+      return;
+    }
     const returnUrl = encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/");
     router.push(
       `/payment?pack=${pack.id}&item=${encodeURIComponent(pack.name)}&credits=${pack.credits}&amount=${pack.priceInr}&returnUrl=${returnUrl}`
@@ -610,6 +702,10 @@ export function CreditPurchaseView({
   };
 
   const handleInitiateCustomTopup = () => {
+    if (wallet?.paymentsCreditsEnabled === false) {
+      toast.error(wallet.paymentsCreditsDisabledReason || "Payments and credit operations are temporarily disabled platform-wide.");
+      return;
+    }
     if (customCredits < 1) {
       toast.error("Please select at least 1 credit to purchase");
       return;
@@ -622,6 +718,10 @@ export function CreditPurchaseView({
   };
 
   const handleInitiateSubscriptionPurchase = (plan: SubscriptionPlanItem) => {
+    if (wallet?.paymentsCreditsEnabled === false) {
+      toast.error(wallet.paymentsCreditsDisabledReason || "Payments and credit operations are temporarily disabled platform-wide.");
+      return;
+    }
     const durationConfig = plan.durations[billingCycle];
     const returnUrl = encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/");
     router.push(
@@ -809,7 +909,16 @@ export function CreditPurchaseView({
   const balance = wallet?.balance ?? 0;
   const balanceInr = balance * 10;
   const creditPacks = wallet?.pricingCatalog?.creditPacks || [];
-  const subscriptionPlans = wallet?.pricingCatalog?.subscriptionPlans || [];
+  const availableSubscriptions: SubscriptionPlanItem[] =
+    wallet?.pricingCatalog?.subscriptionPlans && wallet.pricingCatalog.subscriptionPlans.length > 0
+      ? [
+          ...wallet.pricingCatalog.subscriptionPlans,
+          ...DEFAULT_SUBSCRIPTION_PLANS.filter(
+            (def) => !wallet.pricingCatalog.subscriptionPlans.some((p) => p.id === def.id)
+          ),
+        ]
+      : DEFAULT_SUBSCRIPTION_PLANS;
+  const subscriptionPlans = availableSubscriptions;
   const candidateCategories = wallet?.pricingCatalog?.candidatePlans || DEFAULT_CANDIDATE_CATEGORIES;
   const companyCategories = wallet?.pricingCatalog?.companyPlans || DEFAULT_COMPANY_CATEGORIES;
   const startupCategories = wallet?.pricingCatalog?.startupPlans || DEFAULT_STARTUP_CATEGORIES;
@@ -957,133 +1066,143 @@ export function CreditPurchaseView({
       </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto">
-        {isCandidate ? (
+      {/* Navigation Tabs (Hidden for candidate as parent Payments & Subscription provides top-level tabs) */}
+      {!isCandidate && (
+        <div className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto">
+          {isInstitution ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleTabClick("subscriptions")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+                  activeTab === "subscriptions"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+                }`}
+              >
+                <Crown className="w-4 h-4" />
+                <span>Institution Subscription</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabClick("institution_plans")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+                  activeTab === "institution_plans"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Services & Charges</span>
+              </button>
+            </>
+          ) : isStartup ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleTabClick("subscriptions")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+                  activeTab === "subscriptions"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+                }`}
+              >
+                <Crown className="w-4 h-4" />
+                <span>Startup Subscription</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabClick("startup_plans")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+                  activeTab === "startup_plans"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Startup Services & Charges</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => handleTabClick("subscriptions")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+                  activeTab === "subscriptions"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+                }`}
+              >
+                <Crown className="w-4 h-4" />
+                <span>
+                  {isInstitutionAccount
+                    ? "Institution Subscription"
+                    : isStartupAccount
+                    ? "Startup Subscription"
+                    : "Company Subscriptions"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabClick("company_plans")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+                  activeTab === "company_plans"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Features & Charges</span>
+              </button>
+            </>
+          )}
+
           <button
             type="button"
-            onClick={() => setActiveTab("plans")}
+            onClick={() => handleTabClick("topup")}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-              activeTab === "plans"
+              activeTab === "topup"
                 ? "bg-primary text-primary-foreground shadow-xs"
                 : "text-ink-soft hover:text-ink hover:bg-surface-alt"
             }`}
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Candidate Plans & Services</span>
+            <Zap className="w-4 h-4" />
+            <span>Credit Top-Ups</span>
           </button>
-        ) : isInstitution ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setActiveTab("subscriptions")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-                activeTab === "subscriptions"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-              }`}
-            >
-              <Crown className="w-4 h-4" />
-              <span>Institution Subscriptions</span>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("institution_plans")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-                activeTab === "institution_plans"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Services & Charges</span>
-            </button>
-          </>
-        ) : isStartup ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setActiveTab("subscriptions")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-                activeTab === "subscriptions"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-              }`}
-            >
-              <Crown className="w-4 h-4" />
-              <span>Startup Subscriptions</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => handleTabClick("history")}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeTab === "history"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-ink-soft hover:text-ink hover:bg-surface-alt"
+            }`}
+          >
+            <History className="w-4 h-4" />
+            <span>Transaction Ledger</span>
+          </button>
+        </div>
+      )}
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("startup_plans")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-                activeTab === "startup_plans"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Startup Services & Charges</span>
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setActiveTab("subscriptions")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-                activeTab === "subscriptions"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-              }`}
-            >
-              <Crown className="w-4 h-4" />
-              <span>Company Subscriptions</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("company_plans")}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-                activeTab === "company_plans"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Features & Charges</span>
-            </button>
-          </>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("topup")}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeTab === "topup"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-          }`}
-        >
-          <Zap className="w-4 h-4" />
-          <span>Credit Top-Ups</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("history")}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeTab === "history"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "text-ink-soft hover:text-ink hover:bg-surface-alt"
-          }`}
-        >
-          <History className="w-4 h-4" />
-          <span>Transaction Ledger</span>
-        </button>
-      </div>
+      {/* Global Payments & Credits Disabled Platform Warning */}
+      {wallet && wallet.paymentsCreditsEnabled === false && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1 text-xs">
+            <h4 className="font-extrabold text-sm text-amber-900 dark:text-amber-200">
+              Payments & Credits Temporarily Paused
+            </h4>
+            <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+              {wallet.paymentsCreditsDisabledReason || 'New credit purchases, top-ups, paid subscriptions, and billable operations are temporarily paused platform-wide for scheduled administration.'} Your current wallet balance ({balance} Credits) and transaction history remain completely safe and intact.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* CANDIDATE TAB: CANDIDATE PLANS & SERVICES */}
       {isCandidate && activeTab === "plans" && (
@@ -1998,19 +2117,19 @@ export function CreditPurchaseView({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-ink">
-                {isInstitution
+                {isInstitutionAccount
                   ? "Institution Subscription Plans"
-                  : isStartup
+                  : isStartupAccount
                   ? "Startup Subscription Plans"
                   : isRecruiter
                   ? "Company Subscription Plans"
                   : "Official Platform Subscription Plans"}
               </h2>
               <p className="text-xs text-ink-soft">
-                {isInstitution
-                  ? "Subscribe to the official Institution plan with Monthly, 6 Months, or Yearly billing options including campus placement tools, drives, and corporate network access."
-                  : isStartup
-                  ? "Subscribe to Job Posting, HRMS, or Startup plans with Monthly, 6 Months, or Yearly billing options including platform credits and ecosystem features."
+                {isInstitutionAccount
+                  ? "Subscribe to Job Posting, HRMS, Recruitment Suite, or Institution plans with Monthly, 6 Months, or Yearly billing options."
+                  : isStartupAccount || isStartup
+                  ? "Subscribe to Job Posting, HRMS, Recruitment Suite, or Startup plans with Monthly, 6 Months, or Yearly billing options including platform credits and ecosystem features."
                   : isRecruiter
                   ? "Subscribe to Job Posting, HRMS, or Recruitment Suite with Monthly, 6 Months, or Yearly billing options."
                   : "Subscribe for monthly, 6-month, or yearly entitlements with bundled platform credits."}
@@ -2048,13 +2167,17 @@ export function CreditPurchaseView({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(isInstitution
-              ? subscriptionPlans.filter((p) => ["institution"].includes(p.id))
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isInstitutionAccount || isStartupAccount || isStartup ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-6`}>
+            {(isInstitutionAccount
+              ? (["job_posting", "hrms", "recruitment_suite", "institution"]
+                  .map((id) => subscriptionPlans.find((p) => p.id === id))
+                  .filter(Boolean) as SubscriptionPlanItem[])
+              : isStartupAccount || isStartup
+              ? (["job_posting", "hrms", "recruitment_suite", "startup"]
+                  .map((id) => subscriptionPlans.find((p) => p.id === id))
+                  .filter(Boolean) as SubscriptionPlanItem[])
               : isRecruiter
               ? subscriptionPlans.filter((p) => ["job_posting", "hrms", "recruitment_suite"].includes(p.id))
-              : isStartup
-              ? subscriptionPlans.filter((p) => ["job_posting", "hrms", "startup"].includes(p.id))
               : subscriptionPlans
             ).map((plan) => {
               const duration = plan.durations[billingCycle];

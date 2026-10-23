@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Brain,
   Sparkles,
@@ -15,9 +17,46 @@ import {
   CheckCircle2,
   Sliders,
   Layers,
+  Loader2,
 } from "lucide-react";
+import { mockupTestService } from "@/features/mockupTest/services/mockupTestService";
+import { creditService } from "@/features/credits/services/creditService";
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from "@/features/credits/utils/creditCheck";
 
 export default function PsychometricTestPage() {
+  const router = useRouter();
+  const [startingDimId, setStartingDimId] = useState<string | null>(null);
+
+  const handleStartPsychometricTest = async (dimensionTitle: string, dimId: string) => {
+    if (startingDimId) return;
+    setStartingDimId(dimId);
+
+    try {
+      const check = await checkFeatureCredits("psychometric_test", 10);
+      if (!check.allowed) {
+        setStartingDimId(null);
+        return;
+      }
+
+      await mockupTestService.createSession({
+        testType: "aptitude",
+        mode: "objective",
+        assessmentType: "psychometric",
+        jobDescription: `Psychometric Evaluation: ${dimensionTitle}`,
+      });
+
+      notifyWalletBalanceUpdated();
+      toast.success(`Starting ${dimensionTitle} assessment!`);
+      router.push(`/interviews/assessment?mode=psychometric`);
+    } catch (err: any) {
+      if (!creditService.isInsufficientCreditsError(err)) {
+        toast.error(err?.message || "Failed to start psychometric assessment.");
+      }
+    } finally {
+      setStartingDimId(null);
+    }
+  };
+
   const dimensions = [
     {
       id: "big5-openness",
@@ -159,10 +198,16 @@ export default function PsychometricTestPage() {
 
                 <button
                   type="button"
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => handleStartPsychometricTest(dim.title, dim.id)}
+                  disabled={Boolean(startingDimId)}
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                 >
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>Take Assessment</span>
+                  {startingDimId === dim.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Play className="w-3 h-3 fill-current" />
+                  )}
+                  <span>{startingDimId === dim.id ? "Checking..." : "Take Assessment"}</span>
                 </button>
               </div>
             </div>

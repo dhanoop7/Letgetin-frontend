@@ -271,7 +271,7 @@ class UserService {
       },
       {
         id: 'sub_cand_2',
-        title: 'LetGetIn Pro Career Pass',
+        title: 'LetGetIn Pro Career Plus',
         description: 'Advanced AI Apply & Verified Resume Badge',
         cost: '$9.99/mo',
         status: 'Active',

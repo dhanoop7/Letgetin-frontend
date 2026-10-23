@@ -3,6 +3,21 @@
 import React, { useState, useEffect } from "react";
 import { InsufficientCreditsModal } from "@/components/common/InsufficientCreditsModal";
 
+export function showInsufficientCreditsPopup(detail: {
+  serviceName?: string;
+  feature?: string;
+  requiredCredits: number;
+  availableBalance: number;
+}) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("letgetin:insufficient_credits", {
+        detail,
+      })
+    );
+  }
+}
+
 export function InsufficientCreditsProvider() {
   const [modalData, setModalData] = useState<{
     isOpen: boolean;
@@ -11,7 +26,7 @@ export function InsufficientCreditsProvider() {
     availableBalance: number;
   }>({
     isOpen: false,
-    serviceName: "Premium Service",
+    serviceName: "Premium Feature",
     requiredCredits: 20,
     availableBalance: 0,
   });

@@ -30,6 +30,8 @@ import { LivePreviewCanvas } from "../preview/LivePreviewCanvas";
 import { ResumeVerificationModal } from "./ResumeVerificationModal";
 import { CreateResumeModal } from "@/features/dashboard/components/CreateResumeModal";
 import { triggerPdfDownload } from "../../utils/downloadPdf";
+import { creditService } from "@/features/credits/services/creditService";
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from "@/features/credits/utils/creditCheck";
 
 const calculateResumeCompletion = (resume: IResume | null): number => {
   if (!resume?.content) return 0;
@@ -113,9 +115,13 @@ export const VerifiedResumeWorkspace: React.FC = () => {
   }, [selectedResume]);
 
   // Open verification modal
-  const handleOpenVerifyModal = (resume: IResume, e?: React.MouseEvent) => {
+  const handleOpenVerifyModal = async (resume: IResume, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
+    }
+    const check = await checkFeatureCredits("verified_resume");
+    if (!check.allowed) {
+      return;
     }
     setResumeToVerify(resume);
     setIsVerifyingModalOpen(true);
@@ -123,13 +129,25 @@ export const VerifiedResumeWorkspace: React.FC = () => {
 
   // Confirm verification callback
   const handleConfirmVerification = async (targetResume: IResume) => {
-    const updatedResume: IResume = {
-      ...targetResume,
-      isVerified: true,
-      verifiedAt: new Date().toISOString(),
-    };
+    const check = await checkFeatureCredits("verified_resume");
+    if (!check.allowed) {
+      throw new Error("Insufficient credits to verify resume.");
+    }
 
     try {
+      await creditService.chargeFeature({
+        featureKey: "verified_resume",
+        refId: targetResume.id,
+        reasonOverride: `Verified Resume: ${targetResume.title}`,
+      });
+      notifyWalletBalanceUpdated();
+
+      const updatedResume: IResume = {
+        ...targetResume,
+        isVerified: true,
+        verifiedAt: new Date().toISOString(),
+      };
+
       const provider = StorageProviderFactory.getProvider();
       await provider.save(updatedResume);
 
@@ -139,10 +157,13 @@ export const VerifiedResumeWorkspace: React.FC = () => {
       );
       setSelectedResumeId(targetResume.id);
       toast.success(`Resume "${targetResume.title}" verified successfully!`);
-    } catch (error) {
+    } catch (error: any) {
+      if (creditService.isInsufficientCreditsError(error)) {
+        return;
+      }
       console.error("Failed to persist resume verification:", error);
       toast.error(
-        `Failed to save verified status for "${targetResume.title}". Please try again.`
+        error?.message || `Failed to save verified status for "${targetResume.title}". Please try again.`
       );
       throw error;
     }

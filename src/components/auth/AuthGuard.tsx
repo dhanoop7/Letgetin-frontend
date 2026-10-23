@@ -21,9 +21,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!isAuthenticated) {
         router.replace("/auth");
       } else if (user?.role === "recruiter") {
-        const isProfile = pathname === "/profile" || pathname?.startsWith("/profile/");
-        if (isProfile) {
-          // Allow all account types (Candidate, Company, Startup, Institution) to view My Profile & Identity
+        const isAllowedRoute =
+          pathname === "/profile" ||
+          pathname?.startsWith("/profile/") ||
+          pathname === "/payment" ||
+          pathname?.startsWith("/payment");
+        if (isAllowedRoute) {
+          // Allow all account types to view My Profile & Identity and Payment Review
           return;
         }
         if (pathname === "/e-sign") {
@@ -48,8 +52,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isProfileRoute = pathname === "/profile" || pathname?.startsWith("/profile/");
-  if (!isAuthenticated || (user?.role === "recruiter" && !isProfileRoute)) {
+  const isAllowedRoute =
+    pathname === "/profile" ||
+    pathname?.startsWith("/profile/") ||
+    pathname === "/payment" ||
+    pathname?.startsWith("/payment");
+  if (!isAuthenticated || (user?.role === "recruiter" && !isAllowedRoute)) {
     return null;
   }
 

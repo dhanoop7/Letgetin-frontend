@@ -152,6 +152,8 @@ export interface WalletData {
   subscriptions: UserSubscription[];
   packages?: UserSubscription[];
   transactions: CreditTransaction[];
+  paymentsCreditsEnabled?: boolean;
+  paymentsCreditsDisabledReason?: string;
   pricingCatalog: {
     creditValueInr: number;
     featurePricing: Record<string, FeaturePriceItem>;
@@ -161,6 +163,8 @@ export interface WalletData {
     companyPlans?: CompanyCategoryGroup[];
     startupPlans?: StartupCategoryGroup[];
     institutionPlans?: InstitutionCategoryGroup[];
+    paymentsCreditsEnabled?: boolean;
+    paymentsCreditsDisabledReason?: string;
   };
 }
 
