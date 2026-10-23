@@ -1,11 +1,49 @@
 "use client";
 
 import React, { useState } from "react";
-import { Compass, Bot, UserCheck, Sparkles, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Compass, Bot, UserCheck, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { creditService } from "@/features/credits/services/creditService";
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from "@/features/credits/utils/creditCheck";
 
 export default function CareerGuidancePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"ai" | "personal">("ai");
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+
+  const handleAction = async (
+    featureKey: "career_counselling_ai" | "career_counselling_manual",
+    targetHref: string,
+    actionLabel: string
+  ) => {
+    if (loadingAction) return;
+    setLoadingAction(actionLabel);
+
+    try {
+      const cost = featureKey === "career_counselling_ai" ? 3 : 30;
+      const check = await checkFeatureCredits(featureKey, cost);
+      if (!check.allowed) {
+        setLoadingAction(null);
+        return;
+      }
+
+      await creditService.chargeFeature({
+        featureKey,
+        customCredits: cost,
+      });
+
+      notifyWalletBalanceUpdated();
+      toast.success(`${actionLabel} unlocked!`);
+      router.push(targetHref);
+    } catch (err: any) {
+      if (!creditService.isInsufficientCreditsError(err)) {
+        toast.error(err?.message || `Failed to unlock ${actionLabel}.`);
+      }
+    } finally {
+      setLoadingAction(null);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
@@ -34,7 +72,7 @@ export default function CareerGuidancePage() {
           }`}
         >
           <Bot className="w-4 h-4" />
-          <span>AI</span>
+          <span>AI Guidance</span>
         </button>
 
         <button
@@ -46,7 +84,7 @@ export default function CareerGuidancePage() {
           }`}
         >
           <UserCheck className="w-4 h-4" />
-          <span>Personal</span>
+          <span>Personal Mentoring</span>
         </button>
       </div>
 
@@ -58,18 +96,26 @@ export default function CareerGuidancePage() {
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-ink">AI Career Roadmap</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-ink">AI Career Roadmap</h3>
+                <span className="text-[11px] font-bold text-primary-glow bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                  3 Credits
+                </span>
+              </div>
               <p className="text-xs text-ink-soft mt-1 leading-relaxed">
                 Adaptive role matching and step-by-step career milestones curated by AI based on your skill graph.
               </p>
             </div>
-            <Link
-              href="/ai-apply"
-              className="inline-flex items-center gap-2 text-xs font-bold text-primary-glow hover:underline pt-2"
+            <button
+              type="button"
+              disabled={loadingAction === "AI Career Roadmap"}
+              onClick={() => handleAction("career_counselling_ai", "/ai-apply", "AI Career Roadmap")}
+              className="inline-flex items-center gap-2 text-xs font-bold text-primary-glow hover:underline pt-2 cursor-pointer disabled:opacity-50"
             >
+              {loadingAction === "AI Career Roadmap" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Explore AI Recommendations</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </button>
           </div>
 
           <div className="bg-surface p-6 rounded-3xl border border-border/80 shadow-xs space-y-4">
@@ -77,18 +123,26 @@ export default function CareerGuidancePage() {
               <Bot className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-ink">Smart Career Chatbot</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-ink">Smart Career Chatbot</h3>
+                <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  3 Credits
+                </span>
+              </div>
               <p className="text-xs text-ink-soft mt-1 leading-relaxed">
                 24/7 instant guidance on resumes, interview preparation, salary negotiation, and course selection.
               </p>
             </div>
-            <Link
-              href="/geniustest"
-              className="inline-flex items-center gap-2 text-xs font-bold text-emerald-500 hover:underline pt-2"
+            <button
+              type="button"
+              disabled={loadingAction === "Smart Career Chatbot"}
+              onClick={() => handleAction("career_counselling_ai", "/geniustest", "Smart Career Chatbot")}
+              className="inline-flex items-center gap-2 text-xs font-bold text-emerald-500 hover:underline pt-2 cursor-pointer disabled:opacity-50"
             >
+              {loadingAction === "Smart Career Chatbot" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Start AI Consultation</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </button>
           </div>
         </div>
       ) : (
@@ -98,18 +152,26 @@ export default function CareerGuidancePage() {
               <UserCheck className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-ink">1-on-1 Mentor Sessions</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-ink">1-on-1 Mentor Sessions</h3>
+                <span className="text-[11px] font-bold text-purple-500 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                  30 Credits
+                </span>
+              </div>
               <p className="text-xs text-ink-soft mt-1 leading-relaxed">
                 Book private sessions with top industry professionals, hiring managers, and certified career coaches.
               </p>
             </div>
-            <Link
-              href="/network"
-              className="inline-flex items-center gap-2 text-xs font-bold text-purple-500 hover:underline pt-2"
+            <button
+              type="button"
+              disabled={loadingAction === "1-on-1 Mentor Sessions"}
+              onClick={() => handleAction("career_counselling_manual", "/network", "1-on-1 Mentor Sessions")}
+              className="inline-flex items-center gap-2 text-xs font-bold text-purple-500 hover:underline pt-2 cursor-pointer disabled:opacity-50"
             >
+              {loadingAction === "1-on-1 Mentor Sessions" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Find Mentors</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </button>
           </div>
 
           <div className="bg-surface p-6 rounded-3xl border border-border/80 shadow-xs space-y-4">
@@ -117,18 +179,26 @@ export default function CareerGuidancePage() {
               <Compass className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-ink">Mock Interviews & Review</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-ink">Mock Interviews & Review</h3>
+                <span className="text-[11px] font-bold text-primary-glow bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                  30 Credits
+                </span>
+              </div>
               <p className="text-xs text-ink-soft mt-1 leading-relaxed">
                 Practice real technical and behavioral interview scenarios with actionable, personalized feedback.
               </p>
             </div>
-            <Link
-              href="/profile"
-              className="inline-flex items-center gap-2 text-xs font-bold text-primary-glow hover:underline pt-2"
+            <button
+              type="button"
+              disabled={loadingAction === "Mock Interviews & Review"}
+              onClick={() => handleAction("career_counselling_manual", "/profile", "Mock Interviews & Review")}
+              className="inline-flex items-center gap-2 text-xs font-bold text-primary-glow hover:underline pt-2 cursor-pointer disabled:opacity-50"
             >
+              {loadingAction === "Mock Interviews & Review" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Schedule Session</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </button>
           </div>
         </div>
       )}

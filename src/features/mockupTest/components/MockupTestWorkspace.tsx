@@ -29,6 +29,7 @@ import {
   History,
 } from "lucide-react";
 import { toast } from "sonner";
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from "@/features/credits/utils/creditCheck";
 import {
   mockupTestService,
   TestCategory,
@@ -183,6 +184,11 @@ export function MockupTestWorkspace() {
   // 1. OBJECTIVE QUESTIONS (MCQ)
   // ----------------------------------------------------
   const handleStartMCQ = async () => {
+    const creditCheck = await checkFeatureCredits("mockup_interview", 20);
+    if (!creditCheck.allowed) {
+      return;
+    }
+
     setIsLoadingSession(true);
     setCurrentSessionId(null);
     setSessionQuestions([]);
@@ -195,8 +201,11 @@ export function MockupTestWorkspace() {
       const sessionData = await mockupTestService.createSession({
         testType: activeTab,
         mode: "objective",
+        assessmentType: "mockup_interview",
         jobDescription: jobDescription.trim() || undefined,
       });
+
+      notifyWalletBalanceUpdated();
 
       setCurrentSessionId(sessionData.sessionId);
       setSessionQuestions(sessionData.questions);
@@ -259,6 +268,11 @@ export function MockupTestWorkspace() {
   // 2. RAPID FIRE ROUND (5s Timer)
   // ----------------------------------------------------
   const handleStartRapid = async () => {
+    const creditCheck = await checkFeatureCredits("mockup_interview", 20);
+    if (!creditCheck.allowed) {
+      return;
+    }
+
     setIsLoadingSession(true);
     setCurrentSessionId(null);
     setSessionQuestions([]);
@@ -272,8 +286,11 @@ export function MockupTestWorkspace() {
       const sessionData = await mockupTestService.createSession({
         testType: activeTab,
         mode: "rapid",
+        assessmentType: "mockup_interview",
         jobDescription: jobDescription.trim() || undefined,
       });
+
+      notifyWalletBalanceUpdated();
 
       setCurrentSessionId(sessionData.sessionId);
       setSessionQuestions(sessionData.questions);
@@ -365,6 +382,11 @@ export function MockupTestWorkspace() {
   // 3. DESCRIPTIVE QUESTIONS
   // ----------------------------------------------------
   const handleStartDescriptive = async () => {
+    const creditCheck = await checkFeatureCredits("mockup_interview", 20);
+    if (!creditCheck.allowed) {
+      return;
+    }
+
     setIsLoadingSession(true);
     setCurrentSessionId(null);
     setSessionQuestions([]);
@@ -377,8 +399,11 @@ export function MockupTestWorkspace() {
       const sessionData = await mockupTestService.createSession({
         testType: activeTab,
         mode: "descriptive",
+        assessmentType: "mockup_interview",
         jobDescription: jobDescription.trim() || undefined,
       });
+
+      notifyWalletBalanceUpdated();
 
       setCurrentSessionId(sessionData.sessionId);
       setSessionQuestions(sessionData.questions);
@@ -438,6 +463,11 @@ export function MockupTestWorkspace() {
   // 4. QUICK 5-MINUTE ROUND (300s Countdown)
   // ----------------------------------------------------
   const handleStartQuick5m = async () => {
+    const creditCheck = await checkFeatureCredits("mockup_interview", 20);
+    if (!creditCheck.allowed) {
+      return;
+    }
+
     setIsLoadingSession(true);
     setCurrentSessionId(null);
     setSessionQuestions([]);
@@ -452,8 +482,11 @@ export function MockupTestWorkspace() {
       const sessionData = await mockupTestService.createSession({
         testType: activeTab,
         mode: "quick5m",
+        assessmentType: "mockup_interview",
         jobDescription: jobDescription.trim() || undefined,
       });
+
+      notifyWalletBalanceUpdated();
 
       setCurrentSessionId(sessionData.sessionId);
       setSessionQuestions(sessionData.questions);

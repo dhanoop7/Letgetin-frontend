@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Languages,
   Sparkles,
@@ -17,9 +19,43 @@ import {
   ShieldCheck,
   Globe,
 } from "lucide-react";
+import { mockupTestService } from "@/features/mockupTest/services/mockupTestService";
+import { creditService } from "@/features/credits/services/creditService";
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from "@/features/credits/utils/creditCheck";
 
 export default function LinguisticTestPage() {
+  const router = useRouter();
   const [selectedLanguage, setSelectedLanguage] = useState("English (CEFR Standard)");
+  const [startingModuleId, setStartingModuleId] = useState<string | null>(null);
+
+  const handleStartLinguisticTest = async (mod: { id: string; title: string }) => {
+    if (startingModuleId) return;
+    setStartingModuleId(mod.id);
+    try {
+      const check = await checkFeatureCredits("linguistic_test", 10);
+      if (!check.allowed) {
+        setStartingModuleId(null);
+        return;
+      }
+
+      await mockupTestService.createSession({
+        testType: "aptitude",
+        mode: "objective",
+        assessmentType: "linguistic",
+        jobDescription: `Linguistic Proficiency Test (${selectedLanguage}): ${mod.title}`,
+      });
+
+      notifyWalletBalanceUpdated();
+      toast.success(`Starting ${mod.title}!`);
+      router.push(`/interviews/assessment?mode=linguistic&module=${mod.id}`);
+    } catch (err: any) {
+      if (!creditService.isInsufficientCreditsError(err)) {
+        toast.error(err?.message || "Failed to start linguistic test session.");
+      }
+    } finally {
+      setStartingModuleId(null);
+    }
+  };
 
   const modules = [
     {
@@ -175,10 +211,12 @@ export default function LinguisticTestPage() {
 
                   <button
                     type="button"
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                    disabled={startingModuleId === mod.id}
+                    onClick={() => handleStartLinguisticTest(mod)}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-brand text-primary-foreground text-xs font-bold shadow-glow hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Play className="w-3 h-3 fill-current" />
-                    <span>Start Test</span>
+                    <span>{startingModuleId === mod.id ? "Starting..." : "Start Test"}</span>
                   </button>
                 </div>
               </div>

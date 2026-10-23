@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GoogleAuthProvider } from "@/components/providers/GoogleAuthProvider";
+import { InsufficientCreditsProvider } from "@/components/providers/InsufficientCreditsProvider";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <GoogleAuthProvider>
           {children}
+          <InsufficientCreditsProvider />
           <Toaster
             position="top-right"
             richColors

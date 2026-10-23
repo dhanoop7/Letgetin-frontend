@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { mockupAssessmentService } from "@/features/mockupAssessment/services/mockupAssessmentService";
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from "@/features/credits/utils/creditCheck";
 
 interface AssessmentQuestionItem {
   id: string;
@@ -745,6 +746,12 @@ export default function AIMockAssessmentPage() {
     }
 
     const activeMode = ASSESSMENT_MODES.find((m) => m.id === activeModeId) || selectedMode;
+
+    const creditCheck = await checkFeatureCredits("mockup_assessment", 20);
+    if (!creditCheck.allowed) {
+      return;
+    }
+
     setSelectedModeId(activeModeId);
     setInteractionMode(activeInteractionMode);
     setIsGeneratingAI(true);
@@ -762,6 +769,8 @@ export default function AIMockAssessmentPage() {
         setIsGeneratingAI(false);
         return;
       }
+
+      notifyWalletBalanceUpdated();
 
       setDynamicQuestions(assessmentData.questions);
       if (assessmentData.sessionId) {

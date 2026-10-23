@@ -39,6 +39,7 @@ import {
   ChevronDown,
   ShieldCheck,
   ArrowLeftRight,
+  User,
   UserCheck,
   MessageSquare,
   Bot,
@@ -60,10 +61,10 @@ import {
   Presentation,
   Folder,
   FlaskConical,
-  GitBranch,
   GitCommit,
   Languages,
   FileSignature,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -1647,6 +1648,36 @@ export function RecruiterShell({
 
             {/* Quick SaaS Menu Actions */}
             <div className="space-y-1 pt-1">
+              <Link
+                href="/recruiter/identity"
+                onClick={() => {
+                  setIsProfileOpen(false);
+                  if (onClose) onClose();
+                }}
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-ink hover:text-primary-glow hover:bg-surface-alt transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <User className="w-4 h-4 text-primary-glow" />
+                  <span>Profile</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-ink-soft opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+              </Link>
+
+              <Link
+                href="/recruiter/identity?tab=payments"
+                onClick={() => {
+                  setIsProfileOpen(false);
+                  if (onClose) onClose();
+                }}
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-ink hover:text-primary-glow hover:bg-surface-alt transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <CreditCard className="w-4 h-4 text-primary-glow" />
+                  <span>Payments & Subscription</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-ink-soft opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+              </Link>
+
               <Link
                 href="/recruiter/profile"
                 onClick={() => {

@@ -3,6 +3,9 @@ import { MongoStorage } from '@/features/resume/storage/mongo';
 import { ProfileService, ProfileData } from '@/features/profile/services/profileService';
 import { aiApplyService } from '../services/aiApplyService';
 import { coverLetterService } from '../services/coverLetterService';
+import { creditService } from '@/features/credits/services/creditService';
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from '@/features/credits/utils/creditCheck';
+import { showInsufficientCreditsPopup } from '@/components/providers/InsufficientCreditsProvider';
 import { STEPS, TOTAL_STEPS } from '../config/steps.config';
 import {
   AiApplyPreferences,
@@ -316,6 +319,23 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
       return;
     }
 
+    const totalCount = selectedJobIds.length;
+    let requiredCost = 20;
+    let featureKey = 'ai_apply_10jobs_1day';
+    if (totalCount > 20) {
+      requiredCost = 50;
+      featureKey = 'ai_apply_50jobs_10days';
+    } else if (totalCount > 10) {
+      requiredCost = 40;
+      featureKey = 'ai_apply_20jobs_7days';
+    }
+
+    const check = await checkFeatureCredits(featureKey, requiredCost);
+    if (!check.allowed) {
+      set({ batchActionLoading: false });
+      return;
+    }
+
     set({ batchActionLoading: true, error: null });
 
     try {
@@ -326,6 +346,8 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
         jobIds: selectedJobIds,
         batchSize,
       });
+
+      notifyWalletBalanceUpdated();
 
       // Initial batch session representation
       const initialSession: AiApplyBatchSession = {
@@ -351,6 +373,17 @@ export const useAiApplyStore = create<AiApplyStoreState>((set, get) => ({
       // Start high-performance polling loop
       startBatchPollingLoop(response.sessionId, set, get);
     } catch (err: any) {
+      if (creditService.isInsufficientCreditsError(err)) {
+        const isIns = creditService.isInsufficientCreditsError(err);
+        showInsufficientCreditsPopup({
+          feature: featureKey,
+          serviceName: 'AI Apply Package',
+          requiredCredits: isIns.requiredCredits || requiredCost,
+          availableBalance: isIns.availableBalance || 0,
+        });
+        set({ batchActionLoading: false });
+        return;
+      }
       const apiError = err as { error?: { message?: string }; message?: string };
       set({
         batchActionLoading: false,

@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Brain,
   Edit3,
@@ -18,11 +20,44 @@ import {
   ChevronRight,
   Zap,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { GeniusTestLayout } from "@/features/geniustest/components/GeniusTestLayout";
 import { RadarChartSVG } from "@/features/geniustest/components/RadarChartSVG";
+import { mockupTestService } from "@/features/mockupTest/services/mockupTestService";
+import { creditService } from "@/features/credits/services/creditService";
+import { checkFeatureCredits, notifyWalletBalanceUpdated } from "@/features/credits/utils/creditCheck";
 
 export default function GeniusTestPage() {
+  const router = useRouter();
+  const [isStarting, setIsStarting] = useState(false);
+
+  const handleStartGeniusTest = async (testName: string = "Genius Test") => {
+    if (isStarting) return;
+    setIsStarting(true);
+    try {
+      const check = await checkFeatureCredits("genius_test", 10);
+      if (!check.allowed) {
+        setIsStarting(false);
+        return;
+      }
+      await mockupTestService.createSession({
+        testType: "aptitude",
+        mode: "objective",
+        assessmentType: "genius",
+        jobDescription: `Genius Test: ${testName}`,
+      });
+      notifyWalletBalanceUpdated();
+      toast.success(`Starting ${testName}!`);
+      router.push("/interviews/assessment?mode=genius");
+    } catch (err: any) {
+      if (!creditService.isInsufficientCreditsError(err)) {
+        toast.error(err?.message || "Failed to start Genius assessment.");
+      }
+    } finally {
+      setIsStarting(false);
+    }
+  };
   const dmttTraits = [
     { label: "Linguistic", val: 73, color: "bg-emerald-500" },
     { label: "Logical-Math", val: 47, color: "bg-indigo-500" },
@@ -130,10 +165,12 @@ export default function GeniusTestPage() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className="inline-flex items-center gap-2 text-xs font-bold bg-gradient-brand text-primary-foreground px-6 py-2.5 rounded-full shadow-elegant hover:shadow-glow transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+            disabled={isStarting}
+            onClick={() => handleStartGeniusTest("NeuroCareerOS Assessment")}
+            className="inline-flex items-center gap-2 text-xs font-bold bg-gradient-brand text-primary-foreground px-6 py-2.5 rounded-full shadow-elegant hover:shadow-glow transition-all hover:scale-[1.02] active:scale-95 cursor-pointer disabled:opacity-50"
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>Take Assessment</span>
+            <span>{isStarting ? "Starting..." : "Take Assessment"}</span>
           </button>
 
           <button
@@ -315,9 +352,12 @@ export default function GeniusTestPage() {
               {assessmentCards.map((card) => {
                 const Icon = card.icon;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={card.title}
-                    className="bg-surface border border-border rounded-2xl p-3.5 shadow-xs flex items-center justify-between hover:shadow-glow hover:border-primary/40 transition-all cursor-pointer group"
+                    disabled={isStarting}
+                    onClick={() => handleStartGeniusTest(card.title)}
+                    className="bg-surface border border-border rounded-2xl p-3.5 shadow-xs flex items-center justify-between hover:shadow-glow hover:border-primary/40 transition-all cursor-pointer group text-left w-full disabled:opacity-50"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -330,7 +370,7 @@ export default function GeniusTestPage() {
                       </span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-ink-soft group-hover:translate-x-0.5 group-hover:text-primary-glow transition-all" />
-                  </div>
+                  </button>
                 );
               })}
             </div>
